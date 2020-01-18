@@ -4,9 +4,9 @@ import (
 	"sync"
 	"time"
 
-    "github.com/treydock/gpfs_exporter/config"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/common/log"
+	"github.com/treydock/gpfs_exporter/config"
 )
 
 // Metric name parts.
@@ -17,34 +17,34 @@ const (
 
 // Metric descriptors.
 var (
-    availableScrapers = map[string]Scraper{
-        "mmpmon": ScrapeMmpmon{},
-        "mount": ScrapeMount{},
-    }
+	availableScrapers = map[string]Scraper{
+		"mmpmon": ScrapeMmpmon{},
+		"mount":  ScrapeMount{},
+	}
 )
 
 // Exporter collects GPFS metrics. It implements prometheus.Collector.
 type Exporter struct {
-    target      config.Target
-	scrapers     []Scraper
-	scrapeErrors *prometheus.CounterVec
-    scrapeDuration *prometheus.Desc
-    error        prometheus.Gauge
+	target         config.Target
+	scrapers       []Scraper
+	scrapeErrors   *prometheus.CounterVec
+	scrapeDuration *prometheus.Desc
+	error          prometheus.Gauge
 }
 
 func New(target config.Target) *Exporter {
-    var scrapers []Scraper
-    for _, c := range target.Collectors {
-        if scraper, ok := availableScrapers[c] ; ok {
-            scrapers = append(scrapers, scraper)
-        } else {
-            log.Errorf("Collector %s is not valid", c)
-        }
-    }
+	var scrapers []Scraper
+	for _, c := range target.Collectors {
+		if scraper, ok := availableScrapers[c]; ok {
+			scrapers = append(scrapers, scraper)
+		} else {
+			log.Errorf("Collector %s is not valid", c)
+		}
+	}
 
 	return &Exporter{
-        target: target,
-		scrapers:     scrapers,
+		target:   target,
+		scrapers: scrapers,
 		scrapeErrors: prometheus.NewCounterVec(prometheus.CounterOpts{
 			Namespace: namespace,
 			Name:      "scrape_errors_total",
@@ -56,11 +56,11 @@ func New(target config.Target) *Exporter {
 			Name:      "last_scrape_error",
 			Help:      "Whether the last scrape of metrics from GPFS resulted in an error (1 for error, 0 for success).",
 		}),
-	    scrapeDuration: prometheus.NewDesc(
-		    prometheus.BuildFQName(namespace, exporter, "collector_duration_seconds"),
-		    "Collector time duration.",
-		    []string{"collector"}, nil,
-	    ),
+		scrapeDuration: prometheus.NewDesc(
+			prometheus.BuildFQName(namespace, exporter, "collector_duration_seconds"),
+			"Collector time duration.",
+			[]string{"collector"}, nil,
+		),
 	}
 }
 
@@ -89,8 +89,8 @@ func (e *Exporter) Collect(ch chan<- prometheus.Metric) {
 }
 
 func (e *Exporter) scrape(ch chan<- prometheus.Metric) {
-    e.target.Lock()
-    defer e.target.Unlock()
+	e.target.Lock()
+	defer e.target.Unlock()
 	wg := &sync.WaitGroup{}
 	defer wg.Wait()
 	for _, scraper := range e.scrapers {
@@ -109,4 +109,3 @@ func (e *Exporter) scrape(ch chan<- prometheus.Metric) {
 		}(scraper)
 	}
 }
-

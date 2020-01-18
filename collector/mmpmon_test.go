@@ -42,27 +42,26 @@ _fs_io_s_ _n_ 10.22.0.106 _nn_ ib-pitzer-rw02.ten _rc_ 0 _t_ 1579358234 _tu_ 532
 `
 	defer func() { execCommand = exec.Command }()
 	perfs, err := mmpmon_parse(mockedStdout)
-    if err != nil {
-        t.Errorf("Unexpected error: %s", err.Error())
-    }
-    if len(perfs) != 2 {
-        t.Errorf("Expected 2 perfs returned, got %d", len(perfs))
-        return
-    }
-    if val := perfs[0].FS ; val != "scratch" {
-        t.Errorf("Unexpected FS got %s", val)
-    }
-    if val := perfs[1].FS ; val != "project" {
-        t.Errorf("Unexpected FS got %s", val)
-    }
-    if val := perfs[0].NodeName ; val != "ib-pitzer-rw02.ten" {
-        t.Errorf("Unexpected NodeName got %s", val)
-    }
-    if val := perfs[1].NodeName ; val != "ib-pitzer-rw02.ten" {
-        t.Errorf("Unexpected NodeName got %s", val)
-    }
-    if val := perfs[0].ReadBytes ; val != 205607400434 {
-        t.Errorf("Unexpected ReadBytes got %d", val)
-    }
+	if err != nil {
+		t.Errorf("Unexpected error: %s", err.Error())
+	}
+	if len(perfs) != 2 {
+		t.Errorf("Expected 2 perfs returned, got %d", len(perfs))
+		return
+	}
+	if val := perfs[0].FS; val != "scratch" {
+		t.Errorf("Unexpected FS got %s", val)
+	}
+	if val := perfs[1].FS; val != "project" {
+		t.Errorf("Unexpected FS got %s", val)
+	}
+	if val := perfs[0].NodeName; val != "ib-pitzer-rw02.ten" {
+		t.Errorf("Unexpected NodeName got %s", val)
+	}
+	if val := perfs[1].NodeName; val != "ib-pitzer-rw02.ten" {
+		t.Errorf("Unexpected NodeName got %s", val)
+	}
+	if val := perfs[0].ReadBytes; val != 205607400434 {
+		t.Errorf("Unexpected ReadBytes got %d", val)
+	}
 }
-

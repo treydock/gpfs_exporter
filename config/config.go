@@ -2,10 +2,10 @@ package config
 
 import (
 	"fmt"
-	"io/ioutil"
-    "sync"
 	"github.com/prometheus/common/log"
 	yaml "gopkg.in/yaml.v2"
+	"io/ioutil"
+	"sync"
 )
 
 type Targets struct {
@@ -13,9 +13,9 @@ type Targets struct {
 }
 
 type Target struct {
-    sync.Mutex
-    Name       string `yaml:"name"`
-    FSMounts   []string `yaml:"fs_mounts"`
+	sync.Mutex
+	Name       string   `yaml:"name"`
+	FSMounts   []string `yaml:"fs_mounts"`
 	Collectors []string `yaml:"collectors"`
 }
 
@@ -34,16 +34,15 @@ func (targets *Targets) LoadConfig(configFile string) error {
 }
 
 func (targets *Targets) GetTarget(target string) (Target, error) {
-    for _, t := range targets.Targets {
-        if t.Name == target {
-            log.Debugf("GetTarget target=%s name=%s", target, t.Name)
-            return t, nil
-        }
-    }
-    if target == "default" {
-        log.Debug("Using default target as one was not found")
-        return Target{}, nil
-    }
+	for _, t := range targets.Targets {
+		if t.Name == target {
+			log.Debugf("GetTarget target=%s name=%s", target, t.Name)
+			return t, nil
+		}
+	}
+	if target == "default" {
+		log.Debug("Using default target as one was not found")
+		return Target{}, nil
+	}
 	return Target{}, fmt.Errorf("Target %s not found", target)
 }
-

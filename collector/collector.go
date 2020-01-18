@@ -1,9 +1,10 @@
 package collector
 
 import (
-    "github.com/treydock/gpfs_exporter/config"
 	"github.com/prometheus/client_golang/prometheus"
+	"github.com/treydock/gpfs_exporter/config"
 )
+
 const (
 	// Exporter namespace.
 	namespace = "gpfs"
