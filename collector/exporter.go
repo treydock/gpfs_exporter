@@ -89,6 +89,8 @@ func (e *Exporter) Collect(ch chan<- prometheus.Metric) {
 }
 
 func (e *Exporter) scrape(ch chan<- prometheus.Metric) {
+    e.target.Lock()
+    defer e.target.Unlock()
 	wg := &sync.WaitGroup{}
 	defer wg.Wait()
 	for _, scraper := range e.scrapers {

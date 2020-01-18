@@ -2,9 +2,10 @@ package config
 
 import (
 	"fmt"
+	"io/ioutil"
+    "sync"
 	"github.com/prometheus/common/log"
 	yaml "gopkg.in/yaml.v2"
-	"io/ioutil"
 )
 
 type Targets struct {
@@ -12,6 +13,7 @@ type Targets struct {
 }
 
 type Target struct {
+    sync.Mutex
     Name       string `yaml:"name"`
     FSMounts   []string `yaml:"fs_mounts"`
 	Collectors []string `yaml:"collectors"`
