@@ -1,3 +1,4 @@
 /.tarballs
 /.build
 /gpfs_exporter
+/*.yaml
