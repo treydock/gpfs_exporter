@@ -83,7 +83,7 @@ func (MmdfCollector) Collect(target config.Target, ch chan<- prometheus.Metric) 
 		ch <- prometheus.MustNewConstMetric(Metadata_free, prometheus.GaugeValue, float64(dfMetric.MetadataFree), fs)
 		ch <- prometheus.MustNewConstMetric(Metadata_free_percent, prometheus.GaugeValue, float64(dfMetric.MetadataFreePercent), fs)
 	}
-	ch <- prometheus.MustNewConstMetric(collectDuration, prometheus.GaugeValue, time.Since(collectTime).Seconds(), "mmpmon")
+	ch <- prometheus.MustNewConstMetric(collectDuration, prometheus.GaugeValue, time.Since(collectTime).Seconds(), "mmdf")
 	return nil
 }
 
