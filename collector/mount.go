@@ -1,6 +1,8 @@
 package collector
 
 import (
+    "time"
+
 	linuxproc "github.com/c9s/goprocinfo/linux"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/treydock/gpfs_exporter/config"
@@ -23,6 +25,7 @@ func (ScrapeMount) Name() string {
 }
 
 func (ScrapeMount) Scrape(target config.Target, ch chan<- prometheus.Metric) error {
+	scrapeTime := time.Now()
 	gpfsMounts, err := getGPFSMounts()
 	if err != nil {
 		return nil
@@ -38,6 +41,7 @@ func (ScrapeMount) Scrape(target config.Target, ch chan<- prometheus.Metric) err
 			ch <- prometheus.MustNewConstMetric(fs_mount_status, prometheus.GaugeValue, 0, mount)
 		}
 	}
+	ch <- prometheus.MustNewConstMetric(scrapeDuration, prometheus.GaugeValue, time.Since(scrapeTime).Seconds(), "mount")
 	return nil
 }
 

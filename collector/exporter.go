@@ -2,34 +2,30 @@ package collector
 
 import (
 	"sync"
-	"time"
 
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/common/log"
 	"github.com/treydock/gpfs_exporter/config"
 )
 
-// Metric name parts.
-const (
-	// Subsystem(s).
-	exporter = "exporter"
-)
-
-// Metric descriptors.
 var (
 	availableScrapers = map[string]Scraper{
 		"mmpmon": ScrapeMmpmon{},
 		"mount":  ScrapeMount{},
 	}
+	scrapeDuration = prometheus.NewDesc(
+		prometheus.BuildFQName(namespace, "", "collector_duration_seconds"),
+		"Collector time duration.",
+		[]string{"collector"}, nil,
+	)
 )
 
 // Exporter collects GPFS metrics. It implements prometheus.Collector.
 type Exporter struct {
-	target         config.Target
-	scrapers       []Scraper
-	scrapeErrors   *prometheus.CounterVec
-	scrapeDuration *prometheus.Desc
-	error          prometheus.Gauge
+	target       config.Target
+	scrapers     []Scraper
+	scrapeErrors *prometheus.CounterVec
+	error        prometheus.Gauge
 }
 
 func New(target config.Target) *Exporter {
@@ -52,15 +48,9 @@ func New(target config.Target) *Exporter {
 		}, []string{"collector"}),
 		error: prometheus.NewGauge(prometheus.GaugeOpts{
 			Namespace: namespace,
-			Subsystem: exporter,
 			Name:      "last_scrape_error",
 			Help:      "Whether the last scrape of metrics from GPFS resulted in an error (1 for error, 0 for success).",
 		}),
-		scrapeDuration: prometheus.NewDesc(
-			prometheus.BuildFQName(namespace, exporter, "collector_duration_seconds"),
-			"Collector time duration.",
-			[]string{"collector"}, nil,
-		),
 	}
 }
 
@@ -98,14 +88,12 @@ func (e *Exporter) scrape(ch chan<- prometheus.Metric) {
 		go func(scraper Scraper) {
 			defer wg.Done()
 			label := scraper.Name()
-			scrapeTime := time.Now()
 			if err := scraper.Scrape(e.target, ch); err != nil {
 				log.Errorln("Error scraping for "+label+":", err)
 				e.scrapeErrors.WithLabelValues(label).Inc()
 				e.error.Set(1)
 			}
 
-			ch <- prometheus.MustNewConstMetric(e.scrapeDuration, prometheus.GaugeValue, time.Since(scrapeTime).Seconds(), label)
 		}(scraper)
 	}
 }

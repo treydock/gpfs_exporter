@@ -6,6 +6,7 @@ import (
 	"reflect"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/common/log"
@@ -66,6 +67,7 @@ func (ScrapeMmpmon) Name() string {
 }
 
 func (ScrapeMmpmon) Scrape(target config.Target, ch chan<- prometheus.Metric) error {
+	scrapeTime := time.Now()
 	mmpmon_out, err := mmpmon()
 	if err != nil {
 		return err
@@ -84,6 +86,7 @@ func (ScrapeMmpmon) Scrape(target config.Target, ch chan<- prometheus.Metric) er
 		ch <- prometheus.MustNewConstMetric(operations, prometheus.CounterValue, float64(perf.ReadDir), perf.FS, perf.NodeName, "read_dir")
 		ch <- prometheus.MustNewConstMetric(operations, prometheus.CounterValue, float64(perf.InodeUpdates), perf.FS, perf.NodeName, "inode_updates")
 	}
+	ch <- prometheus.MustNewConstMetric(scrapeDuration, prometheus.GaugeValue, time.Since(scrapeTime).Seconds(), "mmpmon")
 	return nil
 }
 
