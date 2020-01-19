@@ -37,6 +37,10 @@ type Collector struct {
 	inodes_total     *prometheus.Desc
 	fs_total         *prometheus.Desc
     fs_free         *prometheus.Desc
+    fs_free_percent *prometheus.Desc
+    metadata_total  *prometheus.Desc
+    metadata_free   *prometheus.Desc
+    metadata_free_percent  *prometheus.Desc
 }
 
 func NewCollector(fs string) *Collector {
@@ -48,6 +52,10 @@ func NewCollector(fs string) *Collector {
 		inodes_total:     collector.Inodes_total,
 		fs_total:         collector.Fs_total,
 		fs_free:         collector.Fs_free,
+		fs_free_percent:         collector.Fs_free_percent,
+        metadata_total: collector.Metadata_total,
+        metadata_free: collector.Metadata_free,
+        metadata_free_percent: collector.Metadata_free_percent,
 	}
 }
 
@@ -58,6 +66,10 @@ func (c *Collector) Describe(ch chan<- *prometheus.Desc) {
 	ch <- c.inodes_total
 	ch <- c.fs_total
     ch <- c.fs_free
+    ch <- c.fs_free_percent
+    ch <- c.metadata_total
+    ch <- c.metadata_free
+    ch <- c.metadata_free_percent
 }
 
 func (c *Collector) Collect(ch chan<- prometheus.Metric) {
@@ -71,6 +83,10 @@ func (c *Collector) Collect(ch chan<- prometheus.Metric) {
 	ch <- prometheus.MustNewConstMetric(c.inodes_total, prometheus.GaugeValue, float64(metrics.InodesTotal), c.fs)
 	ch <- prometheus.MustNewConstMetric(c.fs_total, prometheus.GaugeValue, float64(metrics.FSTotal), c.fs)
 	ch <- prometheus.MustNewConstMetric(c.fs_free, prometheus.GaugeValue, float64(metrics.FSFree), c.fs)
+	ch <- prometheus.MustNewConstMetric(c.fs_free_percent, prometheus.GaugeValue, float64(metrics.FSFreePercent), c.fs)
+	ch <- prometheus.MustNewConstMetric(c.metadata_total, prometheus.GaugeValue, float64(metrics.MetadataTotal), c.fs)
+	ch <- prometheus.MustNewConstMetric(c.metadata_free, prometheus.GaugeValue, float64(metrics.MetadataFree), c.fs)
+	ch <- prometheus.MustNewConstMetric(c.metadata_free_percent, prometheus.GaugeValue, float64(metrics.MetadataFreePercent), c.fs)
 }
 
 func collect(fs string) {

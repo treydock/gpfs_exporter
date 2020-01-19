@@ -52,4 +52,13 @@ mmdf:inode:0:1:::430741822:484301506:915043328:1332164000:
     if dfmetrics.FSTotal != 3749557989015552 {
         t.Errorf("Unexpected value for FSTotal, got %d", dfmetrics.FSTotal)
     }
+    if dfmetrics.FSFreePercent != 14 {
+        t.Errorf("Unexpected value for FSFreePercent, got %d", dfmetrics.FSFreePercent)
+    }
+    if dfmetrics.MetadataTotal != 14224931684352 {
+        t.Errorf("Unexpected value for MetadataTotal, got %d", dfmetrics.MetadataTotal)
+    }
+    if dfmetrics.MetadataFreePercent != 43 {
+        t.Errorf("Unexpected value for MetadataFreePercent, got %d", dfmetrics.MetadataFreePercent)
+    }
 }

@@ -14,8 +14,8 @@ import (
 )
 
 var (
-    mappedSections = []string{"inode","fsTotal"}
-    KbToBytes      = []string{"fsSize","freeBlocks"}
+    mappedSections = []string{"inode","fsTotal","metadata"}
+    KbToBytes      = []string{"fsSize","freeBlocks","totalMetadata"}
 	dfMap       = map[string]string{
 		"inode:usedInodes":      "InodesUsed",
 		"inode:freeInodes":      "InodesFree",
@@ -23,6 +23,11 @@ var (
 		"inode:maxInodes":       "InodesTotal",
         "fsTotal:fsSize": "FSTotal",
         "fsTotal:freeBlocks": "FSFree",
+        "fsTotal:freeBlocksPct": "FSFreePercent",
+        "metadata:totalMetadata": "MetadataTotal",
+        "metadata:freeBlocks": "MetadataFree",
+        "metadata:freeBlocksPct": "MetadataFreePercent",
+
 	}
 	Inodes_used =     prometheus.NewDesc("gpfs_fs_inodes_used", "GPFS filesystem inodes used", []string{"fs"}, nil)
 	Inodes_free =      prometheus.NewDesc("gpfs_fs_inodes_free", "GPFS filesystem inodes free", []string{"fs"}, nil)
@@ -30,7 +35,10 @@ var (
 	Inodes_total =     prometheus.NewDesc("gpfs_fs_inodes_total", "GPFS filesystem inodes total in bytes", []string{"fs"}, nil)
 	Fs_total =         prometheus.NewDesc("gpfs_fs_total", "GPFS filesystem total size in bytes", []string{"fs"}, nil)
 	Fs_free =         prometheus.NewDesc("gpfs_fs_free", "GPFS filesystem free size in bytes", []string{"fs"}, nil)
-	metadata =        prometheus.NewDesc("gpfs_fs_metadata", "GPFS filesystem metadata", []string{"fs"}, nil)
+	Fs_free_percent =         prometheus.NewDesc("gpfs_fs_free_percent", "GPFS filesystem free percent", []string{"fs"}, nil)
+	Metadata_total =         prometheus.NewDesc("gpfs_metadata_total", "GPFS total metadata size in bytes", []string{"fs"}, nil)
+	Metadata_free =         prometheus.NewDesc("gpfs_metadata_free", "GPFS metadata free size in bytes", []string{"fs"}, nil)
+	Metadata_free_percent =         prometheus.NewDesc("gpfs_metadata_free_percent", "GPFS metadata free percent", []string{"fs"}, nil)
 )
 
 type DFMetric struct {
@@ -41,6 +49,10 @@ type DFMetric struct {
 	InodesTotal     int64
     FSTotal          int64
     FSFree          int64
+    FSFreePercent       int64
+    MetadataTotal   int64
+    MetadataFree    int64
+    MetadataFreePercent int64
 }
 
 type ScrapeMmdf struct{}
@@ -66,6 +78,10 @@ func (ScrapeMmdf) Scrape(target config.Target, ch chan<- prometheus.Metric) erro
 		ch <- prometheus.MustNewConstMetric(Inodes_total, prometheus.GaugeValue, float64(dfMetric.InodesTotal), fs)
 		ch <- prometheus.MustNewConstMetric(Fs_total, prometheus.GaugeValue, float64(dfMetric.FSTotal), fs)
 		ch <- prometheus.MustNewConstMetric(Fs_free, prometheus.GaugeValue, float64(dfMetric.FSFree), fs)
+		ch <- prometheus.MustNewConstMetric(Fs_free_percent, prometheus.GaugeValue, float64(dfMetric.FSFreePercent), fs)
+		ch <- prometheus.MustNewConstMetric(Metadata_total, prometheus.GaugeValue, float64(dfMetric.MetadataTotal), fs)
+		ch <- prometheus.MustNewConstMetric(Metadata_free, prometheus.GaugeValue, float64(dfMetric.MetadataFree), fs)
+		ch <- prometheus.MustNewConstMetric(Metadata_free_percent, prometheus.GaugeValue, float64(dfMetric.MetadataFreePercent), fs)
 	}
 	ch <- prometheus.MustNewConstMetric(scrapeDuration, prometheus.GaugeValue, time.Since(scrapeTime).Seconds(), "mmpmon")
 	return nil
