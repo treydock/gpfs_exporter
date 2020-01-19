@@ -6,7 +6,9 @@ repository:
 build:
     binaries:
         - name: gpfs_exporter
-          path: .
+          path: ./cmd/gpfs_exporter
+        - name: gpfs_mmdf_exporter
+          path: ./cmd/gpfs_mmdf_exporter
     flags: -a -tags netgo
     ldflags: |
         -extldflags "-static"
