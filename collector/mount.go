@@ -18,14 +18,14 @@ var (
 	)
 )
 
-type ScrapeMount struct{}
+type MountCollector struct{}
 
-func (ScrapeMount) Name() string {
+func (MountCollector) Name() string {
 	return "mount"
 }
 
-func (ScrapeMount) Scrape(target config.Target, ch chan<- prometheus.Metric) error {
-	scrapeTime := time.Now()
+func (MountCollector) Collect(target config.Target, ch chan<- prometheus.Metric) error {
+	collectTime := time.Now()
 	gpfsMounts, err := getGPFSMounts()
 	if err != nil {
 		return nil
@@ -41,7 +41,7 @@ func (ScrapeMount) Scrape(target config.Target, ch chan<- prometheus.Metric) err
 			ch <- prometheus.MustNewConstMetric(fs_mount_status, prometheus.GaugeValue, 0, mount)
 		}
 	}
-	ch <- prometheus.MustNewConstMetric(scrapeDuration, prometheus.GaugeValue, time.Since(scrapeTime).Seconds(), "mount")
+	ch <- prometheus.MustNewConstMetric(collectDuration, prometheus.GaugeValue, time.Since(collectTime).Seconds(), "mount")
 	return nil
 }
 

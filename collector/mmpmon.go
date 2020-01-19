@@ -58,14 +58,14 @@ type PerfMetrics struct {
 	InodeUpdates int64
 }
 
-type ScrapeMmpmon struct{}
+type MmpmonCollector struct{}
 
-func (ScrapeMmpmon) Name() string {
+func (MmpmonCollector) Name() string {
 	return "mmpmon"
 }
 
-func (ScrapeMmpmon) Scrape(target config.Target, ch chan<- prometheus.Metric) error {
-	scrapeTime := time.Now()
+func (MmpmonCollector) Collect(target config.Target, ch chan<- prometheus.Metric) error {
+	collectTime := time.Now()
 	mmpmon_out, err := mmpmon()
 	if err != nil {
 		return err
@@ -84,7 +84,7 @@ func (ScrapeMmpmon) Scrape(target config.Target, ch chan<- prometheus.Metric) er
 		ch <- prometheus.MustNewConstMetric(operations, prometheus.CounterValue, float64(perf.ReadDir), perf.FS, perf.NodeName, "read_dir")
 		ch <- prometheus.MustNewConstMetric(operations, prometheus.CounterValue, float64(perf.InodeUpdates), perf.FS, perf.NodeName, "inode_updates")
 	}
-	ch <- prometheus.MustNewConstMetric(scrapeDuration, prometheus.GaugeValue, time.Since(scrapeTime).Seconds(), "mmpmon")
+	ch <- prometheus.MustNewConstMetric(collectDuration, prometheus.GaugeValue, time.Since(collectTime).Seconds(), "mmpmon")
 	return nil
 }
 

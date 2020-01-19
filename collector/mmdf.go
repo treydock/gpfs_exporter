@@ -55,14 +55,14 @@ type DFMetric struct {
     MetadataFreePercent int64
 }
 
-type ScrapeMmdf struct{}
+type MmdfCollector struct{}
 
-func (ScrapeMmdf) Name() string {
+func (MmdfCollector) Name() string {
 	return "mmdf"
 }
 
-func (ScrapeMmdf) Scrape(target config.Target, ch chan<- prometheus.Metric) error {
-	scrapeTime := time.Now()
+func (MmdfCollector) Collect(target config.Target, ch chan<- prometheus.Metric) error {
+	collectTime := time.Now()
     for _, fs := range target.MmdfFilesystems {
         out, err := Mmdf(fs)
         if err != nil {
@@ -83,7 +83,7 @@ func (ScrapeMmdf) Scrape(target config.Target, ch chan<- prometheus.Metric) erro
 		ch <- prometheus.MustNewConstMetric(Metadata_free, prometheus.GaugeValue, float64(dfMetric.MetadataFree), fs)
 		ch <- prometheus.MustNewConstMetric(Metadata_free_percent, prometheus.GaugeValue, float64(dfMetric.MetadataFreePercent), fs)
 	}
-	ch <- prometheus.MustNewConstMetric(scrapeDuration, prometheus.GaugeValue, time.Since(scrapeTime).Seconds(), "mmpmon")
+	ch <- prometheus.MustNewConstMetric(collectDuration, prometheus.GaugeValue, time.Since(collectTime).Seconds(), "mmpmon")
 	return nil
 }
 
