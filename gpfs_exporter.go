@@ -45,13 +45,8 @@ func gpfsHandler() http.HandlerFunc {
 		collector := collector.New(configTarget)
 		registry.MustRegister(collector)
 
-		gatherers := prometheus.Gatherers{
-			prometheus.DefaultGatherer,
-			registry,
-		}
-
 		// Delegate http serving to Prometheus client library, which will call collector.Collect.
-		h := promhttp.HandlerFor(gatherers, promhttp.HandlerOpts{})
+		h := promhttp.HandlerFor(registry, promhttp.HandlerOpts{})
 		h.ServeHTTP(w, r)
 	}
 }
