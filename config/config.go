@@ -14,9 +14,10 @@ type Targets struct {
 
 type Target struct {
 	sync.Mutex
-	Name       string   `yaml:"name"`
-	FSMounts   []string `yaml:"fs_mounts"`
-	Collectors []string `yaml:"collectors"`
+	Name            string   `yaml:"name"`
+	FSMounts        []string `yaml:"fs_mounts"`
+	Collectors      []string `yaml:"collectors"`
+	MmdfFilesystems []string `yaml:"mmdf_filesystems"`
 }
 
 func (targets *Targets) LoadConfig(configFile string) error {

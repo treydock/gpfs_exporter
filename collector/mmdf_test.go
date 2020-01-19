@@ -1,27 +1,9 @@
-package main
+package collector
 
 import (
-	"os"
 	"os/exec"
-	"strconv"
 	"testing"
 )
-
-var (
-	mockedExitStatus = 0
-	mockedStdout     string
-)
-
-func fakeExecCommand(command string, args ...string) *exec.Cmd {
-	cs := []string{"-test.run=TestExecCommandHelper", "--", command}
-	cs = append(cs, args...)
-	cmd := exec.Command(os.Args[0], cs...)
-	es := strconv.Itoa(mockedExitStatus)
-	cmd.Env = []string{"GO_WANT_HELPER_PROCESS=1",
-		"STDOUT=" + mockedStdout,
-		"EXIT_STATUS=" + es}
-	return cmd
-}
 
 func TestParseMmlsfs(t *testing.T) {
 	execCommand = fakeExecCommand
@@ -60,7 +42,7 @@ mmdf:fsTotal:0:1:::3661677723648:481202021888:14:12117655064:0:
 mmdf:inode:0:1:::430741822:484301506:915043328:1332164000:
 `
     defer func() { execCommand = exec.Command }()
-    dfmetrics, err := parse_mmdf(mockedStdout)
+    dfmetrics, err := Parse_mmdf(mockedStdout)
     if err != nil {
         t.Errorf("Unexpected error: %s", err.Error())
     }

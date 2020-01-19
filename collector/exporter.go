@@ -12,6 +12,7 @@ var (
 	availableScrapers = map[string]Scraper{
 		"mmpmon": ScrapeMmpmon{},
 		"mount":  ScrapeMount{},
+        "mmdf": ScrapeMmdf{},
 	}
 	scrapeDuration = prometheus.NewDesc(
 		prometheus.BuildFQName(namespace, "", "collector_duration_seconds"),

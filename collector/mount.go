@@ -1,7 +1,7 @@
 package collector
 
 import (
-    "time"
+	"time"
 
 	linuxproc "github.com/c9s/goprocinfo/linux"
 	"github.com/prometheus/client_golang/prometheus"

@@ -1,6 +1,8 @@
 package collector
 
 import (
+	"os/exec"
+
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/treydock/gpfs_exporter/config"
 )
@@ -8,6 +10,10 @@ import (
 const (
 	// Exporter namespace.
 	namespace = "gpfs"
+)
+
+var (
+	execCommand = exec.Command
 )
 
 // Scraper is minimal interface that let's you add new prometheus metrics to gpfs_exporter.

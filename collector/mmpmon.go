@@ -2,7 +2,6 @@ package collector
 
 import (
 	"bytes"
-	"os/exec"
 	"reflect"
 	"strconv"
 	"strings"
@@ -14,8 +13,7 @@ import (
 )
 
 var (
-	execCommand = exec.Command
-	mmpmonMap   = map[string]string{
+	mmpmonMap = map[string]string{
 		"_fs_":  "FS",
 		"_nn_":  "NodeName",
 		"_br_":  "ReadBytes",
