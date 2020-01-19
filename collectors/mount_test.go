@@ -1,4 +1,4 @@
-package collector
+package collectors
 
 import (
 	"github.com/Flaque/filet"

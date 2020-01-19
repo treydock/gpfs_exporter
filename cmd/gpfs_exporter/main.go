@@ -8,7 +8,7 @@ import (
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/prometheus/common/log"
 	"github.com/prometheus/common/version"
-	"github.com/treydock/gpfs_exporter/collector"
+	"github.com/treydock/gpfs_exporter/collectors"
 	"github.com/treydock/gpfs_exporter/config"
 	"gopkg.in/alecthomas/kingpin.v2"
 )
@@ -18,6 +18,11 @@ var (
 	configPath        = kingpin.Flag("config", "Path to config").Default("").String()
 	configTargets     = &config.Targets{}
 	defaultCollectors = []string{"mmpmon", "mount"}
+	availableCollectors = map[string]interface{}{
+        "mmpmon": collectors.NewMmpmonCollector,
+        "mount": collectors.NewMountCollector,
+        "mmdf": collectors.NewMmdfCollector,
+    }
 )
 
 func gpfsHandler() http.HandlerFunc {
@@ -39,11 +44,33 @@ func gpfsHandler() http.HandlerFunc {
 		if configTarget.Collectors == nil {
 			configTarget.Collectors = defaultCollectors
 		}
-
 		jsonTarget, _ := json.Marshal(configTarget)
 		log.Debugln("Target config:", string(jsonTarget))
-		collector := collector.New(configTarget)
-		registry.MustRegister(collector)
+        
+        for _, collector := range configTarget.Collectors {
+            if f, ok := availableCollectors[collector] ; ok {
+                c := f.(func(config.Target))(configTarget)
+                registry.MustRegister(c)
+            } else {
+                log.Errorf("Collector %s is not valid", collector)
+            }
+        }
+/*
+        for _, collector := range configTarget.Collectors {
+            if ! collectors.SliceContains(availableCollectors, collector) {
+                log.Errorf("Collector %s is not valid", collector)
+                continue
+            }
+            switch collector {
+            case "mmpmon":
+                registry.MustRegister(NewMmpmonCollector(configTarget))
+            case "mount":
+                registry.MustRegister(NewMountCollector(configTarget))
+            case "mmdf":
+                registry.MustRegister(NewMmdfCollector(configTarget))
+            }
+        }
+*/
 
 		// Delegate http serving to Prometheus client library, which will call collector.Collect.
 		h := promhttp.HandlerFor(registry, promhttp.HandlerOpts{})
