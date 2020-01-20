@@ -114,6 +114,7 @@ func (c *MmdfCollector) Collect(ch chan<- prometheus.Metric) {
 				ch <- prometheus.MustNewConstMetric(collectError, prometheus.GaugeValue, 0, label)
 			}
 			ch <- prometheus.MustNewConstMetric(collectDuration, prometheus.GaugeValue, time.Since(collectTime).Seconds(), label)
+			ch <- prometheus.MustNewConstMetric(lastExecution, prometheus.GaugeValue, float64(time.Now().Unix()), label)
 			wg.Done()
 		}(fs)
 	}

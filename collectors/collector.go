@@ -20,6 +20,9 @@ var (
 		prometheus.BuildFQName(namespace, "exporter", "collect_error"),
 		"Indicates if error has occurred during collection",
 		[]string{"collector"}, nil)
+	lastExecution = prometheus.NewDesc(
+		prometheus.BuildFQName(namespace, "exporter", "last_execution"),
+		"Last execution time of ", []string{"collector"}, nil)
 )
 
 func SliceContains(slice []string, str string) bool {
