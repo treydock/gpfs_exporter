@@ -14,11 +14,11 @@ var (
 )
 
 type MountCollector struct {
-	target          config.Target
+	target          *config.Target
 	fs_mount_status *prometheus.Desc
 }
 
-func NewMountCollector(target config.Target) *MountCollector {
+func NewMountCollector(target *config.Target) *MountCollector {
 	return &MountCollector{
 		target: target,
 		fs_mount_status: prometheus.NewDesc(prometheus.BuildFQName(namespace, "mount", "status"),

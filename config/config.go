@@ -34,16 +34,16 @@ func (targets *Targets) LoadConfig(configFile string) error {
 	return nil
 }
 
-func (targets *Targets) GetTarget(target string) (Target, error) {
-	for _, t := range targets.Targets {
+func (targets *Targets) GetTarget(target string) (*Target, error) {
+	for i, t := range targets.Targets {
 		if t.Name == target {
 			log.Debugf("GetTarget target=%s name=%s", target, t.Name)
-			return t, nil
+			return &targets.Targets[i], nil
 		}
 	}
 	if target == "default" {
 		log.Debug("Using default target as one was not found")
-		return Target{}, nil
+		return &Target{}, nil
 	}
-	return Target{}, fmt.Errorf("Target %s not found", target)
+	return &Target{}, fmt.Errorf("Target %s not found", target)
 }

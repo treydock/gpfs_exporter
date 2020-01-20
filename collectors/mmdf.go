@@ -47,7 +47,7 @@ type DFMetric struct {
 
 type MmdfCollector struct {
 	fs                  string
-	target              config.Target
+	target              *config.Target
 	InodesUsed          *prometheus.Desc
 	InodesFree          *prometheus.Desc
 	InodesAllocated     *prometheus.Desc
@@ -60,7 +60,7 @@ type MmdfCollector struct {
 	MetadataFreePercent *prometheus.Desc
 }
 
-func NewMmdfCollector(target config.Target) *MmdfCollector {
+func NewMmdfCollector(target *config.Target) *MmdfCollector {
 	return &MmdfCollector{
 		target: target,
 		InodesUsed: prometheus.NewDesc(prometheus.BuildFQName(namespace, "fs", "inodes_used"),

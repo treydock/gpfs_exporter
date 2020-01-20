@@ -41,13 +41,13 @@ type PerfMetrics struct {
 }
 
 type MmpmonCollector struct {
-	target      config.Target
+	target      *config.Target
 	read_bytes  *prometheus.Desc
 	write_bytes *prometheus.Desc
 	operations  *prometheus.Desc
 }
 
-func NewMmpmonCollector(target config.Target) *MmpmonCollector {
+func NewMmpmonCollector(target *config.Target) *MmpmonCollector {
 	return &MmpmonCollector{
 		read_bytes: prometheus.NewDesc(prometheus.BuildFQName(namespace, "perf", "read_bytes"),
 			"GPFS read bytes", []string{"fs", "nodename"}, nil),

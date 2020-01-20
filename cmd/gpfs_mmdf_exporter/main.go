@@ -96,7 +96,7 @@ func collect() {
 	mmdfFilesystems := strings.Split(*filesystems, ",")
 	target := config.Target{MmdfFilesystems: mmdfFilesystems}
 	registry := prometheus.NewRegistry()
-	registry.MustRegister(collectors.NewMmdfCollector(target))
+	registry.MustRegister(collectors.NewMmdfCollector(&target))
 	err := prometheus.WriteToTextfile(*output, registry)
 	if err != nil {
 		log.Fatal(err)
