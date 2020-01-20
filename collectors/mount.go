@@ -5,34 +5,46 @@ import (
 
 	linuxproc "github.com/c9s/goprocinfo/linux"
 	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/common/log"
 	"github.com/treydock/gpfs_exporter/config"
 )
 
 var (
-	procMounts      = "/proc/mounts"
+	procMounts = "/proc/mounts"
 )
 
 type MountCollector struct {
-    target          config.Target
-    fs_mount_status *prometheus.Desc
+	target          config.Target
+	fs_mount_status *prometheus.Desc
 }
 
 func NewMountCollector(target config.Target) *MountCollector {
-    return &MountCollector{
-        target: target,
-        fs_mount_status: prometheus.NewDesc("gpfs_fs_mount_status", "Status of GPFS filesystems, 1=mounted 0=not mounted", []string{"mount"}, nil),
-    }
+	return &MountCollector{
+		target: target,
+		fs_mount_status: prometheus.NewDesc(prometheus.BuildFQName(namespace, "mount", "status"),
+			"Status of GPFS filesystems, 1=mounted 0=not mounted", []string{"mount"}, nil),
+	}
 }
 
 func (c *MountCollector) Describe(ch chan<- *prometheus.Desc) {
-    ch <- c.fs_mount_status
+	ch <- c.fs_mount_status
 }
 
-func (c *MountCollector) Collect(ch chan<- prometheus.Metric) error {
+func (c *MountCollector) Collect(ch chan<- prometheus.Metric) {
+	log.Debug("Collecting mount metrics")
+	err := c.collect(ch)
+	if err != nil {
+		ch <- prometheus.MustNewConstMetric(collectError, prometheus.GaugeValue, 1, "mount")
+	} else {
+		ch <- prometheus.MustNewConstMetric(collectError, prometheus.GaugeValue, 0, "mount")
+	}
+}
+
+func (c *MountCollector) collect(ch chan<- prometheus.Metric) error {
 	collectTime := time.Now()
 	gpfsMounts, err := getGPFSMounts()
 	if err != nil {
-        ch <- prometheus.MustNewConstMetric(collectError, prometheus.GaugeValue, 1, "mmpmon")
+		ch <- prometheus.MustNewConstMetric(collectError, prometheus.GaugeValue, 1, "mmpmon")
 		return nil
 	}
 	check_mounts := c.target.FSMounts
@@ -65,4 +77,3 @@ func getGPFSMounts() ([]string, error) {
 	}
 	return gpfsMounts, err
 }
-

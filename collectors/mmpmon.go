@@ -41,36 +41,49 @@ type PerfMetrics struct {
 }
 
 type MmpmonCollector struct {
-    target config.Target
-    read_bytes *prometheus.Desc
-    write_bytes *prometheus.Desc
-    operations  *prometheus.Desc
+	target      config.Target
+	read_bytes  *prometheus.Desc
+	write_bytes *prometheus.Desc
+	operations  *prometheus.Desc
 }
 
 func NewMmpmonCollector(target config.Target) *MmpmonCollector {
 	return &MmpmonCollector{
-        read_bytes: prometheus.NewDesc("gpfs_perf_read_bytes", "GPFS read bytes", []string{"fs","nodename"}, nil),
-	    write_bytes: prometheus.NewDesc("gpfs_perf_write_bytes", "GPFS write bytes", []string{"fs","nodename"}, nil),
-	    operations: prometheus.NewDesc("gpfs_perf_operations", "GPFS operationgs reported by mmpmon", []string{"fs","nodename","operation"}, nil),
+		read_bytes: prometheus.NewDesc(prometheus.BuildFQName(namespace, "perf", "read_bytes"),
+			"GPFS read bytes", []string{"fs", "nodename"}, nil),
+		write_bytes: prometheus.NewDesc(prometheus.BuildFQName(namespace, "perf", "write_bytes"),
+			"GPFS write bytes", []string{"fs", "nodename"}, nil),
+		operations: prometheus.NewDesc(prometheus.BuildFQName(namespace, "perf", "operations"),
+			"GPFS operationgs reported by mmpmon", []string{"fs", "nodename", "operation"}, nil),
 	}
 }
 
 func (c *MmpmonCollector) Describe(ch chan<- *prometheus.Desc) {
-    ch <- c.read_bytes
-    ch <- c.write_bytes
-    ch <- c.operations
+	ch <- c.read_bytes
+	ch <- c.write_bytes
+	ch <- c.operations
 }
 
-func (c *MmpmonCollector) Collect(ch chan<- prometheus.Metric) error {
+func (c *MmpmonCollector) Collect(ch chan<- prometheus.Metric) {
+	log.Debug("Collecting mmpmon metrics")
+	err := c.collect(ch)
+	if err != nil {
+		ch <- prometheus.MustNewConstMetric(collectError, prometheus.GaugeValue, 1, "mmpmon")
+	} else {
+		ch <- prometheus.MustNewConstMetric(collectError, prometheus.GaugeValue, 0, "mmpmon")
+	}
+}
+
+func (c *MmpmonCollector) collect(ch chan<- prometheus.Metric) error {
 	collectTime := time.Now()
 	mmpmon_out, err := mmpmon()
 	if err != nil {
-        ch <- prometheus.MustNewConstMetric(collectError, prometheus.GaugeValue, 1, "mmpmon")
+		ch <- prometheus.MustNewConstMetric(collectError, prometheus.GaugeValue, 1, "mmpmon")
 		return err
 	}
 	perfs, err := mmpmon_parse(mmpmon_out)
 	if err != nil {
-        ch <- prometheus.MustNewConstMetric(collectError, prometheus.GaugeValue, 1, "mmpmon")
+		ch <- prometheus.MustNewConstMetric(collectError, prometheus.GaugeValue, 1, "mmpmon")
 		return err
 	}
 	for _, perf := range perfs {

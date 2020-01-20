@@ -18,11 +18,6 @@ var (
 	configPath        = kingpin.Flag("config", "Path to config").Default("").String()
 	configTargets     = &config.Targets{}
 	defaultCollectors = []string{"mmpmon", "mount"}
-	availableCollectors = map[string]interface{}{
-        "mmpmon": collectors.NewMmpmonCollector,
-        "mount": collectors.NewMountCollector,
-        "mmdf": collectors.NewMmdfCollector,
-    }
 )
 
 func gpfsHandler() http.HandlerFunc {
@@ -35,6 +30,8 @@ func gpfsHandler() http.HandlerFunc {
 		}
 
 		configTarget, err := configTargets.GetTarget(target)
+		configTarget.Lock()
+		defer configTarget.Unlock()
 		if err != nil {
 			log.Error(err.Error())
 			http.Error(w, err.Error(), 404)
@@ -46,31 +43,19 @@ func gpfsHandler() http.HandlerFunc {
 		}
 		jsonTarget, _ := json.Marshal(configTarget)
 		log.Debugln("Target config:", string(jsonTarget))
-        
-        for _, collector := range configTarget.Collectors {
-            if f, ok := availableCollectors[collector] ; ok {
-                c := f.(func(config.Target))(configTarget)
-                registry.MustRegister(c)
-            } else {
-                log.Errorf("Collector %s is not valid", collector)
-            }
-        }
-/*
-        for _, collector := range configTarget.Collectors {
-            if ! collectors.SliceContains(availableCollectors, collector) {
-                log.Errorf("Collector %s is not valid", collector)
-                continue
-            }
-            switch collector {
-            case "mmpmon":
-                registry.MustRegister(NewMmpmonCollector(configTarget))
-            case "mount":
-                registry.MustRegister(NewMountCollector(configTarget))
-            case "mmdf":
-                registry.MustRegister(NewMmdfCollector(configTarget))
-            }
-        }
-*/
+
+		for _, collector := range configTarget.Collectors {
+			switch collector {
+			case "mmpmon":
+				registry.MustRegister(collectors.NewMmpmonCollector(configTarget))
+			case "mount":
+				registry.MustRegister(collectors.NewMountCollector(configTarget))
+			case "mmdf":
+				registry.MustRegister(collectors.NewMmdfCollector(configTarget))
+			default:
+				log.Errorf("Collector %s is not valid", collector)
+			}
+		}
 
 		// Delegate http serving to Prometheus client library, which will call collector.Collect.
 		h := promhttp.HandlerFor(registry, promhttp.HandlerOpts{})

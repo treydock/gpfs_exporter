@@ -1,22 +1,24 @@
 package main
 
 import (
-	"fmt"
 	"strings"
-	//"time"
 
-	"github.com/treydock/gpfs_exporter/collector"
+	"github.com/gofrs/flock"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/common/log"
 	"github.com/prometheus/common/version"
+	"github.com/treydock/gpfs_exporter/collectors"
+	"github.com/treydock/gpfs_exporter/config"
 	"gopkg.in/alecthomas/kingpin.v2"
 )
 
 var (
 	output      = kingpin.Flag("output", "Path to node exporter collected file").Required().String()
-    filesystem  = kingpin.Flag("filesystems", "Comma separated list of filesystems to query").Required().String()
+	filesystems = kingpin.Flag("filesystems", "Comma separated list of filesystems to query").Required().String()
+	lockFile    = kingpin.Flag("lockfile", "Lock file path").Default("/tmp/gpfs_mmdf_exporter.lock").String()
 )
 
+/*
 func GetMetrics(fs string) (collector.DFMetric, error) {
     out, err := collector.Mmdf(fs)
     if err != nil {
@@ -88,12 +90,14 @@ func (c *Collector) Collect(ch chan<- prometheus.Metric) {
 	ch <- prometheus.MustNewConstMetric(c.metadata_free, prometheus.GaugeValue, float64(metrics.MetadataFree), c.fs)
 	ch <- prometheus.MustNewConstMetric(c.metadata_free_percent, prometheus.GaugeValue, float64(metrics.MetadataFreePercent), c.fs)
 }
+*/
 
-func collect(fs string) {
+func collect() {
+	mmdfFilesystems := strings.Split(*filesystems, ",")
+	target := config.Target{MmdfFilesystems: mmdfFilesystems}
 	registry := prometheus.NewRegistry()
-	registry.MustRegister(NewCollector(fs))
-    outputPath := fmt.Sprintf("%s_fs_%s", *output, fs)
-	err := prometheus.WriteToTextfile(outputPath, registry)
+	registry.MustRegister(collectors.NewMmdfCollector(target))
+	err := prometheus.WriteToTextfile(*output, registry)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -104,8 +108,16 @@ func main() {
 	kingpin.Version(version.Print("gpfs_exporter"))
 	kingpin.HelpFlag.Short('h')
 	kingpin.Parse()
-    filesystems := strings.Split(*filesystem, ",")
-    for _, fs := range filesystems {
-	    collect(fs)
-    }
+
+	fileLock := flock.New(*lockFile)
+	defer fileLock.Unlock()
+	locked, err := fileLock.TryLock()
+	if err != nil {
+		log.Errorln("Unable to obtain lock on lock file", *lockFile)
+		log.Fatal(err)
+	}
+	if !locked {
+		log.Fatalf("Lock file %s is locked", *lockFile)
+	}
+	collect()
 }

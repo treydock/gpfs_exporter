@@ -25,8 +25,8 @@ mmlsfs::0:1:::ess:defaultMountPoint:%2Ffs%2Fess::
 }
 
 func TestParseMmdf(t *testing.T) {
-    execCommand = fakeExecCommand
-    mockedStdout = `
+	execCommand = fakeExecCommand
+	mockedStdout = `
 mmdf:nsd:HEADER:version:reserved:reserved:nsdName:storagePool:diskSize:failureGroup:metadata:data:freeBlocks:freeBlocksPct:freeFragments:freeFragmentsPct:diskAvailableForAlloc:
 mmdf:poolTotal:HEADER:version:reserved:reserved:poolName:poolSize:freeBlocks:freeBlocksPct:freeFragments:freeFragmentsPct:maxDiskSize:
 mmdf:data:HEADER:version:reserved:reserved:totalData:freeBlocks:freeBlocksPct:freeFragments:freeFragmentsPct:
@@ -41,24 +41,24 @@ mmdf:metadata:0:1:::13891534848:6011299328:43:58139768:0:
 mmdf:fsTotal:0:1:::3661677723648:481202021888:14:12117655064:0:
 mmdf:inode:0:1:::430741822:484301506:915043328:1332164000:
 `
-    defer func() { execCommand = exec.Command }()
-    dfmetrics, err := Parse_mmdf(mockedStdout)
-    if err != nil {
-        t.Errorf("Unexpected error: %s", err.Error())
-    }
-    if dfmetrics.InodesFree != 484301506 {
-        t.Errorf("Unexpected value for InodesFree, got %d", dfmetrics.InodesFree)
-    }
-    if dfmetrics.FSTotal != 3749557989015552 {
-        t.Errorf("Unexpected value for FSTotal, got %d", dfmetrics.FSTotal)
-    }
-    if dfmetrics.FSFreePercent != 14 {
-        t.Errorf("Unexpected value for FSFreePercent, got %d", dfmetrics.FSFreePercent)
-    }
-    if dfmetrics.MetadataTotal != 14224931684352 {
-        t.Errorf("Unexpected value for MetadataTotal, got %d", dfmetrics.MetadataTotal)
-    }
-    if dfmetrics.MetadataFreePercent != 43 {
-        t.Errorf("Unexpected value for MetadataFreePercent, got %d", dfmetrics.MetadataFreePercent)
-    }
+	defer func() { execCommand = exec.Command }()
+	dfmetrics, err := Parse_mmdf(mockedStdout)
+	if err != nil {
+		t.Errorf("Unexpected error: %s", err.Error())
+	}
+	if dfmetrics.InodesFree != 484301506 {
+		t.Errorf("Unexpected value for InodesFree, got %d", dfmetrics.InodesFree)
+	}
+	if dfmetrics.FSTotal != 3749557989015552 {
+		t.Errorf("Unexpected value for FSTotal, got %d", dfmetrics.FSTotal)
+	}
+	if dfmetrics.FSFreePercent != 14 {
+		t.Errorf("Unexpected value for FSFreePercent, got %d", dfmetrics.FSFreePercent)
+	}
+	if dfmetrics.MetadataTotal != 14224931684352 {
+		t.Errorf("Unexpected value for MetadataTotal, got %d", dfmetrics.MetadataTotal)
+	}
+	if dfmetrics.MetadataFreePercent != 43 {
+		t.Errorf("Unexpected value for MetadataFreePercent, got %d", dfmetrics.MetadataFreePercent)
+	}
 }
