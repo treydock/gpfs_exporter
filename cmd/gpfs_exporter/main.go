@@ -50,6 +50,8 @@ func gpfsHandler() http.HandlerFunc {
 				registry.MustRegister(collectors.NewMmpmonCollector(configTarget))
 			case "mount":
 				registry.MustRegister(collectors.NewMountCollector(configTarget))
+			case "verbs":
+				registry.MustRegister(collectors.NewVerbsCollector(configTarget))
 			case "mmdf":
 				registry.MustRegister(collectors.NewMmdfCollector(configTarget))
 			default:
