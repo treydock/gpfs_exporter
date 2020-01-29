@@ -1,21 +1,17 @@
 package main
 
 import (
-	"strings"
-
 	"github.com/gofrs/flock"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/common/log"
 	"github.com/prometheus/common/version"
 	"github.com/treydock/gpfs_exporter/collectors"
-	"github.com/treydock/gpfs_exporter/config"
 	"gopkg.in/alecthomas/kingpin.v2"
 )
 
 var (
-	output      = kingpin.Flag("output", "Path to node exporter collected file").Required().String()
-	filesystems = kingpin.Flag("filesystems", "Comma separated list of filesystems to query").Required().String()
-	lockFile    = kingpin.Flag("lockfile", "Lock file path").Default("/tmp/gpfs_mmdf_exporter.lock").String()
+	output   = kingpin.Flag("output", "Path to node exporter collected file").Required().String()
+	lockFile = kingpin.Flag("lockfile", "Lock file path").Default("/tmp/gpfs_mmdf_exporter.lock").String()
 )
 
 /*
@@ -93,10 +89,8 @@ func (c *Collector) Collect(ch chan<- prometheus.Metric) {
 */
 
 func collect() {
-	mmdfFilesystems := strings.Split(*filesystems, ",")
-	target := config.Target{MmdfFilesystems: mmdfFilesystems}
 	registry := prometheus.NewRegistry()
-	registry.MustRegister(collectors.NewMmdfCollector(&target))
+	registry.MustRegister(collectors.NewMmdfCollector())
 	err := prometheus.WriteToTextfile(*output, registry)
 	if err != nil {
 		log.Fatal(err)

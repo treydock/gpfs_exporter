@@ -11,13 +11,14 @@ import (
 
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/common/log"
-	"github.com/treydock/gpfs_exporter/config"
+	"gopkg.in/alecthomas/kingpin.v2"
 )
 
 var (
-	mappedSections = []string{"inode", "fsTotal", "metadata"}
-	KbToBytes      = []string{"fsSize", "freeBlocks", "totalMetadata"}
-	dfMap          = map[string]string{
+	configFilesystems = kingpin.Flag("collector.mmdf.filesystems", "Filesystems to query with mmdf, comma separated. Defaults to all filesystems.").Default("").String()
+	mappedSections    = []string{"inode", "fsTotal", "metadata"}
+	KbToBytes         = []string{"fsSize", "freeBlocks", "totalMetadata"}
+	dfMap             = map[string]string{
 		"inode:usedInodes":       "InodesUsed",
 		"inode:freeInodes":       "InodesFree",
 		"inode:allocatedInodes":  "InodesAllocated",
@@ -47,7 +48,6 @@ type DFMetric struct {
 
 type MmdfCollector struct {
 	fs                  string
-	target              *config.Target
 	InodesUsed          *prometheus.Desc
 	InodesFree          *prometheus.Desc
 	InodesAllocated     *prometheus.Desc
@@ -60,9 +60,12 @@ type MmdfCollector struct {
 	MetadataFreePercent *prometheus.Desc
 }
 
-func NewMmdfCollector(target *config.Target) *MmdfCollector {
+func init() {
+	registerCollector("mmdf", false, NewMmdfCollector)
+}
+
+func NewMmdfCollector() Collector {
 	return &MmdfCollector{
-		target: target,
 		InodesUsed: prometheus.NewDesc(prometheus.BuildFQName(namespace, "fs", "inodes_used"),
 			"GPFS filesystem inodes used", []string{"fs"}, nil),
 		InodesFree: prometheus.NewDesc(prometheus.BuildFQName(namespace, "fs", "inodes_free"),
@@ -101,7 +104,19 @@ func (c *MmdfCollector) Describe(ch chan<- *prometheus.Desc) {
 
 func (c *MmdfCollector) Collect(ch chan<- prometheus.Metric) {
 	wg := &sync.WaitGroup{}
-	for _, fs := range c.target.MmdfFilesystems {
+	var filesystems []string
+	if *configFilesystems == "" {
+		mmlfsfs_filesystems, err := mmlfsfsFilesystems()
+		if err != nil {
+			ch <- prometheus.MustNewConstMetric(collectError, prometheus.GaugeValue, 1, "mmdf-mmlsfs")
+		} else {
+			ch <- prometheus.MustNewConstMetric(collectError, prometheus.GaugeValue, 0, "mmdf-mmlsfs")
+		}
+		filesystems = mmlfsfs_filesystems
+	} else {
+		filesystems = strings.Split(*configFilesystems, ",")
+	}
+	for _, fs := range filesystems {
 		log.Debugln("Collecting mmdf metrics for fs", fs)
 		wg.Add(1)
 		collectTime := time.Now()
@@ -143,30 +158,18 @@ func (c *MmdfCollector) mmdfCollect(fs string, ch chan<- prometheus.Metric) erro
 	return nil
 }
 
-func mmlsfs() (string, error) {
-	cmd := execCommand("sudo", "/usr/lpp/mmfs/bin/mmlsfs", "all", "-Y", "-T")
-	var out bytes.Buffer
-	cmd.Stdout = &out
-	err := cmd.Run()
-	if err != nil {
-		log.Error(err)
-		return "", err
-	}
-	return out.String(), nil
-}
-
-func parse_mmlsfs(out string) ([]string, error) {
+func mmlfsfsFilesystems() ([]string, error) {
 	var filesystems []string
-	lines := strings.Split(out, "\n")
-	for _, line := range lines {
-		items := strings.Split(line, ":")
-		if len(items) < 7 {
-			continue
-		}
-		if items[2] == "HEADER" {
-			continue
-		}
-		filesystems = append(filesystems, items[6])
+	out, err := mmlsfs()
+	if err != nil {
+		return nil, err
+	}
+	mmlsfs_filesystems, err := parse_mmlsfs(out)
+	if err != nil {
+		return nil, err
+	}
+	for _, fs := range mmlsfs_filesystems {
+		filesystems = append(filesystems, fs.Name)
 	}
 	return filesystems, nil
 }

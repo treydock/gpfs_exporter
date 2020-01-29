@@ -9,7 +9,6 @@ import (
 
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/common/log"
-	"github.com/treydock/gpfs_exporter/config"
 )
 
 var (
@@ -41,13 +40,16 @@ type PerfMetrics struct {
 }
 
 type MmpmonCollector struct {
-	target      *config.Target
 	read_bytes  *prometheus.Desc
 	write_bytes *prometheus.Desc
 	operations  *prometheus.Desc
 }
 
-func NewMmpmonCollector(target *config.Target) *MmpmonCollector {
+func init() {
+	registerCollector("mmpmon", true, NewMmpmonCollector)
+}
+
+func NewMmpmonCollector() Collector {
 	return &MmpmonCollector{
 		read_bytes: prometheus.NewDesc(prometheus.BuildFQName(namespace, "perf", "read_bytes"),
 			"GPFS read bytes", []string{"fs", "nodename"}, nil),

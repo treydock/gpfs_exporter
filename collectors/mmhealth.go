@@ -9,7 +9,6 @@ import (
 
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/common/log"
-	"github.com/treydock/gpfs_exporter/config"
 )
 
 var (
@@ -29,11 +28,14 @@ type HealthMetric struct {
 }
 
 type MmhealthCollector struct {
-	target *config.Target
-	State  *prometheus.Desc
+	State *prometheus.Desc
 }
 
-func NewMmhealthCollector(target *config.Target) *MmhealthCollector {
+func init() {
+	registerCollector("mmhealth", false, NewMmhealthCollector)
+}
+
+func NewMmhealthCollector() Collector {
 	return &MmhealthCollector{
 		State: prometheus.NewDesc(prometheus.BuildFQName(namespace, "health", "state"),
 			"GPFS health state, 1=healthy 0=not healthy", []string{"component", "entityname", "entitytype"}, nil),

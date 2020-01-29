@@ -5,25 +5,6 @@ import (
 	"testing"
 )
 
-func TestParseMmlsfs(t *testing.T) {
-	execCommand = fakeExecCommand
-	mockedStdout = `
-fs::HEADER:version:reserved:reserved:deviceName:fieldName:data:remarks:
-mmlsfs::0:1:::project:defaultMountPoint:%2Ffs%2Fproject::
-mmlsfs::0:1:::scratch:defaultMountPoint:%2Ffs%2Fscratch::
-mmlsfs::0:1:::ess:defaultMountPoint:%2Ffs%2Fess::
-`
-	defer func() { execCommand = exec.Command }()
-	filesystems, err := parse_mmlsfs(mockedStdout)
-	if err != nil {
-		t.Errorf("Unexpected error: %s", err.Error())
-	}
-	if len(filesystems) != 3 {
-		t.Errorf("Expected 3 perfs returned, got %d", len(filesystems))
-		return
-	}
-}
-
 func TestParseMmdf(t *testing.T) {
 	execCommand = fakeExecCommand
 	mockedStdout = `

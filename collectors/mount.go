@@ -1,26 +1,33 @@
 package collectors
 
 import (
+	"fmt"
+	"strings"
 	"time"
 
 	linuxproc "github.com/c9s/goprocinfo/linux"
+	fstab "github.com/deniswernert/go-fstab"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/common/log"
-	"github.com/treydock/gpfs_exporter/config"
+	"gopkg.in/alecthomas/kingpin.v2"
 )
 
 var (
-	procMounts = "/proc/mounts"
+	procMounts   = "/proc/mounts"
+	fstabPath    = "/etc/fstab"
+	configMounts = kingpin.Flag("collector.mount.mounts", "Mountpoints to monitor, comma separated. Defaults to all filesystems.").Default("").String()
 )
 
 type MountCollector struct {
-	target          *config.Target
 	fs_mount_status *prometheus.Desc
 }
 
-func NewMountCollector(target *config.Target) *MountCollector {
+func init() {
+	registerCollector("mount", true, NewMountCollector)
+}
+
+func NewMountCollector() Collector {
 	return &MountCollector{
-		target: target,
 		fs_mount_status: prometheus.NewDesc(prometheus.BuildFQName(namespace, "mount", "status"),
 			"Status of GPFS filesystems, 1=mounted 0=not mounted", []string{"mount"}, nil),
 	}
@@ -44,12 +51,24 @@ func (c *MountCollector) collect(ch chan<- prometheus.Metric) error {
 	collectTime := time.Now()
 	gpfsMounts, err := getGPFSMounts()
 	if err != nil {
-		ch <- prometheus.MustNewConstMetric(collectError, prometheus.GaugeValue, 1, "mmpmon")
+		ch <- prometheus.MustNewConstMetric(collectError, prometheus.GaugeValue, 1, "mount")
 		return nil
 	}
-	check_mounts := c.target.FSMounts
-	if check_mounts == nil {
+	gpfsMountsFstab, err := getGPFSMountsFSTab()
+	if err != nil {
+		ch <- prometheus.MustNewConstMetric(collectError, prometheus.GaugeValue, 1, "mount")
+		return nil
+	}
+	for _, m := range gpfsMountsFstab {
+		if !SliceContains(gpfsMounts, m) {
+			gpfsMounts = append(gpfsMounts, m)
+		}
+	}
+	var check_mounts []string
+	if *configMounts == "" {
 		check_mounts = gpfsMounts
+	} else {
+		check_mounts = strings.Split(*configMounts, ",")
 	}
 	for _, mount := range check_mounts {
 		if SliceContains(gpfsMounts, mount) {
@@ -76,4 +95,22 @@ func getGPFSMounts() ([]string, error) {
 		gpfsMounts = append(gpfsMounts, gpfsMount)
 	}
 	return gpfsMounts, err
+}
+
+func getGPFSMountsFSTab() ([]string, error) {
+	var gpfsMounts []string
+	if exists := fileExists(fstabPath); !exists {
+		return nil, fmt.Errorf("%s does not exist", fstabPath)
+	}
+	mounts, err := fstab.ParseFile(fstabPath)
+	if err != nil {
+		return nil, err
+	}
+	for _, m := range mounts {
+		if m.VfsType != "gpfs" {
+			continue
+		}
+		gpfsMounts = append(gpfsMounts, m.File)
+	}
+	return gpfsMounts, nil
 }

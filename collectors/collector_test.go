@@ -33,3 +33,28 @@ func TestExecCommandHelper(t *testing.T) {
 	i, _ := strconv.Atoi(os.Getenv("EXIT_STATUS"))
 	os.Exit(i)
 }
+
+func TestParseMmlsfs(t *testing.T) {
+	execCommand = fakeExecCommand
+	mockedStdout = `
+fs::HEADER:version:reserved:reserved:deviceName:fieldName:data:remarks:
+mmlsfs::0:1:::project:defaultMountPoint:%2Ffs%2Fproject::
+mmlsfs::0:1:::scratch:defaultMountPoint:%2Ffs%2Fscratch::
+mmlsfs::0:1:::ess:defaultMountPoint:%2Ffs%2Fess::
+`
+	defer func() { execCommand = exec.Command }()
+	filesystems, err := parse_mmlsfs(mockedStdout)
+	if err != nil {
+		t.Errorf("Unexpected error: %s", err.Error())
+	}
+	if len(filesystems) != 3 {
+		t.Errorf("Expected 3 perfs returned, got %d", len(filesystems))
+		return
+	}
+	if val := filesystems[0].Name; val != "project" {
+		t.Errorf("Unexpected Name, got %v", val)
+	}
+	if val := filesystems[0].Mountpoint; val != "/fs/project" {
+		t.Errorf("Unexpected Mounpoint, got %v", val)
+	}
+}

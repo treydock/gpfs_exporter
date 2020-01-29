@@ -7,7 +7,6 @@ import (
 
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/common/log"
-	"github.com/treydock/gpfs_exporter/config"
 )
 
 type VerbsMetrics struct {
@@ -15,11 +14,14 @@ type VerbsMetrics struct {
 }
 
 type VerbsCollector struct {
-	target *config.Target
 	Status *prometheus.Desc
 }
 
-func NewVerbsCollector(target *config.Target) *VerbsCollector {
+func init() {
+	registerCollector("verbs", false, NewVerbsCollector)
+}
+
+func NewVerbsCollector() Collector {
 	return &VerbsCollector{
 		Status: prometheus.NewDesc(prometheus.BuildFQName(namespace, "verbs", "status"),
 			"GPFS verbs status, 1=started 0=not started", nil, nil),
