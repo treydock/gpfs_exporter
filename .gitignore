@@ -2,4 +2,3 @@
 /.build
 /gpfs_exporter
 /gpfs_mmdf_exporter
-/*.yaml
