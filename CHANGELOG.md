@@ -1,3 +1,10 @@
+## 0.2.0 / 2020-01-30
+
+### Changes
+
+* Move all metrics to /metrics endpoint, remove /gpfs endpoint
+* Add --web.disable-exporter-metrics flag
+
 ## 0.1.0 / 2020-01-29
 
 ### Changes
