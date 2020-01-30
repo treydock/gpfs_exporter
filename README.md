@@ -7,7 +7,7 @@
 # GPFS Prometheus exporter
 
 The GPFS exporter collects metrics from the GPFS filesystem.
-The exporter supports the `/metrics` endpoint with data about the exporter and the `/gpfs` endpoint used to collect GPFS metrics.
+The exporter supports the `/metrics` endpoint to gather GPFS metrics an metrics about the exporter.
 
 ## Collectors
 
