@@ -20,6 +20,7 @@ mmpmon| Collect metrics from `mmpmon` using `fs_io_s` | Enabled
 mount | Check status of GPFS mounts. | Enabled
 verbs | Test if GPFS is using verbs interface | Disabled
 mmhealth | Test node health through `mmhealth` | Disabled
+mmdiag | Test mmdiag waiters | Disabled
 mmdf | Collect filesystem space for inodes, block and metadata. | Disabled
 
 ### mount
@@ -51,6 +52,8 @@ gpfs_exporter ALL=(ALL) NOPASSWD:/usr/lpp/mmfs/bin/mmhealth node show -Y
 gpfs_exporter ALL=(ALL) NOPASSWD:/usr/lpp/mmfs/bin/mmfsadm test verbs status
 # mmdf collector if filesystems not specified
 gpfs_exporter ALL=(ALL) NOPASSWD:/usr/lpp/mmfs/bin/mmlsfs all -Y -T
+# mmdiag collector
+gpfs_exporter ALL=(ALL) NOPASSWD:/usr/lpp/mmfs/bin/mmdiag --waiters -Y
 # mmdf collector, each filesystem must be listed
 gpfs_exporter ALL=(ALL) NOPASSWD:/usr/lpp/mmfs/bin/mmdf project -Y
 gpfs_exporter ALL=(ALL) NOPASSWD:/usr/lpp/mmfs/bin/mmdf scratch -Y
