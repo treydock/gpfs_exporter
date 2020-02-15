@@ -7,4 +7,5 @@ include Makefile.common
 DOCKER_IMAGE_NAME ?= gpfs_exporter
 
 coverage:
-	go test -race -coverprofile=coverage.txt -covermode=atomic ./...
+	go test -coverprofile=c.out ./...
+	go tool cover -html=c.out -o coverage.html
