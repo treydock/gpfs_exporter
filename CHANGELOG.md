@@ -1,3 +1,10 @@
+## 0.3.0 / 2020-02-15
+
+### Changes
+
+* Add mmdiag collector with waiters metric
+* Add mmces collector with service state metrics
+
 ## 0.2.0 / 2020-01-30
 
 ### Changes
