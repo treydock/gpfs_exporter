@@ -118,14 +118,10 @@ func mmhealth_parse(out string) ([]HealthMetric, error) {
 		}
 		var values []string
 		if items[2] == "HEADER" {
-			for _, i := range items {
-				headers = append(headers, i)
-			}
+			headers = append(headers, items...)
 			continue
 		} else {
-			for _, i := range items {
-				values = append(values, i)
-			}
+			values = append(values, items...)
 		}
 		var metric HealthMetric
 		ps := reflect.ValueOf(&metric) // pointer to struct - addressable

@@ -117,6 +117,7 @@ func main() {
 	kingpin.Parse()
 
 	fileLock := flock.New(*lockFile)
+	//nolint:errcheck
 	defer fileLock.Unlock()
 	locked, err := fileLock.TryLock()
 	if err != nil {

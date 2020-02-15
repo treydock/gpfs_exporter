@@ -60,7 +60,6 @@ type DFMetric struct {
 }
 
 type MmdfCollector struct {
-	fs                  string
 	InodesUsed          *prometheus.Desc
 	InodesFree          *prometheus.Desc
 	InodesAllocated     *prometheus.Desc
@@ -216,13 +215,9 @@ func Parse_mmdf(out string) (DFMetric, error) {
 			continue
 		}
 		if items[2] == "HEADER" {
-			for _, i := range items {
-				headers[items[1]] = append(headers[items[1]], i)
-			}
+			headers[items[1]] = append(headers[items[1]], items...)
 		} else {
-			for _, i := range items {
-				values[items[1]] = append(values[items[1]], i)
-			}
+			values[items[1]] = append(values[items[1]], items...)
 		}
 	}
 	ps := reflect.ValueOf(&dfMetrics) // pointer to struct - addressable
