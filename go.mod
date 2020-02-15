@@ -11,5 +11,4 @@ require (
 	github.com/prometheus/common v0.8.0
 	github.com/spf13/afero v1.2.2 // indirect
 	gopkg.in/alecthomas/kingpin.v2 v2.2.6
-	gopkg.in/yaml.v2 v2.2.4
 )

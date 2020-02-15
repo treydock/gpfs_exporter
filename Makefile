@@ -1,20 +1,11 @@
-GOBIN := $(shell go env GOPATH)/bin
-PROMU := $(GOBIN)/promu
-PREFIX ?= $(shell pwd)
-pkgs   = $(shell go list ./... | grep -v /vendor/)
+# Needs to be defined before including Makefile.common to auto-generate targets
+DOCKER_ARCHS ?= amd64 armv7 arm64 ppc64le s390x
+DOCKER_REPO	 ?= treydock
 
-all: format build test
+include Makefile.common
 
-format:
-	go fmt $(pkgs)
+DOCKER_IMAGE_NAME ?= gpfs_exporter
 
-test:
-	go test -v -short $(pkgs)
-
-build: promu
-	$(PROMU) build --verbose --prefix $(PREFIX)
-
-promu:
-	go get -u github.com/prometheus/promu
-
-.PHONY: promu
+coverage:
+	go test -coverprofile=c.out ./...
+	go tool cover -html=c.out -o coverage.html

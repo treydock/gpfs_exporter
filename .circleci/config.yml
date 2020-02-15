@@ -3,6 +3,7 @@ version: 2.1
 
 orbs:
   prometheus: prometheus/prometheus@0.4.0
+  codecov: codecov/codecov@1.0.5
 
 executors:
   # Whenever the Go version is updated here, .promu.yml should
@@ -17,6 +18,9 @@ jobs:
     steps:
     - prometheus/setup_environment
     - run: make
+    - run: make coverage
+    - codecov/upload:
+        file: coverage.html
     - prometheus/store_artifact:
         file: gpfs_exporter
   build:
