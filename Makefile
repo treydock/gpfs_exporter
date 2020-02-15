@@ -5,3 +5,7 @@ DOCKER_REPO	 ?= treydock
 include Makefile.common
 
 DOCKER_IMAGE_NAME ?= gpfs_exporter
+
+coverage:
+	go test -coverprofile=c.out ./...
+	go tool cover -html=c.out -o coverage.html
