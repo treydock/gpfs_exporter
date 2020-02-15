@@ -18,6 +18,9 @@ jobs:
     steps:
     - prometheus/setup_environment
     - run: make
+    - run: make coverage
+    - codecov/upload:
+        file: coverage.html
     - prometheus/store_artifact:
         file: gpfs_exporter
   build:
@@ -27,9 +30,6 @@ jobs:
     - checkout
     - run: make promu
     - run: promu crossbuild -v
-    - run: make coverage
-    - codecov/upload:
-        file: coverage.html
     - persist_to_workspace:
         root: .
         paths:
