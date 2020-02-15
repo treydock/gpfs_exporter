@@ -20,7 +20,7 @@ jobs:
     - run: make
     - run: make coverage
     - codecov/upload:
-        file: coverage.html
+        file: coverage.txt
     - prometheus/store_artifact:
         file: gpfs_exporter
   build:
