@@ -22,6 +22,7 @@ verbs | Test if GPFS is using verbs interface | Disabled
 mmhealth | Test node health through `mmhealth` | Disabled
 mmdiag | Test mmdiag waiters | Disabled
 mmdf | Collect filesystem space for inodes, block and metadata. | Disabled
+mmces | Collect state of CES | Disabled
 
 ### mount
 
@@ -35,6 +36,12 @@ Flags:
 
 * `--output` - This is expected to be a path collected by the Prometheus node_exporter textfile collector
 * `--collector.mmdf.filesystems` - A comma separated list of filesystems to collect. Default is to collect all filesystems listed by `mmlsfs`.
+
+### mmces
+
+The command used to collect CES states needs a specific node name.
+The `--collector.mmces.nodename` flag can be used to specify which CES node to check.
+The default is FQDN of those running the exporter.
 
 ## Sudo
 
@@ -54,6 +61,8 @@ gpfs_exporter ALL=(ALL) NOPASSWD:/usr/lpp/mmfs/bin/mmfsadm test verbs status
 gpfs_exporter ALL=(ALL) NOPASSWD:/usr/lpp/mmfs/bin/mmlsfs all -Y -T
 # mmdiag collector
 gpfs_exporter ALL=(ALL) NOPASSWD:/usr/lpp/mmfs/bin/mmdiag --waiters -Y
+# mmces collector
+gpfs_exporter ALL=(ALL) NOPASSWD:/usr/lpp/mmfs/bin/mmces state show *
 # mmdf collector, each filesystem must be listed
 gpfs_exporter ALL=(ALL) NOPASSWD:/usr/lpp/mmfs/bin/mmdf project -Y
 gpfs_exporter ALL=(ALL) NOPASSWD:/usr/lpp/mmfs/bin/mmdf scratch -Y
