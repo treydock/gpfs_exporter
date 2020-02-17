@@ -1,3 +1,9 @@
+## 0.4.0 / 2020-02-17
+
+### Changes
+
+* Refactor mmdiag waiter metric collection
+
 ## 0.3.1 / 2020-02-17
 
 ### Fixes
