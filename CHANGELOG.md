@@ -1,3 +1,9 @@
+## 0.3.1 / 2020-02-17
+
+### Fixes
+
+* Avoid duplicate metrics for collector errors
+
 ## 0.3.0 / 2020-02-15
 
 ### Changes
