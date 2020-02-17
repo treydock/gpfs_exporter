@@ -73,12 +73,10 @@ func (c *MmhealthCollector) collect(ch chan<- prometheus.Metric) error {
 	collectTime := time.Now()
 	mmhealth_out, err := mmhealth()
 	if err != nil {
-		ch <- prometheus.MustNewConstMetric(collectError, prometheus.GaugeValue, 1, "mmhealth")
 		return err
 	}
 	metrics, err := mmhealth_parse(mmhealth_out)
 	if err != nil {
-		ch <- prometheus.MustNewConstMetric(collectError, prometheus.GaugeValue, 1, "mmhealth")
 		return err
 	}
 	for _, m := range metrics {

@@ -59,12 +59,10 @@ func (c *VerbsCollector) collect(ch chan<- prometheus.Metric) error {
 	collectTime := time.Now()
 	out, err := verbs()
 	if err != nil {
-		ch <- prometheus.MustNewConstMetric(collectError, prometheus.GaugeValue, 1, "verbs")
 		return err
 	}
 	metric, err := verbs_parse(out)
 	if err != nil {
-		ch <- prometheus.MustNewConstMetric(collectError, prometheus.GaugeValue, 1, "verbs")
 		return err
 	}
 	if metric.Status == "started" {

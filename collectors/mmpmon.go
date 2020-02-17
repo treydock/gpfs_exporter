@@ -93,7 +93,6 @@ func (c *MmpmonCollector) collect(ch chan<- prometheus.Metric) error {
 	collectTime := time.Now()
 	mmpmon_out, err := mmpmon()
 	if err != nil {
-		ch <- prometheus.MustNewConstMetric(collectError, prometheus.GaugeValue, 1, "mmpmon")
 		return err
 	}
 	perfs, err := mmpmon_parse(mmpmon_out)

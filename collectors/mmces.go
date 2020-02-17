@@ -82,12 +82,10 @@ func (c *MmcesCollector) collect(ch chan<- prometheus.Metric) error {
 	nodename := *configNodeName
 	mmces_state_out, err := mmces_state_show(nodename)
 	if err != nil {
-		ch <- prometheus.MustNewConstMetric(collectError, prometheus.GaugeValue, 1, "mmces")
 		return err
 	}
 	metrics, err := mmces_state_show_parse(mmces_state_out)
 	if err != nil {
-		ch <- prometheus.MustNewConstMetric(collectError, prometheus.GaugeValue, 1, "mmces")
 		return err
 	}
 	for _, m := range metrics {
