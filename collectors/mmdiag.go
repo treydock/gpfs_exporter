@@ -15,6 +15,9 @@ package collectors
 
 import (
 	"bytes"
+	"regexp"
+	"sort"
+	"strconv"
 	"strings"
 	"time"
 
@@ -23,11 +26,12 @@ import (
 )
 
 type DiagMetric struct {
-	WaitersCount int
+	Waiters []float64
 }
 
 type MmdiagCollector struct {
-	WaitersCount *prometheus.Desc
+	Waiters    prometheus.Histogram
+	WaitersMax *prometheus.Desc
 }
 
 func init() {
@@ -36,13 +40,20 @@ func init() {
 
 func NewMmdiagCollector() Collector {
 	return &MmdiagCollector{
-		WaitersCount: prometheus.NewDesc(prometheus.BuildFQName(namespace, "mmdiag", "waiters_count"),
-			"GPFS number of waiters", nil, nil),
+		Waiters: prometheus.NewHistogram(prometheus.HistogramOpts{
+			Namespace: namespace,
+			Subsystem: "mmdiag",
+			Name:      "waiters",
+			Help:      "GPFS number of waiters",
+			Buckets:   []float64{0.5, 1.0, 10.0, 30.0, 60.0, 120.0, 300.0}}),
+		WaitersMax: prometheus.NewDesc(prometheus.BuildFQName(namespace, "mmdiag", "waiters_max"),
+			"GPFS max waiter in seconds", nil, nil),
 	}
 }
 
 func (c *MmdiagCollector) Describe(ch chan<- *prometheus.Desc) {
-	ch <- c.WaitersCount
+	c.Waiters.Describe(ch)
+	ch <- c.WaitersMax
 }
 
 func (c *MmdiagCollector) Collect(ch chan<- prometheus.Metric) {
@@ -66,7 +77,12 @@ func (c *MmdiagCollector) collect(ch chan<- prometheus.Metric) error {
 	if err != nil {
 		return err
 	}
-	ch <- prometheus.MustNewConstMetric(c.WaitersCount, prometheus.GaugeValue, float64(diagMetric.WaitersCount))
+	for _, waiter := range diagMetric.Waiters {
+		c.Waiters.Observe(waiter)
+	}
+	c.Waiters.Collect(ch)
+	sort.Float64s(diagMetric.Waiters)
+	ch <- prometheus.MustNewConstMetric(c.WaitersMax, prometheus.GaugeValue, diagMetric.Waiters[len(diagMetric.Waiters)-1])
 	ch <- prometheus.MustNewConstMetric(collectDuration, prometheus.GaugeValue, time.Since(collectTime).Seconds(), "mmdiag")
 	return nil
 }
@@ -85,11 +101,18 @@ func mmdiag(arg string) (string, error) {
 
 func parse_mmdiag_waiters(out string, diagMetric *DiagMetric) error {
 	lines := strings.Split(out, "\n")
+	waitersPatter := regexp.MustCompile(`^Waiting ([0-9.]+) sec`)
 	for _, l := range lines {
-		if !strings.HasPrefix(l, "Waiting") {
+		match := waitersPatter.FindStringSubmatch(l)
+		if len(match) != 2 {
 			continue
 		}
-		diagMetric.WaitersCount++
+		secs, err := strconv.ParseFloat(match[1], 64)
+		if err != nil {
+			log.Errorf("Unable to convert %s to float64", match[1])
+			continue
+		}
+		diagMetric.Waiters = append(diagMetric.Waiters, secs)
 	}
 	return nil
 }

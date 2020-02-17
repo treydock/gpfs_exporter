@@ -49,7 +49,7 @@ Waiting 0.0002 sec since 10:24:00, monitored, thread 22987 NSDThread: for I/O co
 	if err != nil {
 		t.Errorf("Unexpected error: %s", err.Error())
 	}
-	if val := metric.WaitersCount; val != 19 {
-		t.Errorf("Unexpected WaitersCount got %v", val)
+	if val := len(metric.Waiters); val != 19 {
+		t.Errorf("Unexpected Waiters len got %v", val)
 	}
 }
