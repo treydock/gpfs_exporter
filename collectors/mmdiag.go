@@ -16,22 +16,30 @@ package collectors
 import (
 	"bytes"
 	"regexp"
-	"sort"
 	"strconv"
 	"strings"
 	"time"
 
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/common/log"
+	"gopkg.in/alecthomas/kingpin.v2"
+)
+
+var (
+	configWaiterThreshold = kingpin.Flag("collector.mmdiag.waiter-threshold", "Threshold for collected waiters").Default("30").Int()
 )
 
 type DiagMetric struct {
-	Waiters []float64
+	Waiters []DiagWaiter
+}
+
+type DiagWaiter struct {
+	Seconds float64
+	Thread  string
 }
 
 type MmdiagCollector struct {
-	Waiters    prometheus.Histogram
-	WaitersMax *prometheus.Desc
+	Waiter *prometheus.Desc
 }
 
 func init() {
@@ -40,20 +48,13 @@ func init() {
 
 func NewMmdiagCollector() Collector {
 	return &MmdiagCollector{
-		Waiters: prometheus.NewHistogram(prometheus.HistogramOpts{
-			Namespace: namespace,
-			Subsystem: "mmdiag",
-			Name:      "waiters",
-			Help:      "GPFS number of waiters",
-			Buckets:   []float64{0.5, 1.0, 10.0, 30.0, 60.0, 120.0, 300.0}}),
-		WaitersMax: prometheus.NewDesc(prometheus.BuildFQName(namespace, "mmdiag", "waiters_max"),
-			"GPFS max waiter in seconds", nil, nil),
+		Waiter: prometheus.NewDesc(prometheus.BuildFQName(namespace, "mmdiag", "waiter"),
+			"GPFS max waiter in seconds", []string{"thread"}, nil),
 	}
 }
 
 func (c *MmdiagCollector) Describe(ch chan<- *prometheus.Desc) {
-	c.Waiters.Describe(ch)
-	ch <- c.WaitersMax
+	ch <- c.Waiter
 }
 
 func (c *MmdiagCollector) Collect(ch chan<- prometheus.Metric) {
@@ -78,11 +79,8 @@ func (c *MmdiagCollector) collect(ch chan<- prometheus.Metric) error {
 		return err
 	}
 	for _, waiter := range diagMetric.Waiters {
-		c.Waiters.Observe(waiter)
+		ch <- prometheus.MustNewConstMetric(c.Waiter, prometheus.GaugeValue, waiter.Seconds, waiter.Thread)
 	}
-	c.Waiters.Collect(ch)
-	sort.Float64s(diagMetric.Waiters)
-	ch <- prometheus.MustNewConstMetric(c.WaitersMax, prometheus.GaugeValue, diagMetric.Waiters[len(diagMetric.Waiters)-1])
 	ch <- prometheus.MustNewConstMetric(collectDuration, prometheus.GaugeValue, time.Since(collectTime).Seconds(), "mmdiag")
 	return nil
 }
@@ -101,10 +99,10 @@ func mmdiag(arg string) (string, error) {
 
 func parse_mmdiag_waiters(out string, diagMetric *DiagMetric) error {
 	lines := strings.Split(out, "\n")
-	waitersPatter := regexp.MustCompile(`^Waiting ([0-9.]+) sec`)
+	waitersPatter := regexp.MustCompile(`^Waiting ([0-9.]+) sec.*thread ([0-9]+)`)
 	for _, l := range lines {
 		match := waitersPatter.FindStringSubmatch(l)
-		if len(match) != 2 {
+		if len(match) != 3 {
 			continue
 		}
 		secs, err := strconv.ParseFloat(match[1], 64)
@@ -112,7 +110,11 @@ func parse_mmdiag_waiters(out string, diagMetric *DiagMetric) error {
 			log.Errorf("Unable to convert %s to float64", match[1])
 			continue
 		}
-		diagMetric.Waiters = append(diagMetric.Waiters, secs)
+		threshold := float64(*configWaiterThreshold)
+		if secs >= threshold {
+			waiter := DiagWaiter{Seconds: secs, Thread: match[2]}
+			diagMetric.Waiters = append(diagMetric.Waiters, waiter)
+		}
 	}
 	return nil
 }
