@@ -64,13 +64,11 @@ func (c *MountCollector) collect(ch chan<- prometheus.Metric) error {
 	collectTime := time.Now()
 	gpfsMounts, err := getGPFSMounts()
 	if err != nil {
-		ch <- prometheus.MustNewConstMetric(collectError, prometheus.GaugeValue, 1, "mount")
-		return nil
+		return err
 	}
 	gpfsMountsFstab, err := getGPFSMountsFSTab()
 	if err != nil {
-		ch <- prometheus.MustNewConstMetric(collectError, prometheus.GaugeValue, 1, "mount")
-		return nil
+		return err
 	}
 	for _, m := range gpfsMountsFstab {
 		if !SliceContains(gpfsMounts, m) {
