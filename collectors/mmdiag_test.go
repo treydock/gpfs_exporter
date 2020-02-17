@@ -19,10 +19,14 @@ import (
 )
 
 func TestParseMmdiagWaiters(t *testing.T) {
+	threshold := 30
+	configWaiterThreshold = &threshold
 	execCommand = fakeExecCommand
 	mockedStdout = `
 
 === mmdiag: waiters ===
+Waiting 64.3890 sec since 17:55:45, monitored, thread 120655 EventsExporterSenderThread: for poll on sock 1379
+Waiting 44.3890 sec since 17:55:45, monitored, thread 120656 EventsExporterSenderThread: for poll on sock 1379
 Waiting 0.0409 sec since 10:24:00, monitored, thread 23170 NSDThread: for I/O completion
 Waiting 0.0259 sec since 10:24:00, monitored, thread 23241 NSDThread: for I/O completion
 Waiting 0.0251 sec since 10:24:00, monitored, thread 23243 NSDThread: for I/O completion
@@ -49,7 +53,20 @@ Waiting 0.0002 sec since 10:24:00, monitored, thread 22987 NSDThread: for I/O co
 	if err != nil {
 		t.Errorf("Unexpected error: %s", err.Error())
 	}
-	if val := len(metric.Waiters); val != 19 {
+	if val := len(metric.Waiters); val != 2 {
 		t.Errorf("Unexpected Waiters len got %v", val)
+		return
+	}
+	if val := metric.Waiters[0].Seconds; val != 64.3890 {
+		t.Errorf("Unexpected waiter seconds value %v", val)
+	}
+	if val := metric.Waiters[0].Thread; val != "120655" {
+		t.Errorf("Unexpected waiter thread value %v", val)
+	}
+	if val := metric.Waiters[1].Seconds; val != 44.3890 {
+		t.Errorf("Unexpected waiter seconds value %v", val)
+	}
+	if val := metric.Waiters[1].Thread; val != "120656" {
+		t.Errorf("Unexpected waiter thread value %v", val)
 	}
 }

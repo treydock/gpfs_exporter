@@ -28,6 +28,10 @@ mmces | Collect state of CES | Disabled
 
 The default behavior of the `mount` collector is to collect mount statuses on GPFS mounts in /proc/mounts or /etc/fstab. The `--collector.mount.mounts` flag can be used to adjust which mount points to check.
 
+### mmdiag
+
+The waiters will generate metrics if their seconds value is greater than `--collector.mmdiag.waiter-threshold`.
+
 ### mmdf
 
 Due to the time it can take to execute mmdf that is an executable provided that can be used to collect mmdf via cron. See `gpfs_mmdf_exporter`.
