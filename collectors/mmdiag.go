@@ -26,7 +26,9 @@ import (
 )
 
 var (
+	defWaiterExclude      = "(EventsExporterSenderThread)"
 	configWaiterThreshold = kingpin.Flag("collector.mmdiag.waiter-threshold", "Threshold for collected waiters").Default("30").Int()
+	configWaiterExclude   = kingpin.Flag("collector.mmdiag.waiter-exclude", "Pattern to exclude for waiters").Default(defWaiterExclude).String()
 )
 
 type DiagMetric struct {
@@ -99,9 +101,13 @@ func mmdiag(arg string) (string, error) {
 
 func parse_mmdiag_waiters(out string, diagMetric *DiagMetric) error {
 	lines := strings.Split(out, "\n")
-	waitersPatter := regexp.MustCompile(`^Waiting ([0-9.]+) sec.*thread ([0-9]+)`)
+	waitersPattern := regexp.MustCompile(`^Waiting ([0-9.]+) sec.*thread ([0-9]+)`)
+	excludePattern := regexp.MustCompile(*configWaiterExclude)
 	for _, l := range lines {
-		match := waitersPatter.FindStringSubmatch(l)
+		if excludePattern.MatchString(l) {
+			continue
+		}
+		match := waitersPattern.FindStringSubmatch(l)
 		if len(match) != 3 {
 			continue
 		}

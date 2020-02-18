@@ -21,12 +21,14 @@ import (
 func TestParseMmdiagWaiters(t *testing.T) {
 	threshold := 30
 	configWaiterThreshold = &threshold
+	configWaiterExclude = &defWaiterExclude
 	execCommand = fakeExecCommand
 	mockedStdout = `
 
 === mmdiag: waiters ===
-Waiting 64.3890 sec since 17:55:45, monitored, thread 120655 EventsExporterSenderThread: for poll on sock 1379
-Waiting 44.3890 sec since 17:55:45, monitored, thread 120656 EventsExporterSenderThread: for poll on sock 1379
+Waiting 40.4231 sec since 13:08:39, monitored, thread 120656 EventsExporterSenderThread: for poll on sock 1379
+Waiting 64.3890 sec since 17:55:45, monitored, thread 120655 NSDThread: for I/O completion
+Waiting 44.3890 sec since 17:55:45, monitored, thread 120656 NSDThread: for I/O completion
 Waiting 0.0409 sec since 10:24:00, monitored, thread 23170 NSDThread: for I/O completion
 Waiting 0.0259 sec since 10:24:00, monitored, thread 23241 NSDThread: for I/O completion
 Waiting 0.0251 sec since 10:24:00, monitored, thread 23243 NSDThread: for I/O completion
