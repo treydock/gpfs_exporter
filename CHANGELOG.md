@@ -1,3 +1,9 @@
+## 0.5.0 / 2020-02-18
+
+### Changes
+
+* Support excluding waiters
+
 ## 0.4.0 / 2020-02-17
 
 ### Changes
