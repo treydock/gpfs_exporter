@@ -95,7 +95,7 @@ func verbs_parse(out string) (VerbsMetrics, error) {
 		}
 		items := strings.Split(l, ": ")
 		if len(items) == 2 {
-			metric.Status = items[1]
+			metric.Status = strings.TrimSuffix(items[1], "\n")
 			break
 		}
 	}

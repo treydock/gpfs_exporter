@@ -97,7 +97,6 @@ func (c *MmpmonCollector) collect(ch chan<- prometheus.Metric) error {
 	}
 	perfs, err := mmpmon_parse(mmpmon_out)
 	if err != nil {
-		ch <- prometheus.MustNewConstMetric(collectError, prometheus.GaugeValue, 1, "mmpmon")
 		return err
 	}
 	for _, perf := range perfs {

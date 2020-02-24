@@ -14,7 +14,9 @@
 package collectors
 
 import (
+	"github.com/prometheus/client_golang/prometheus/testutil"
 	"os/exec"
+	"strings"
 	"testing"
 )
 
@@ -47,5 +49,26 @@ VERBS RDMA status: started
 	}
 	if metric.Status != "started" {
 		t.Errorf("Unexpected value for status, expected started, got %s", metric.Status)
+	}
+}
+
+func TestVerbsCollector(t *testing.T) {
+	execCommand = fakeExecCommand
+	mockedStdout = `
+VERBS RDMA status: started
+`
+	defer func() { execCommand = exec.Command }()
+	expected := `
+		# HELP gpfs_verbs_status GPFS verbs status, 1=started 0=not started
+		# TYPE gpfs_verbs_status gauge
+		gpfs_verbs_status 1
+	`
+	collector := NewVerbsCollector()
+	gatherers := setupGatherer(collector)
+	if val := testutil.CollectAndCount(collector); val != 3 {
+		t.Errorf("Unexpected collection count %d, expected 3", val)
+	}
+	if err := testutil.GatherAndCompare(gatherers, strings.NewReader(expected), "gpfs_verbs_status"); err != nil {
+		t.Errorf("unexpected collecting result:\n%s", err)
 	}
 }
