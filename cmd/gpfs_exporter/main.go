@@ -29,7 +29,7 @@ var (
 	disableExporterMetrics = kingpin.Flag("web.disable-exporter-metrics", "Exclude metrics about the exporter (promhttp_*, process_*, go_*)").Default("false").Bool()
 )
 
-func gpfsHandler() http.HandlerFunc {
+func metricsHandler() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		registry := prometheus.NewRegistry()
 
@@ -62,7 +62,7 @@ func main() {
 	log.Infoln("Build context", version.BuildContext())
 	log.Infof("Starting Server: %s", *listenAddr)
 
-	http.Handle("/metrics", gpfsHandler())
+	http.Handle("/metrics", metricsHandler())
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		//nolint:errcheck
 		w.Write([]byte(`<html>
