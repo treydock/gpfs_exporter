@@ -15,6 +15,7 @@ package collectors
 
 import (
 	"fmt"
+	"github.com/prometheus/client_golang/prometheus"
 	"os"
 	"os/exec"
 	"strconv"
@@ -46,6 +47,13 @@ func TestExecCommandHelper(t *testing.T) {
 	fmt.Fprintf(os.Stdout, os.Getenv("STDOUT"))
 	i, _ := strconv.Atoi(os.Getenv("EXIT_STATUS"))
 	os.Exit(i)
+}
+
+func setupGatherer(collector Collector) prometheus.Gatherer {
+	registry := prometheus.NewRegistry()
+	registry.MustRegister(collector)
+	gatherers := prometheus.Gatherers{registry}
+	return gatherers
 }
 
 func TestParseMmlsfs(t *testing.T) {

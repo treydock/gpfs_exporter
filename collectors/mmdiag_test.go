@@ -14,7 +14,10 @@
 package collectors
 
 import (
+	"github.com/prometheus/client_golang/prometheus/testutil"
+	kingpin "gopkg.in/alecthomas/kingpin.v2"
 	"os/exec"
+	"strings"
 	"testing"
 )
 
@@ -70,5 +73,56 @@ Waiting 0.0002 sec since 10:24:00, monitored, thread 22987 NSDThread: for I/O co
 	}
 	if val := metric.Waiters[1].Thread; val != "120656" {
 		t.Errorf("Unexpected waiter thread value %v", val)
+	}
+}
+
+func TestMmdiagCollector(t *testing.T) {
+	if _, err := kingpin.CommandLine.Parse([]string{}); err != nil {
+		t.Fatal(err)
+	}
+	threshold := 30
+	configWaiterThreshold = &threshold
+	configWaiterExclude = &defWaiterExclude
+	execCommand = fakeExecCommand
+	mockedStdout = `
+=== mmdiag: waiters ===
+Waiting 40.4231 sec since 13:08:39, monitored, thread 120656 EventsExporterSenderThread: for poll on sock 1379
+Waiting 64.3890 sec since 17:55:45, monitored, thread 120655 NSDThread: for I/O completion
+Waiting 44.3890 sec since 17:55:45, monitored, thread 120656 NSDThread: for I/O completion
+Waiting 0.0409 sec since 10:24:00, monitored, thread 23170 NSDThread: for I/O completion
+Waiting 0.0259 sec since 10:24:00, monitored, thread 23241 NSDThread: for I/O completion
+Waiting 0.0251 sec since 10:24:00, monitored, thread 23243 NSDThread: for I/O completion
+Waiting 0.0173 sec since 10:24:00, monitored, thread 22893 NSDThread: for I/O completion
+Waiting 0.0158 sec since 10:24:00, monitored, thread 22933 NSDThread: for I/O completion
+Waiting 0.0153 sec since 10:24:00, monitored, thread 22953 NSDThread: for I/O completion
+Waiting 0.0143 sec since 10:24:00, monitored, thread 22978 NSDThread: for I/O completion
+Waiting 0.0139 sec since 10:24:00, monitored, thread 22996 NSDThread: for I/O completion
+Waiting 0.0128 sec since 10:24:00, monitored, thread 23025 NSDThread: for I/O completion
+Waiting 0.0121 sec since 10:24:00, monitored, thread 23047 NSDThread: for I/O completion
+Waiting 0.0114 sec since 10:24:00, monitored, thread 23075 NSDThread: for I/O completion
+Waiting 0.0109 sec since 10:24:00, monitored, thread 23097 NSDThread: for I/O completion
+Waiting 0.0099 sec since 10:24:00, monitored, thread 23130 NSDThread: for I/O completion
+Waiting 0.0069 sec since 10:24:00, monitored, thread 23337 NSDThread: for I/O completion
+Waiting 0.0063 sec since 10:24:00, monitored, thread 23227 NSDThread: for I/O completion
+Waiting 0.0039 sec since 10:24:00, monitored, thread 23267 NSDThread: for I/O completion
+Waiting 0.0023 sec since 10:24:00, monitored, thread 22922 NSDThread: for I/O completion
+Waiting 0.0022 sec since 10:24:00, monitored, thread 22931 NSDThread: for I/O completion
+Waiting 0.0002 sec since 10:24:00, monitored, thread 22987 NSDThread: for I/O completion
+`
+	defer func() { execCommand = exec.Command }()
+	metadata := `
+			# HELP gpfs_mmdiag_waiter GPFS max waiter in seconds
+			# TYPE gpfs_mmdiag_waiter gauge`
+	expected := `
+		gpfs_mmdiag_waiter{thread="120655"} 64.3890
+		gpfs_mmdiag_waiter{thread="120656"} 44.3890
+	`
+	collector := NewMmdiagCollector()
+	gatherers := setupGatherer(collector)
+	if val := testutil.CollectAndCount(collector); val != 4 {
+		t.Errorf("Unexpected collection count %d, expected 4", val)
+	}
+	if err := testutil.GatherAndCompare(gatherers, strings.NewReader(metadata+expected), "gpfs_mmdiag_waiter"); err != nil {
+		t.Errorf("unexpected collecting result:\n%s", err)
 	}
 }

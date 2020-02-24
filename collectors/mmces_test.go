@@ -14,7 +14,10 @@
 package collectors
 
 import (
+	"github.com/prometheus/client_golang/prometheus/testutil"
+	kingpin "gopkg.in/alecthomas/kingpin.v2"
 	"os/exec"
+	"strings"
 	"testing"
 )
 
@@ -22,7 +25,7 @@ func TestParseMmcesStateShow(t *testing.T) {
 	execCommand = fakeExecCommand
 	mockedStdout = `
 mmcesstate::HEADER:version:reserved:reserved:NODE:AUTH:BLOCK:NETWORK:AUTH_OBJ:NFS:OBJ:SMB:CES:
-mmcesstate::0:1:::ib-protocol01.ten.osc.edu:HEALTHY:DISABLED:HEALTHY:DISABLED:HEALTHY:DISABLED:HEALTHY:HEALTHY:
+mmcesstate::0:1:::ib-protocol01.domain:HEALTHY:DISABLED:HEALTHY:DISABLED:HEALTHY:DISABLED:HEALTHY:HEALTHY:
 `
 	defer func() { execCommand = exec.Command }()
 	metrics, err := mmces_state_show_parse(mockedStdout)
@@ -50,5 +53,38 @@ func TestParseMmcesState(t *testing.T) {
 	}
 	if val := parseMmcesState("DEGRADED"); val != 0 {
 		t.Errorf("Expected 0 for DEGRADED, got %v", val)
+	}
+}
+
+func TestMMcesCollector(t *testing.T) {
+	if _, err := kingpin.CommandLine.Parse([]string{"--collector.mmces.nodename=ib-protocol01.domain"}); err != nil {
+		t.Fatal(err)
+	}
+	execCommand = fakeExecCommand
+	mockedStdout = `
+mmcesstate::HEADER:version:reserved:reserved:NODE:AUTH:BLOCK:NETWORK:AUTH_OBJ:NFS:OBJ:SMB:CES:
+mmcesstate::0:1:::ib-protocol01.domain:HEALTHY:DISABLED:HEALTHY:DISABLED:HEALTHY:DISABLED:HEALTHY:HEALTHY:
+`
+	defer func() { execCommand = exec.Command }()
+	metadata := `
+			# HELP gpfs_ces_state GPFS CES health status, 1=healthy 0=not healthy
+			# TYPE gpfs_ces_state gauge`
+	expected := `
+		gpfs_ces_state{service="AUTH",state="HEALTHY"} 1
+		gpfs_ces_state{service="AUTH_OBJ",state="DISABLED"} 0
+		gpfs_ces_state{service="BLOCK",state="DISABLED"} 0
+		gpfs_ces_state{service="CES",state="HEALTHY"} 1
+		gpfs_ces_state{service="NETWORK",state="HEALTHY"} 1
+		gpfs_ces_state{service="NFS",state="HEALTHY"} 1
+		gpfs_ces_state{service="OBJ",state="DISABLED"} 0
+		gpfs_ces_state{service="SMB",state="HEALTHY"} 1
+	`
+	collector := NewMmcesCollector()
+	gatherers := setupGatherer(collector)
+	if val := testutil.CollectAndCount(collector); val != 10 {
+		t.Errorf("Unexpected collection count %d, expected 10", val)
+	}
+	if err := testutil.GatherAndCompare(gatherers, strings.NewReader(metadata+expected), "gpfs_ces_state"); err != nil {
+		t.Errorf("unexpected collecting result:\n%s", err)
 	}
 }
