@@ -1,3 +1,10 @@
+## 0.6.0 / 2020-02-25
+
+### Changes
+
+* Update client_golang dependency
+* Testing improvements
+
 ## 0.5.0 / 2020-02-18
 
 ### Changes
