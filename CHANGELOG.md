@@ -1,3 +1,9 @@
+## 0.7.0 / 2020-03-02
+
+### Changes
+
+* Add timeouts to all collectors
+
 ## 0.6.0 / 2020-02-25
 
 ### Changes
