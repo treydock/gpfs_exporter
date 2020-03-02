@@ -124,8 +124,8 @@ scratch              /fs/scratch          gpfs       rw,mtime,atime,quota=userqu
 	`
 	collector := NewMountCollector()
 	gatherers := setupGatherer(collector)
-	if val := testutil.CollectAndCount(collector); val != 5 {
-		t.Errorf("Unexpected collection count %d, expected 5", val)
+	if val := testutil.CollectAndCount(collector); val != 6 {
+		t.Errorf("Unexpected collection count %d, expected 6", val)
 	}
 	if err := testutil.GatherAndCompare(gatherers, strings.NewReader(metadata+expected), "gpfs_mount_status"); err != nil {
 		t.Errorf("unexpected collecting result:\n%s", err)

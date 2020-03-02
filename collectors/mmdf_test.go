@@ -39,7 +39,7 @@ mmdf:metadata:0:1:::13891534848:6011299328:43:58139768:0:
 mmdf:fsTotal:0:1:::3661677723648:481202021888:14:12117655064:0:
 mmdf:inode:0:1:::430741822:484301506:915043328:1332164000:
 `
-	defer func() { execCommand = exec.Command }()
+	defer func() { execCommand = exec.CommandContext }()
 	dfmetrics, err := Parse_mmdf(mockedStdout)
 	if err != nil {
 		t.Errorf("Unexpected error: %s", err.Error())
@@ -84,7 +84,7 @@ mmdf:metadata:0:1:::13891534848:6011299328:43:58139768:0:
 mmdf:fsTotal:0:1:::3661677723648:481202021888:14:12117655064:0:
 mmdf:inode:0:1:::430741822:484301506:915043328:1332164000:
 `
-	defer func() { execCommand = exec.Command }()
+	defer func() { execCommand = exec.CommandContext }()
 	expected := `
 		# HELP gpfs_fs_free_bytes GPFS filesystem free size in bytes
 		# TYPE gpfs_fs_free_bytes gauge
@@ -119,8 +119,8 @@ mmdf:inode:0:1:::430741822:484301506:915043328:1332164000:
 	`
 	collector := NewMmdfCollector()
 	gatherers := setupGatherer(collector)
-	if val := testutil.CollectAndCount(collector); val != 13 {
-		t.Errorf("Unexpected collection count %d, expected 13", val)
+	if val := testutil.CollectAndCount(collector); val != 14 {
+		t.Errorf("Unexpected collection count %d, expected 14", val)
 	}
 	if err := testutil.GatherAndCompare(gatherers, strings.NewReader(expected),
 		"gpfs_fs_inodes_used", "gpfs_fs_inodes_free", "gpfs_fs_inodes_allocated", "gpfs_fs_inodes_total",

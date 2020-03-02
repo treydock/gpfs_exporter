@@ -14,23 +14,27 @@
 package collectors
 
 import (
+	"context"
 	"fmt"
 	"github.com/prometheus/client_golang/prometheus"
 	"os"
 	"os/exec"
 	"strconv"
 	"testing"
+	"time"
 )
 
 var (
 	mockedExitStatus = 0
 	mockedStdout     string
+	_, cancel        = context.WithTimeout(context.Background(), 5*time.Second)
 )
 
-func fakeExecCommand(command string, args ...string) *exec.Cmd {
+func fakeExecCommand(ctx context.Context, command string, args ...string) *exec.Cmd {
 	cs := []string{"-test.run=TestExecCommandHelper", "--", command}
 	cs = append(cs, args...)
-	cmd := exec.Command(os.Args[0], cs...)
+	defer cancel()
+	cmd := exec.CommandContext(ctx, os.Args[0], cs...)
 	es := strconv.Itoa(mockedExitStatus)
 	cmd.Env = []string{"GO_WANT_HELPER_PROCESS=1",
 		"STDOUT=" + mockedStdout,
@@ -64,7 +68,7 @@ mmlsfs::0:1:::project:defaultMountPoint:%2Ffs%2Fproject::
 mmlsfs::0:1:::scratch:defaultMountPoint:%2Ffs%2Fscratch::
 mmlsfs::0:1:::ess:defaultMountPoint:%2Ffs%2Fess::
 `
-	defer func() { execCommand = exec.Command }()
+	defer func() { execCommand = exec.CommandContext }()
 	filesystems, err := parse_mmlsfs(mockedStdout)
 	if err != nil {
 		t.Errorf("Unexpected error: %s", err.Error())

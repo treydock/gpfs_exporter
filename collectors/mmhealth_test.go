@@ -34,7 +34,7 @@ mmhealth:State:0:1:::ib-cluster-rw02.example.com:FILESYSTEM:project:FILESYSTEM:H
 mmhealth:State:0:1:::ib-cluster-rw02.example.com:FILESYSTEM:scratch:FILESYSTEM:HEALTHY:2020-01-07 18%3A03%3A31.842569 EST:
 mmhealth:State:0:1:::ib-cluster-rw02.example.com:FILESYSTEM:ess:FILESYSTEM:HEALTHY:2020-01-14 10%3A37%3A33.657052 EST:
 `
-	defer func() { execCommand = exec.Command }()
+	defer func() { execCommand = exec.CommandContext }()
 	metrics, err := mmhealth_parse(mockedStdout)
 	if err != nil {
 		t.Errorf("Unexpected error: %s", err.Error())
@@ -73,7 +73,7 @@ mmhealth:State:0:1:::ib-haswell1.example.com:FILESYSTEM:project:FILESYSTEM:HEALT
 mmhealth:State:0:1:::ib-haswell1.example.com:FILESYSTEM:scratch:FILESYSTEM:HEALTHY:2020-01-27 09%3A35%3A21.657798 EST:
 mmhealth:State:0:1:::ib-haswell1.example.com:FILESYSTEM:ess:FILESYSTEM:HEALTHY:2020-01-27 09%3A35%3A21.716417 EST:
 `
-	defer func() { execCommand = exec.Command }()
+	defer func() { execCommand = exec.CommandContext }()
 	metrics, err := mmhealth_parse(mockedStdout)
 	if err != nil {
 		t.Errorf("Unexpected error: %s", err.Error())
@@ -124,7 +124,7 @@ mmhealth:State:0:1:::ib-haswell1.example.com:FILESYSTEM:project:FILESYSTEM:HEALT
 mmhealth:State:0:1:::ib-haswell1.example.com:FILESYSTEM:scratch:FILESYSTEM:HEALTHY:2020-01-27 09%3A35%3A21.657798 EST:
 mmhealth:State:0:1:::ib-haswell1.example.com:FILESYSTEM:ess:FILESYSTEM:HEALTHY:2020-01-27 09%3A35%3A21.716417 EST:
 `
-	defer func() { execCommand = exec.Command }()
+	defer func() { execCommand = exec.CommandContext }()
 	metadata := `
 		# HELP gpfs_health_status GPFS health status, 1=healthy 0=not healthy
 		# TYPE gpfs_health_status gauge`
@@ -141,8 +141,8 @@ mmhealth:State:0:1:::ib-haswell1.example.com:FILESYSTEM:ess:FILESYSTEM:HEALTHY:2
 	`
 	collector := NewMmhealthCollector()
 	gatherers := setupGatherer(collector)
-	if val := testutil.CollectAndCount(collector); val != 11 {
-		t.Errorf("Unexpected collection count %d, expected 11", val)
+	if val := testutil.CollectAndCount(collector); val != 12 {
+		t.Errorf("Unexpected collection count %d, expected 12", val)
 	}
 	if err := testutil.GatherAndCompare(gatherers, strings.NewReader(metadata+expected), "gpfs_health_status"); err != nil {
 		t.Errorf("unexpected collecting result:\n%s", err)

@@ -52,7 +52,7 @@ Waiting 0.0023 sec since 10:24:00, monitored, thread 22922 NSDThread: for I/O co
 Waiting 0.0022 sec since 10:24:00, monitored, thread 22931 NSDThread: for I/O completion
 Waiting 0.0002 sec since 10:24:00, monitored, thread 22987 NSDThread: for I/O completion
 `
-	defer func() { execCommand = exec.Command }()
+	defer func() { execCommand = exec.CommandContext }()
 	var metric DiagMetric
 	err := parse_mmdiag_waiters(mockedStdout, &metric)
 	if err != nil {
@@ -109,7 +109,7 @@ Waiting 0.0023 sec since 10:24:00, monitored, thread 22922 NSDThread: for I/O co
 Waiting 0.0022 sec since 10:24:00, monitored, thread 22931 NSDThread: for I/O completion
 Waiting 0.0002 sec since 10:24:00, monitored, thread 22987 NSDThread: for I/O completion
 `
-	defer func() { execCommand = exec.Command }()
+	defer func() { execCommand = exec.CommandContext }()
 	metadata := `
 			# HELP gpfs_mmdiag_waiter GPFS max waiter in seconds
 			# TYPE gpfs_mmdiag_waiter gauge`
@@ -119,8 +119,8 @@ Waiting 0.0002 sec since 10:24:00, monitored, thread 22987 NSDThread: for I/O co
 	`
 	collector := NewMmdiagCollector()
 	gatherers := setupGatherer(collector)
-	if val := testutil.CollectAndCount(collector); val != 4 {
-		t.Errorf("Unexpected collection count %d, expected 4", val)
+	if val := testutil.CollectAndCount(collector); val != 5 {
+		t.Errorf("Unexpected collection count %d, expected 5", val)
 	}
 	if err := testutil.GatherAndCompare(gatherers, strings.NewReader(metadata+expected), "gpfs_mmdiag_waiter"); err != nil {
 		t.Errorf("unexpected collecting result:\n%s", err)

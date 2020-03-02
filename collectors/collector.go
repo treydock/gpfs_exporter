@@ -15,6 +15,7 @@ package collectors
 
 import (
 	"bytes"
+	"context"
 	"fmt"
 	"net/url"
 	"os"
@@ -34,7 +35,7 @@ const (
 var (
 	collectorState  = make(map[string]*bool)
 	factories       = make(map[string]func() Collector)
-	execCommand     = exec.Command
+	execCommand     = exec.CommandContext
 	collectDuration = prometheus.NewDesc(
 		prometheus.BuildFQName(namespace, "exporter", "collector_duration_seconds"),
 		"Collector time duration.",
@@ -43,9 +44,14 @@ var (
 		prometheus.BuildFQName(namespace, "exporter", "collect_error"),
 		"Indicates if error has occurred during collection",
 		[]string{"collector"}, nil)
+	collecTimeout = prometheus.NewDesc(
+		prometheus.BuildFQName(namespace, "exporter", "collect_timeout"),
+		"Indicates the collector timed out",
+		[]string{"collector"}, nil)
 	lastExecution = prometheus.NewDesc(
 		prometheus.BuildFQName(namespace, "exporter", "last_execution"),
 		"Last execution time of ", []string{"collector"}, nil)
+	mmlsfsTimeout = kingpin.Flag("config.mmlsfs.timeout", "Timeout for mmlsfs execution").Default("5").Int()
 )
 
 type GPFSFilesystem struct {
@@ -108,8 +114,8 @@ func fileExists(filename string) bool {
 	return !info.IsDir()
 }
 
-func mmlsfs() (string, error) {
-	cmd := execCommand("sudo", "/usr/lpp/mmfs/bin/mmlsfs", "all", "-Y", "-T")
+func mmlsfs(ctx context.Context) (string, error) {
+	cmd := execCommand(ctx, "sudo", "/usr/lpp/mmfs/bin/mmlsfs", "all", "-Y", "-T")
 	var out bytes.Buffer
 	cmd.Stdout = &out
 	err := cmd.Run()

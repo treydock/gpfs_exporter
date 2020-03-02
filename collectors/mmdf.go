@@ -15,6 +15,7 @@ package collectors
 
 import (
 	"bytes"
+	"context"
 	"fmt"
 	"reflect"
 	"strconv"
@@ -29,6 +30,7 @@ import (
 
 var (
 	configFilesystems = kingpin.Flag("collector.mmdf.filesystems", "Filesystems to query with mmdf, comma separated. Defaults to all filesystems.").Default("").String()
+	mmdfTimeout       = kingpin.Flag("collector.mmdf.timeout", "Timeout for mmdf execution").Default("60").Int()
 	mappedSections    = []string{"inode", "fsTotal", "metadata"}
 	KbToBytes         = []string{"fsSize", "freeBlocks", "totalMetadata"}
 	dfMap             = map[string]string{
@@ -118,7 +120,15 @@ func (c *MmdfCollector) Collect(ch chan<- prometheus.Metric) {
 	wg := &sync.WaitGroup{}
 	var filesystems []string
 	if *configFilesystems == "" {
-		mmlfsfs_filesystems, err := mmlfsfsFilesystems()
+		ctx, cancel := context.WithTimeout(context.Background(), time.Duration(*mmlsfsTimeout)*time.Second)
+		defer cancel()
+		mmlfsfs_filesystems, err := mmlfsfsFilesystems(ctx)
+		if ctx.Err() == context.DeadlineExceeded {
+			ch <- prometheus.MustNewConstMetric(collecTimeout, prometheus.GaugeValue, 1, "mmdf-mmlsfs")
+			log.Error("Timeout executing mmlsfs")
+		} else {
+			ch <- prometheus.MustNewConstMetric(collecTimeout, prometheus.GaugeValue, 0, "mmdf-mmlsfs")
+		}
 		if err != nil {
 			ch <- prometheus.MustNewConstMetric(collectError, prometheus.GaugeValue, 1, "mmdf-mmlsfs")
 		} else {
@@ -133,8 +143,17 @@ func (c *MmdfCollector) Collect(ch chan<- prometheus.Metric) {
 		wg.Add(1)
 		collectTime := time.Now()
 		go func(fs string) {
+			defer wg.Done()
+			ctx, cancel := context.WithTimeout(context.Background(), time.Duration(*mmdfTimeout)*time.Second)
+			defer cancel()
 			label := fmt.Sprintf("mmdf-%s", fs)
-			err := c.mmdfCollect(fs, ch)
+			err := c.mmdfCollect(fs, ch, ctx)
+			if ctx.Err() == context.DeadlineExceeded {
+				ch <- prometheus.MustNewConstMetric(collecTimeout, prometheus.GaugeValue, 1, label)
+				log.Errorln("Timeout executing", label)
+				return
+			}
+			ch <- prometheus.MustNewConstMetric(collecTimeout, prometheus.GaugeValue, 0, label)
 			if err != nil {
 				ch <- prometheus.MustNewConstMetric(collectError, prometheus.GaugeValue, 1, label)
 			} else {
@@ -142,14 +161,13 @@ func (c *MmdfCollector) Collect(ch chan<- prometheus.Metric) {
 			}
 			ch <- prometheus.MustNewConstMetric(collectDuration, prometheus.GaugeValue, time.Since(collectTime).Seconds(), label)
 			ch <- prometheus.MustNewConstMetric(lastExecution, prometheus.GaugeValue, float64(time.Now().Unix()), label)
-			wg.Done()
 		}(fs)
 	}
 	wg.Wait()
 }
 
-func (c *MmdfCollector) mmdfCollect(fs string, ch chan<- prometheus.Metric) error {
-	out, err := Mmdf(fs)
+func (c *MmdfCollector) mmdfCollect(fs string, ch chan<- prometheus.Metric, ctx context.Context) error {
+	out, err := Mmdf(fs, ctx)
 	if err != nil {
 		return err
 	}
@@ -170,9 +188,9 @@ func (c *MmdfCollector) mmdfCollect(fs string, ch chan<- prometheus.Metric) erro
 	return nil
 }
 
-func mmlfsfsFilesystems() ([]string, error) {
+func mmlfsfsFilesystems(ctx context.Context) ([]string, error) {
 	var filesystems []string
-	out, err := mmlsfs()
+	out, err := mmlsfs(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -186,8 +204,8 @@ func mmlfsfsFilesystems() ([]string, error) {
 	return filesystems, nil
 }
 
-func Mmdf(fs string) (string, error) {
-	cmd := execCommand("sudo", "/usr/lpp/mmfs/bin/mmdf", fs, "-Y")
+func Mmdf(fs string, ctx context.Context) (string, error) {
+	cmd := execCommand(ctx, "sudo", "/usr/lpp/mmfs/bin/mmdf", fs, "-Y")
 	var out bytes.Buffer
 	cmd.Stdout = &out
 	err := cmd.Run()
