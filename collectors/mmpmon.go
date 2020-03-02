@@ -15,6 +15,7 @@ package collectors
 
 import (
 	"bytes"
+	"context"
 	"reflect"
 	"strconv"
 	"strings"
@@ -22,10 +23,12 @@ import (
 
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/common/log"
+	"gopkg.in/alecthomas/kingpin.v2"
 )
 
 var (
-	mmpmonMap = map[string]string{
+	mmpmonTimeout = kingpin.Flag("collector.mmpmon.timeout", "Timeout for mmpmon execution").Default("5").Int()
+	mmpmonMap     = map[string]string{
 		"_fs_":  "FS",
 		"_nn_":  "NodeName",
 		"_br_":  "ReadBytes",
@@ -91,7 +94,15 @@ func (c *MmpmonCollector) Collect(ch chan<- prometheus.Metric) {
 
 func (c *MmpmonCollector) collect(ch chan<- prometheus.Metric) error {
 	collectTime := time.Now()
-	mmpmon_out, err := mmpmon()
+	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(*mmpmonTimeout)*time.Second)
+	defer cancel()
+	mmpmon_out, err := mmpmon(ctx)
+	if ctx.Err() == context.DeadlineExceeded {
+		ch <- prometheus.MustNewConstMetric(collecTimeout, prometheus.GaugeValue, 1, "mmpmon")
+		log.Error("Timeout executing mmpmon")
+		return nil
+	}
+	ch <- prometheus.MustNewConstMetric(collecTimeout, prometheus.GaugeValue, 0, "mmpmon")
 	if err != nil {
 		return err
 	}
@@ -113,8 +124,8 @@ func (c *MmpmonCollector) collect(ch chan<- prometheus.Metric) error {
 	return nil
 }
 
-func mmpmon() (string, error) {
-	cmd := execCommand("sudo", "/usr/lpp/mmfs/bin/mmpmon", "-s", "-p")
+func mmpmon(ctx context.Context) (string, error) {
+	cmd := execCommand(ctx, "sudo", "/usr/lpp/mmfs/bin/mmpmon", "-s", "-p")
 	cmd.Stdin = strings.NewReader("fs_io_s\n")
 	var out bytes.Buffer
 	cmd.Stdout = &out

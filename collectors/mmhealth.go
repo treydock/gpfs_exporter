@@ -15,6 +15,7 @@ package collectors
 
 import (
 	"bytes"
+	"context"
 	"reflect"
 	"strconv"
 	"strings"
@@ -22,10 +23,12 @@ import (
 
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/common/log"
+	"gopkg.in/alecthomas/kingpin.v2"
 )
 
 var (
-	mmhealthMap = map[string]string{
+	mmhealthTimeout = kingpin.Flag("collector.mmhealth.timeout", "Timeout for mmhealth execution").Default("5").Int()
+	mmhealthMap     = map[string]string{
 		"component":  "Component",
 		"entityname": "EntityName",
 		"entitytype": "EntityType",
@@ -71,7 +74,15 @@ func (c *MmhealthCollector) Collect(ch chan<- prometheus.Metric) {
 
 func (c *MmhealthCollector) collect(ch chan<- prometheus.Metric) error {
 	collectTime := time.Now()
-	mmhealth_out, err := mmhealth()
+	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(*mmhealthTimeout)*time.Second)
+	defer cancel()
+	mmhealth_out, err := mmhealth(ctx)
+	if ctx.Err() == context.DeadlineExceeded {
+		ch <- prometheus.MustNewConstMetric(collecTimeout, prometheus.GaugeValue, 1, "mmhealth")
+		log.Error("Timeout executing mmhealth")
+		return nil
+	}
+	ch <- prometheus.MustNewConstMetric(collecTimeout, prometheus.GaugeValue, 0, "mmhealth")
 	if err != nil {
 		return err
 	}
@@ -87,8 +98,8 @@ func (c *MmhealthCollector) collect(ch chan<- prometheus.Metric) error {
 	return nil
 }
 
-func mmhealth() (string, error) {
-	cmd := execCommand("sudo", "/usr/lpp/mmfs/bin/mmhealth", "node", "show", "-Y")
+func mmhealth(ctx context.Context) (string, error) {
+	cmd := execCommand(ctx, "sudo", "/usr/lpp/mmfs/bin/mmhealth", "node", "show", "-Y")
 	var out bytes.Buffer
 	cmd.Stdout = &out
 	err := cmd.Run()

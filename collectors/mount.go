@@ -29,6 +29,7 @@ var (
 	procMounts   = "/proc/mounts"
 	fstabPath    = "/etc/fstab"
 	configMounts = kingpin.Flag("collector.mount.mounts", "Mountpoints to monitor, comma separated. Defaults to all filesystems.").Default("").String()
+	mountTimeout = kingpin.Flag("collector.mount.timeout", "Timeout for mount collection").Default("5").Int()
 )
 
 type MountCollector struct {
@@ -54,6 +55,7 @@ func (c *MountCollector) Collect(ch chan<- prometheus.Metric) {
 	log.Debug("Collecting mount metrics")
 	err := c.collect(ch)
 	if err != nil {
+		log.Error(err)
 		ch <- prometheus.MustNewConstMetric(collectError, prometheus.GaugeValue, 1, "mount")
 	} else {
 		ch <- prometheus.MustNewConstMetric(collectError, prometheus.GaugeValue, 0, "mount")
@@ -62,14 +64,43 @@ func (c *MountCollector) Collect(ch chan<- prometheus.Metric) {
 
 func (c *MountCollector) collect(ch chan<- prometheus.Metric) error {
 	collectTime := time.Now()
-	gpfsMounts, err := getGPFSMounts()
+	var gpfsMounts []string
+	var gpfsMountsFstab []string
+	var err error
+
+	c1 := make(chan int, 1)
+	timeout := false
+
+	go func() {
+		gpfsMounts, err = getGPFSMounts()
+		if err != nil {
+			return
+		}
+		gpfsMountsFstab, err = getGPFSMountsFSTab()
+		if err != nil {
+			return
+		}
+		if !timeout {
+			c1 <- 1
+		}
+	}()
+
+	select {
+	case <-c1:
+	case <-time.After(time.Duration(*mountTimeout) * time.Second):
+		timeout = true
+		close(c1)
+		ch <- prometheus.MustNewConstMetric(collecTimeout, prometheus.GaugeValue, 1, "mount")
+		log.Error("Timeout collecting mount information")
+		return nil
+	}
+	close(c1)
+	ch <- prometheus.MustNewConstMetric(collecTimeout, prometheus.GaugeValue, 0, "mount")
+
 	if err != nil {
 		return err
 	}
-	gpfsMountsFstab, err := getGPFSMountsFSTab()
-	if err != nil {
-		return err
-	}
+
 	for _, m := range gpfsMountsFstab {
 		if !SliceContains(gpfsMounts, m) {
 			gpfsMounts = append(gpfsMounts, m)

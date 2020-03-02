@@ -27,7 +27,7 @@ func TestParseMmcesStateShow(t *testing.T) {
 mmcesstate::HEADER:version:reserved:reserved:NODE:AUTH:BLOCK:NETWORK:AUTH_OBJ:NFS:OBJ:SMB:CES:
 mmcesstate::0:1:::ib-protocol01.domain:HEALTHY:DISABLED:HEALTHY:DISABLED:HEALTHY:DISABLED:HEALTHY:HEALTHY:
 `
-	defer func() { execCommand = exec.Command }()
+	defer func() { execCommand = exec.CommandContext }()
 	metrics, err := mmces_state_show_parse(mockedStdout)
 	if err != nil {
 		t.Errorf("Unexpected error: %s", err.Error())
@@ -65,7 +65,7 @@ func TestMMcesCollector(t *testing.T) {
 mmcesstate::HEADER:version:reserved:reserved:NODE:AUTH:BLOCK:NETWORK:AUTH_OBJ:NFS:OBJ:SMB:CES:
 mmcesstate::0:1:::ib-protocol01.domain:HEALTHY:DISABLED:HEALTHY:DISABLED:HEALTHY:DISABLED:HEALTHY:HEALTHY:
 `
-	defer func() { execCommand = exec.Command }()
+	defer func() { execCommand = exec.CommandContext }()
 	metadata := `
 			# HELP gpfs_ces_state GPFS CES health status, 1=healthy 0=not healthy
 			# TYPE gpfs_ces_state gauge`
@@ -81,8 +81,8 @@ mmcesstate::0:1:::ib-protocol01.domain:HEALTHY:DISABLED:HEALTHY:DISABLED:HEALTHY
 	`
 	collector := NewMmcesCollector()
 	gatherers := setupGatherer(collector)
-	if val := testutil.CollectAndCount(collector); val != 10 {
-		t.Errorf("Unexpected collection count %d, expected 10", val)
+	if val := testutil.CollectAndCount(collector); val != 11 {
+		t.Errorf("Unexpected collection count %d, expected 11", val)
 	}
 	if err := testutil.GatherAndCompare(gatherers, strings.NewReader(metadata+expected), "gpfs_ces_state"); err != nil {
 		t.Errorf("unexpected collecting result:\n%s", err)

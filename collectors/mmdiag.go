@@ -15,6 +15,7 @@ package collectors
 
 import (
 	"bytes"
+	"context"
 	"regexp"
 	"strconv"
 	"strings"
@@ -29,6 +30,7 @@ var (
 	defWaiterExclude      = "(EventsExporterSenderThread)"
 	configWaiterThreshold = kingpin.Flag("collector.mmdiag.waiter-threshold", "Threshold for collected waiters").Default("30").Int()
 	configWaiterExclude   = kingpin.Flag("collector.mmdiag.waiter-exclude", "Pattern to exclude for waiters").Default(defWaiterExclude).String()
+	mmdiagTimeout         = kingpin.Flag("collector.mmdiag.timeout", "Timeout for mmdiag execution").Default("5").Int()
 )
 
 type DiagMetric struct {
@@ -71,7 +73,15 @@ func (c *MmdiagCollector) Collect(ch chan<- prometheus.Metric) {
 
 func (c *MmdiagCollector) collect(ch chan<- prometheus.Metric) error {
 	collectTime := time.Now()
-	out, err := mmdiag("--waiters")
+	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(*mmdiagTimeout)*time.Second)
+	defer cancel()
+	out, err := mmdiag("--waiters", ctx)
+	if ctx.Err() == context.DeadlineExceeded {
+		ch <- prometheus.MustNewConstMetric(collecTimeout, prometheus.GaugeValue, 1, "mmdiag")
+		log.Error("Timeout executing mmdiag")
+		return nil
+	}
+	ch <- prometheus.MustNewConstMetric(collecTimeout, prometheus.GaugeValue, 0, "mmdiag")
 	if err != nil {
 		return err
 	}
@@ -87,8 +97,8 @@ func (c *MmdiagCollector) collect(ch chan<- prometheus.Metric) error {
 	return nil
 }
 
-func mmdiag(arg string) (string, error) {
-	cmd := execCommand("sudo", "/usr/lpp/mmfs/bin/mmdiag", arg, "-Y")
+func mmdiag(arg string, ctx context.Context) (string, error) {
+	cmd := execCommand(ctx, "sudo", "/usr/lpp/mmfs/bin/mmdiag", arg, "-Y")
 	var out bytes.Buffer
 	cmd.Stdout = &out
 	err := cmd.Run()

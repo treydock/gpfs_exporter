@@ -15,6 +15,7 @@ package collectors
 
 import (
 	"bytes"
+	"context"
 	"os"
 	"strings"
 	"time"
@@ -28,6 +29,7 @@ var (
 	osHostname     = os.Hostname
 	fqdn           = getFQDN()
 	configNodeName = kingpin.Flag("collector.mmces.nodename", "CES node name to check, defaults to FQDN").Default(fqdn).String()
+	mmcesTimeout   = kingpin.Flag("collector.mmces.timeout", "Timeout for mmces execution").Default("5").Int()
 	cesServices    = []string{"AUTH", "BLOCK", "NETWORK", "AUTH_OBJ", "NFS", "OBJ", "SMB", "CES"}
 )
 
@@ -76,11 +78,19 @@ func (c *MmcesCollector) Collect(ch chan<- prometheus.Metric) {
 
 func (c *MmcesCollector) collect(ch chan<- prometheus.Metric) error {
 	collectTime := time.Now()
+	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(*mmcesTimeout)*time.Second)
+	defer cancel()
 	if *configNodeName == "" {
 		log.Fatal("collector.mmces.nodename must be defined and could not be determined")
 	}
 	nodename := *configNodeName
-	mmces_state_out, err := mmces_state_show(nodename)
+	mmces_state_out, err := mmces_state_show(nodename, ctx)
+	if ctx.Err() == context.DeadlineExceeded {
+		ch <- prometheus.MustNewConstMetric(collecTimeout, prometheus.GaugeValue, 1, "mmces")
+		log.Error("Timeout executing mmces")
+		return nil
+	}
+	ch <- prometheus.MustNewConstMetric(collecTimeout, prometheus.GaugeValue, 0, "mmces")
 	if err != nil {
 		return err
 	}
@@ -96,8 +106,8 @@ func (c *MmcesCollector) collect(ch chan<- prometheus.Metric) error {
 	return nil
 }
 
-func mmces_state_show(nodename string) (string, error) {
-	cmd := execCommand("sudo", "/usr/lpp/mmfs/bin/mmces", "state", "show", "-N", nodename, "-Y")
+func mmces_state_show(nodename string, ctx context.Context) (string, error) {
+	cmd := execCommand(ctx, "sudo", "/usr/lpp/mmfs/bin/mmces", "state", "show", "-N", nodename, "-Y")
 	var out bytes.Buffer
 	cmd.Stdout = &out
 	err := cmd.Run()

@@ -15,11 +15,17 @@ package collectors
 
 import (
 	"bytes"
+	"context"
 	"strings"
 	"time"
 
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/common/log"
+	"gopkg.in/alecthomas/kingpin.v2"
+)
+
+var (
+	verbsTimeout = kingpin.Flag("collector.verbs.timeout", "Timeout for collecting verbs information").Default("5").Int()
 )
 
 type VerbsMetrics struct {
@@ -57,7 +63,15 @@ func (c *VerbsCollector) Collect(ch chan<- prometheus.Metric) {
 
 func (c *VerbsCollector) collect(ch chan<- prometheus.Metric) error {
 	collectTime := time.Now()
-	out, err := verbs()
+	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(*verbsTimeout)*time.Second)
+	defer cancel()
+	out, err := verbs(ctx)
+	if ctx.Err() == context.DeadlineExceeded {
+		ch <- prometheus.MustNewConstMetric(collecTimeout, prometheus.GaugeValue, 1, "verbs")
+		log.Error("Timeout executing verbs check")
+		return nil
+	}
+	ch <- prometheus.MustNewConstMetric(collecTimeout, prometheus.GaugeValue, 0, "verbs")
 	if err != nil {
 		return err
 	}
@@ -74,8 +88,8 @@ func (c *VerbsCollector) collect(ch chan<- prometheus.Metric) error {
 	return nil
 }
 
-func verbs() (string, error) {
-	cmd := execCommand("sudo", "/usr/lpp/mmfs/bin/mmfsadm", "test", "verbs", "status")
+func verbs(ctx context.Context) (string, error) {
+	cmd := execCommand(ctx, "sudo", "/usr/lpp/mmfs/bin/mmfsadm", "test", "verbs", "status")
 	var out bytes.Buffer
 	cmd.Stdout = &out
 	err := cmd.Run()
