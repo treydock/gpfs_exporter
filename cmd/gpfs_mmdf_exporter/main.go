@@ -53,8 +53,6 @@ func main() {
 	logger := promlog.New(promlogConfig)
 
 	fileLock := flock.New(*lockFile)
-	//nolint:errcheck
-	defer fileLock.Unlock()
 	locked, err := fileLock.TryLock()
 	if err != nil {
 		level.Error(logger).Log("msg", "Unable to obtain lock on lock file", "lockfile", *lockFile)
@@ -66,4 +64,5 @@ func main() {
 		os.Exit(1)
 	}
 	collect(logger)
+	_ = fileLock.Unlock()
 }

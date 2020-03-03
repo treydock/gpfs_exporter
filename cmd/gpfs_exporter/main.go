@@ -71,7 +71,6 @@ func main() {
 
 	http.Handle("/metrics", metricsHandler(logger))
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		//nolint:errcheck
 		w.Write([]byte(`<html>
              <head><title>GPFS Exporter</title></head>
              <body>
