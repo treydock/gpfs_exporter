@@ -14,8 +14,8 @@
 package collectors
 
 import (
+	"github.com/go-kit/kit/log"
 	"github.com/prometheus/client_golang/prometheus/testutil"
-	"github.com/prometheus/common/log"
 	kingpin "gopkg.in/alecthomas/kingpin.v2"
 	"os/exec"
 	"strings"
@@ -40,7 +40,7 @@ mmdf:fsTotal:0:1:::3661677723648:481202021888:14:12117655064:0:
 mmdf:inode:0:1:::430741822:484301506:915043328:1332164000:
 `
 	defer func() { execCommand = exec.CommandContext }()
-	dfmetrics, err := Parse_mmdf(mockedStdout)
+	dfmetrics, err := parse_mmdf(mockedStdout, log.NewNopLogger())
 	if err != nil {
 		t.Errorf("Unexpected error: %s", err.Error())
 	}
@@ -62,7 +62,6 @@ mmdf:inode:0:1:::430741822:484301506:915043328:1332164000:
 }
 
 func TestMmdfCollector(t *testing.T) {
-	_ = log.Base().SetLevel("debug")
 	if _, err := kingpin.CommandLine.Parse([]string{}); err != nil {
 		t.Fatal(err)
 	}
@@ -117,7 +116,7 @@ mmdf:inode:0:1:::430741822:484301506:915043328:1332164000:
 		# TYPE gpfs_fs_total_bytes gauge
 		gpfs_fs_total_bytes{fs="project"} 3749557989015552
 	`
-	collector := NewMmdfCollector()
+	collector := NewMmdfCollector(log.NewNopLogger())
 	gatherers := setupGatherer(collector)
 	if val := testutil.CollectAndCount(collector); val != 14 {
 		t.Errorf("Unexpected collection count %d, expected 14", val)

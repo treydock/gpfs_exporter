@@ -14,6 +14,7 @@
 package collectors
 
 import (
+	"github.com/go-kit/kit/log"
 	"github.com/prometheus/client_golang/prometheus/testutil"
 	"os/exec"
 	"strings"
@@ -27,7 +28,7 @@ _fs_io_s_ _n_ 10.22.0.106 _nn_ ib-pitzer-rw02.ten _rc_ 0 _t_ 1579358234 _tu_ 532
 _fs_io_s_ _n_ 10.22.0.106 _nn_ ib-pitzer-rw02.ten _rc_ 0 _t_ 1579358234 _tu_ 53212 _cl_ gpfs.osc.edu _fs_ project _d_ 96 _br_ 0 _bw_ 0 _oc_ 513 _cc_ 513 _rdc_ 0 _wc_ 0 _dir_ 0 _iu_ 169
 `
 	defer func() { execCommand = exec.CommandContext }()
-	perfs, err := mmpmon_parse(mockedStdout)
+	perfs, err := mmpmon_parse(mockedStdout, log.NewNopLogger())
 	if err != nil {
 		t.Errorf("Unexpected error: %s", err.Error())
 	}
@@ -83,7 +84,7 @@ _fs_io_s_ _n_ 10.22.0.106 _nn_ ib-pitzer-rw02.ten _rc_ 0 _t_ 1579358234 _tu_ 532
 		gpfs_perf_write_bytes{fs="project",nodename="ib-pitzer-rw02.ten"} 0
 		gpfs_perf_write_bytes{fs="scratch",nodename="ib-pitzer-rw02.ten"} 74839282351
 	`
-	collector := NewMmpmonCollector()
+	collector := NewMmpmonCollector(log.NewNopLogger())
 	gatherers := setupGatherer(collector)
 	if val := testutil.CollectAndCount(collector); val != 19 {
 		t.Errorf("Unexpected collection count %d, expected 19", val)

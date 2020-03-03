@@ -23,8 +23,9 @@ import (
 	"sync"
 	"time"
 
+	"github.com/go-kit/kit/log"
+	"github.com/go-kit/kit/log/level"
 	"github.com/prometheus/client_golang/prometheus"
-	"github.com/prometheus/common/log"
 	"gopkg.in/alecthomas/kingpin.v2"
 )
 
@@ -72,13 +73,14 @@ type MmdfCollector struct {
 	MetadataTotal       *prometheus.Desc
 	MetadataFree        *prometheus.Desc
 	MetadataFreePercent *prometheus.Desc
+	logger              log.Logger
 }
 
 func init() {
 	registerCollector("mmdf", false, NewMmdfCollector)
 }
 
-func NewMmdfCollector() Collector {
+func NewMmdfCollector(logger log.Logger) Collector {
 	return &MmdfCollector{
 		InodesUsed: prometheus.NewDesc(prometheus.BuildFQName(namespace, "fs", "inodes_used"),
 			"GPFS filesystem inodes used", []string{"fs"}, nil),
@@ -100,6 +102,7 @@ func NewMmdfCollector() Collector {
 			"GPFS metadata free size in bytes", []string{"fs"}, nil),
 		MetadataFreePercent: prometheus.NewDesc(prometheus.BuildFQName(namespace, "fs", "metadata_free_percent"),
 			"GPFS metadata free percent", []string{"fs"}, nil),
+		logger: logger,
 	}
 }
 
@@ -122,10 +125,10 @@ func (c *MmdfCollector) Collect(ch chan<- prometheus.Metric) {
 	if *configFilesystems == "" {
 		ctx, cancel := context.WithTimeout(context.Background(), time.Duration(*mmlsfsTimeout)*time.Second)
 		defer cancel()
-		mmlfsfs_filesystems, err := mmlfsfsFilesystems(ctx)
+		mmlfsfs_filesystems, err := mmlfsfsFilesystems(ctx, c.logger)
 		if ctx.Err() == context.DeadlineExceeded {
 			ch <- prometheus.MustNewConstMetric(collecTimeout, prometheus.GaugeValue, 1, "mmdf-mmlsfs")
-			log.Error("Timeout executing mmlsfs")
+			level.Error(c.logger).Log("msg", "Timeout executing mmlsfs")
 		} else {
 			ch <- prometheus.MustNewConstMetric(collecTimeout, prometheus.GaugeValue, 0, "mmdf-mmlsfs")
 		}
@@ -139,7 +142,7 @@ func (c *MmdfCollector) Collect(ch chan<- prometheus.Metric) {
 		filesystems = strings.Split(*configFilesystems, ",")
 	}
 	for _, fs := range filesystems {
-		log.Debugln("Collecting mmdf metrics for fs", fs)
+		level.Debug(c.logger).Log("msg", "Collecting mmdf metrics", "fs", fs)
 		wg.Add(1)
 		collectTime := time.Now()
 		go func(fs string) {
@@ -150,7 +153,7 @@ func (c *MmdfCollector) Collect(ch chan<- prometheus.Metric) {
 			err := c.mmdfCollect(fs, ch, ctx)
 			if ctx.Err() == context.DeadlineExceeded {
 				ch <- prometheus.MustNewConstMetric(collecTimeout, prometheus.GaugeValue, 1, label)
-				log.Errorln("Timeout executing", label)
+				level.Error(c.logger).Log("msg", fmt.Sprintf("Timeout executing %s", label))
 				return
 			}
 			ch <- prometheus.MustNewConstMetric(collecTimeout, prometheus.GaugeValue, 0, label)
@@ -167,12 +170,14 @@ func (c *MmdfCollector) Collect(ch chan<- prometheus.Metric) {
 }
 
 func (c *MmdfCollector) mmdfCollect(fs string, ch chan<- prometheus.Metric, ctx context.Context) error {
-	out, err := Mmdf(fs, ctx)
+	out, err := mmdf(fs, ctx)
 	if err != nil {
+		level.Error(c.logger).Log("msg", err)
 		return err
 	}
-	dfMetric, err := Parse_mmdf(out)
+	dfMetric, err := parse_mmdf(out, c.logger)
 	if err != nil {
+		level.Error(c.logger).Log("msg", err)
 		return err
 	}
 	ch <- prometheus.MustNewConstMetric(c.InodesUsed, prometheus.GaugeValue, float64(dfMetric.InodesUsed), fs)
@@ -188,14 +193,16 @@ func (c *MmdfCollector) mmdfCollect(fs string, ch chan<- prometheus.Metric, ctx 
 	return nil
 }
 
-func mmlfsfsFilesystems(ctx context.Context) ([]string, error) {
+func mmlfsfsFilesystems(ctx context.Context, logger log.Logger) ([]string, error) {
 	var filesystems []string
 	out, err := mmlsfs(ctx)
 	if err != nil {
+		level.Error(logger).Log("msg", err)
 		return nil, err
 	}
 	mmlsfs_filesystems, err := parse_mmlsfs(out)
 	if err != nil {
+		level.Error(logger).Log("msg", err)
 		return nil, err
 	}
 	for _, fs := range mmlsfs_filesystems {
@@ -204,19 +211,18 @@ func mmlfsfsFilesystems(ctx context.Context) ([]string, error) {
 	return filesystems, nil
 }
 
-func Mmdf(fs string, ctx context.Context) (string, error) {
+func mmdf(fs string, ctx context.Context) (string, error) {
 	cmd := execCommand(ctx, "sudo", "/usr/lpp/mmfs/bin/mmdf", fs, "-Y")
 	var out bytes.Buffer
 	cmd.Stdout = &out
 	err := cmd.Run()
 	if err != nil {
-		log.Error(err)
 		return "", err
 	}
 	return out.String(), nil
 }
 
-func Parse_mmdf(out string) (DFMetric, error) {
+func parse_mmdf(out string, logger log.Logger) (DFMetric, error) {
 	var dfMetrics DFMetric
 	headers := make(map[string][]string)
 	values := make(map[string][]string)
@@ -255,7 +261,7 @@ func Parse_mmdf(out string) (DFMetric, error) {
 						}
 						f.SetInt(val)
 					} else {
-						log.Errorf("Error parsing %s value %s: %s", mapKey, value, err.Error())
+						level.Error(logger).Log("msg", fmt.Sprintf("Error parsing %s value %s: %s", mapKey, value, err.Error()))
 					}
 				}
 			}

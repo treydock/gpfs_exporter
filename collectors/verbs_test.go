@@ -14,6 +14,7 @@
 package collectors
 
 import (
+	"github.com/go-kit/kit/log"
 	"github.com/prometheus/client_golang/prometheus/testutil"
 	"os/exec"
 	"strings"
@@ -63,7 +64,7 @@ VERBS RDMA status: started
 		# TYPE gpfs_verbs_status gauge
 		gpfs_verbs_status 1
 	`
-	collector := NewVerbsCollector()
+	collector := NewVerbsCollector(log.NewNopLogger())
 	gatherers := setupGatherer(collector)
 	if val := testutil.CollectAndCount(collector); val != 4 {
 		t.Errorf("Unexpected collection count %d, expected 4", val)

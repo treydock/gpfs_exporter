@@ -14,6 +14,7 @@
 package collectors
 
 import (
+	"github.com/go-kit/kit/log"
 	"github.com/prometheus/client_golang/prometheus/testutil"
 	"os/exec"
 	"strings"
@@ -35,7 +36,7 @@ mmhealth:State:0:1:::ib-cluster-rw02.example.com:FILESYSTEM:scratch:FILESYSTEM:H
 mmhealth:State:0:1:::ib-cluster-rw02.example.com:FILESYSTEM:ess:FILESYSTEM:HEALTHY:2020-01-14 10%3A37%3A33.657052 EST:
 `
 	defer func() { execCommand = exec.CommandContext }()
-	metrics, err := mmhealth_parse(mockedStdout)
+	metrics, err := mmhealth_parse(mockedStdout, log.NewNopLogger())
 	if err != nil {
 		t.Errorf("Unexpected error: %s", err.Error())
 	}
@@ -74,7 +75,7 @@ mmhealth:State:0:1:::ib-haswell1.example.com:FILESYSTEM:scratch:FILESYSTEM:HEALT
 mmhealth:State:0:1:::ib-haswell1.example.com:FILESYSTEM:ess:FILESYSTEM:HEALTHY:2020-01-27 09%3A35%3A21.716417 EST:
 `
 	defer func() { execCommand = exec.CommandContext }()
-	metrics, err := mmhealth_parse(mockedStdout)
+	metrics, err := mmhealth_parse(mockedStdout, log.NewNopLogger())
 	if err != nil {
 		t.Errorf("Unexpected error: %s", err.Error())
 	}
@@ -139,7 +140,7 @@ mmhealth:State:0:1:::ib-haswell1.example.com:FILESYSTEM:ess:FILESYSTEM:HEALTHY:2
 		gpfs_health_status{component="NETWORK",entityname="mlx5_0/1",entitytype="IB_RDMA",status="HEALTHY"} 1
 		gpfs_health_status{component="NODE",entityname="ib-haswell1.example.com",entitytype="NODE",status="TIPS"} 0
 	`
-	collector := NewMmhealthCollector()
+	collector := NewMmhealthCollector(log.NewNopLogger())
 	gatherers := setupGatherer(collector)
 	if val := testutil.CollectAndCount(collector); val != 12 {
 		t.Errorf("Unexpected collection count %d, expected 12", val)

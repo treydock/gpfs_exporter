@@ -14,6 +14,7 @@
 package collectors
 
 import (
+	"github.com/go-kit/kit/log"
 	"github.com/prometheus/client_golang/prometheus/testutil"
 	kingpin "gopkg.in/alecthomas/kingpin.v2"
 	"os/exec"
@@ -54,7 +55,7 @@ Waiting 0.0002 sec since 10:24:00, monitored, thread 22987 NSDThread: for I/O co
 `
 	defer func() { execCommand = exec.CommandContext }()
 	var metric DiagMetric
-	err := parse_mmdiag_waiters(mockedStdout, &metric)
+	err := parse_mmdiag_waiters(mockedStdout, &metric, log.NewNopLogger())
 	if err != nil {
 		t.Errorf("Unexpected error: %s", err.Error())
 	}
@@ -117,7 +118,7 @@ Waiting 0.0002 sec since 10:24:00, monitored, thread 22987 NSDThread: for I/O co
 		gpfs_mmdiag_waiter{thread="120655"} 64.3890
 		gpfs_mmdiag_waiter{thread="120656"} 44.3890
 	`
-	collector := NewMmdiagCollector()
+	collector := NewMmdiagCollector(log.NewNopLogger())
 	gatherers := setupGatherer(collector)
 	if val := testutil.CollectAndCount(collector); val != 5 {
 		t.Errorf("Unexpected collection count %d, expected 5", val)

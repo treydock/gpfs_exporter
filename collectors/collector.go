@@ -23,8 +23,8 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/go-kit/kit/log"
 	"github.com/prometheus/client_golang/prometheus"
-	"github.com/prometheus/common/log"
 	"gopkg.in/alecthomas/kingpin.v2"
 )
 
@@ -34,7 +34,7 @@ const (
 
 var (
 	collectorState  = make(map[string]*bool)
-	factories       = make(map[string]func() Collector)
+	factories       = make(map[string]func(logger log.Logger) Collector)
 	execCommand     = exec.CommandContext
 	collectDuration = prometheus.NewDesc(
 		prometheus.BuildFQName(namespace, "exporter", "collector_duration_seconds"),
@@ -70,7 +70,7 @@ type Collector interface {
 	Collect(ch chan<- prometheus.Metric)
 }
 
-func registerCollector(collector string, isDefaultEnabled bool, factory func() Collector) {
+func registerCollector(collector string, isDefaultEnabled bool, factory func(logger log.Logger) Collector) {
 	var helpDefaultState string
 	if isDefaultEnabled {
 		helpDefaultState = "enabled"
@@ -85,12 +85,12 @@ func registerCollector(collector string, isDefaultEnabled bool, factory func() C
 	factories[collector] = factory
 }
 
-func NewGPFSCollector() *GPFSCollector {
+func NewGPFSCollector(logger log.Logger) *GPFSCollector {
 	collectors := make(map[string]Collector)
 	for key, enabled := range collectorState {
 		var collector Collector
 		if *enabled {
-			collector = factories[key]()
+			collector = factories[key](log.With(logger, "collector", key))
 			collectors[key] = collector
 		}
 	}
@@ -120,7 +120,6 @@ func mmlsfs(ctx context.Context) (string, error) {
 	cmd.Stdout = &out
 	err := cmd.Run()
 	if err != nil {
-		log.Error(err)
 		return "", err
 	}
 	return out.String(), nil
