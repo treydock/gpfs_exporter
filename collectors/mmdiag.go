@@ -16,13 +16,15 @@ package collectors
 import (
 	"bytes"
 	"context"
+	"fmt"
 	"regexp"
 	"strconv"
 	"strings"
 	"time"
 
+	"github.com/go-kit/kit/log"
+	"github.com/go-kit/kit/log/level"
 	"github.com/prometheus/client_golang/prometheus"
-	"github.com/prometheus/common/log"
 	"gopkg.in/alecthomas/kingpin.v2"
 )
 
@@ -44,16 +46,18 @@ type DiagWaiter struct {
 
 type MmdiagCollector struct {
 	Waiter *prometheus.Desc
+	logger log.Logger
 }
 
 func init() {
 	registerCollector("mmdiag", false, NewMmdiagCollector)
 }
 
-func NewMmdiagCollector() Collector {
+func NewMmdiagCollector(logger log.Logger) Collector {
 	return &MmdiagCollector{
 		Waiter: prometheus.NewDesc(prometheus.BuildFQName(namespace, "mmdiag", "waiter"),
 			"GPFS max waiter in seconds", []string{"thread"}, nil),
+		logger: logger,
 	}
 }
 
@@ -62,7 +66,7 @@ func (c *MmdiagCollector) Describe(ch chan<- *prometheus.Desc) {
 }
 
 func (c *MmdiagCollector) Collect(ch chan<- prometheus.Metric) {
-	log.Debug("Collecting mmdiag metrics")
+	level.Debug(c.logger).Log("msg", "Collecting mmdiag metrics")
 	err := c.collect(ch)
 	if err != nil {
 		ch <- prometheus.MustNewConstMetric(collectError, prometheus.GaugeValue, 1, "mmdiag")
@@ -78,16 +82,18 @@ func (c *MmdiagCollector) collect(ch chan<- prometheus.Metric) error {
 	out, err := mmdiag("--waiters", ctx)
 	if ctx.Err() == context.DeadlineExceeded {
 		ch <- prometheus.MustNewConstMetric(collecTimeout, prometheus.GaugeValue, 1, "mmdiag")
-		log.Error("Timeout executing mmdiag")
+		level.Error(c.logger).Log("msg", "Timeout executing mmdiag")
 		return nil
 	}
 	ch <- prometheus.MustNewConstMetric(collecTimeout, prometheus.GaugeValue, 0, "mmdiag")
 	if err != nil {
+		level.Error(c.logger).Log("msg", err)
 		return err
 	}
 	var diagMetric DiagMetric
-	err = parse_mmdiag_waiters(out, &diagMetric)
+	err = parse_mmdiag_waiters(out, &diagMetric, c.logger)
 	if err != nil {
+		level.Error(c.logger).Log("msg", err)
 		return err
 	}
 	for _, waiter := range diagMetric.Waiters {
@@ -103,13 +109,12 @@ func mmdiag(arg string, ctx context.Context) (string, error) {
 	cmd.Stdout = &out
 	err := cmd.Run()
 	if err != nil {
-		log.Error(err)
 		return "", err
 	}
 	return out.String(), nil
 }
 
-func parse_mmdiag_waiters(out string, diagMetric *DiagMetric) error {
+func parse_mmdiag_waiters(out string, diagMetric *DiagMetric, logger log.Logger) error {
 	lines := strings.Split(out, "\n")
 	waitersPattern := regexp.MustCompile(`^Waiting ([0-9.]+) sec.*thread ([0-9]+)`)
 	excludePattern := regexp.MustCompile(*configWaiterExclude)
@@ -123,7 +128,7 @@ func parse_mmdiag_waiters(out string, diagMetric *DiagMetric) error {
 		}
 		secs, err := strconv.ParseFloat(match[1], 64)
 		if err != nil {
-			log.Errorf("Unable to convert %s to float64", match[1])
+			level.Error(logger).Log("msg", fmt.Sprintf("Unable to convert %s to float64", match[1]))
 			continue
 		}
 		threshold := float64(*configWaiterThreshold)

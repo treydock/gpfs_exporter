@@ -16,13 +16,15 @@ package collectors
 import (
 	"bytes"
 	"context"
+	"fmt"
 	"reflect"
 	"strconv"
 	"strings"
 	"time"
 
+	"github.com/go-kit/kit/log"
+	"github.com/go-kit/kit/log/level"
 	"github.com/prometheus/client_golang/prometheus"
-	"github.com/prometheus/common/log"
 	"gopkg.in/alecthomas/kingpin.v2"
 )
 
@@ -44,17 +46,19 @@ type HealthMetric struct {
 }
 
 type MmhealthCollector struct {
-	State *prometheus.Desc
+	State  *prometheus.Desc
+	logger log.Logger
 }
 
 func init() {
 	registerCollector("mmhealth", false, NewMmhealthCollector)
 }
 
-func NewMmhealthCollector() Collector {
+func NewMmhealthCollector(logger log.Logger) Collector {
 	return &MmhealthCollector{
 		State: prometheus.NewDesc(prometheus.BuildFQName(namespace, "health", "status"),
 			"GPFS health status, 1=healthy 0=not healthy", []string{"component", "entityname", "entitytype", "status"}, nil),
+		logger: logger,
 	}
 }
 
@@ -63,7 +67,7 @@ func (c *MmhealthCollector) Describe(ch chan<- *prometheus.Desc) {
 }
 
 func (c *MmhealthCollector) Collect(ch chan<- prometheus.Metric) {
-	log.Debug("Collecting mmhealth metrics")
+	level.Debug(c.logger).Log("msg", "Collecting mmhealth metrics")
 	err := c.collect(ch)
 	if err != nil {
 		ch <- prometheus.MustNewConstMetric(collectError, prometheus.GaugeValue, 1, "mmhealth")
@@ -79,15 +83,17 @@ func (c *MmhealthCollector) collect(ch chan<- prometheus.Metric) error {
 	mmhealth_out, err := mmhealth(ctx)
 	if ctx.Err() == context.DeadlineExceeded {
 		ch <- prometheus.MustNewConstMetric(collecTimeout, prometheus.GaugeValue, 1, "mmhealth")
-		log.Error("Timeout executing mmhealth")
+		level.Error(c.logger).Log("msg", "Timeout executing mmhealth")
 		return nil
 	}
 	ch <- prometheus.MustNewConstMetric(collecTimeout, prometheus.GaugeValue, 0, "mmhealth")
 	if err != nil {
+		level.Error(c.logger).Log("msg", err)
 		return err
 	}
-	metrics, err := mmhealth_parse(mmhealth_out)
+	metrics, err := mmhealth_parse(mmhealth_out, c.logger)
 	if err != nil {
+		level.Error(c.logger).Log("msg", err)
 		return err
 	}
 	for _, m := range metrics {
@@ -104,13 +110,12 @@ func mmhealth(ctx context.Context) (string, error) {
 	cmd.Stdout = &out
 	err := cmd.Run()
 	if err != nil {
-		log.Error(err)
 		return "", err
 	}
 	return out.String(), nil
 }
 
-func mmhealth_parse(out string) ([]HealthMetric, error) {
+func mmhealth_parse(out string, logger log.Logger) ([]HealthMetric, error) {
 	var metrics []HealthMetric
 	lines := strings.Split(out, "\n")
 	var headers []string
@@ -144,7 +149,7 @@ func mmhealth_parse(out string) ([]HealthMetric, error) {
 					if val, err := strconv.ParseInt(values[i], 10, 64); err == nil {
 						f.SetInt(val)
 					} else {
-						log.Errorf("Error parsing %s value %s: %s", h, values[i], err.Error())
+						level.Error(logger).Log("msg", fmt.Sprintf("Error parsing %s value %s: %s", h, values[i], err.Error()))
 					}
 				}
 			}

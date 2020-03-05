@@ -16,13 +16,15 @@ package collectors
 import (
 	"bytes"
 	"context"
+	"fmt"
 	"reflect"
 	"strconv"
 	"strings"
 	"time"
 
+	"github.com/go-kit/kit/log"
+	"github.com/go-kit/kit/log/level"
 	"github.com/prometheus/client_golang/prometheus"
-	"github.com/prometheus/common/log"
 	"gopkg.in/alecthomas/kingpin.v2"
 )
 
@@ -59,13 +61,14 @@ type MmpmonCollector struct {
 	read_bytes  *prometheus.Desc
 	write_bytes *prometheus.Desc
 	operations  *prometheus.Desc
+	logger      log.Logger
 }
 
 func init() {
 	registerCollector("mmpmon", true, NewMmpmonCollector)
 }
 
-func NewMmpmonCollector() Collector {
+func NewMmpmonCollector(logger log.Logger) Collector {
 	return &MmpmonCollector{
 		read_bytes: prometheus.NewDesc(prometheus.BuildFQName(namespace, "perf", "read_bytes"),
 			"GPFS read bytes", []string{"fs", "nodename"}, nil),
@@ -73,6 +76,7 @@ func NewMmpmonCollector() Collector {
 			"GPFS write bytes", []string{"fs", "nodename"}, nil),
 		operations: prometheus.NewDesc(prometheus.BuildFQName(namespace, "perf", "operations"),
 			"GPFS operationgs reported by mmpmon", []string{"fs", "nodename", "operation"}, nil),
+		logger: logger,
 	}
 }
 
@@ -83,7 +87,7 @@ func (c *MmpmonCollector) Describe(ch chan<- *prometheus.Desc) {
 }
 
 func (c *MmpmonCollector) Collect(ch chan<- prometheus.Metric) {
-	log.Debug("Collecting mmpmon metrics")
+	level.Debug(c.logger).Log("msg", "Collecting mmpmon metrics")
 	err := c.collect(ch)
 	if err != nil {
 		ch <- prometheus.MustNewConstMetric(collectError, prometheus.GaugeValue, 1, "mmpmon")
@@ -99,15 +103,17 @@ func (c *MmpmonCollector) collect(ch chan<- prometheus.Metric) error {
 	mmpmon_out, err := mmpmon(ctx)
 	if ctx.Err() == context.DeadlineExceeded {
 		ch <- prometheus.MustNewConstMetric(collecTimeout, prometheus.GaugeValue, 1, "mmpmon")
-		log.Error("Timeout executing mmpmon")
+		level.Error(c.logger).Log("msg", "Timeout executing mmpmon")
 		return nil
 	}
 	ch <- prometheus.MustNewConstMetric(collecTimeout, prometheus.GaugeValue, 0, "mmpmon")
 	if err != nil {
+		level.Error(c.logger).Log("msg", err)
 		return err
 	}
-	perfs, err := mmpmon_parse(mmpmon_out)
+	perfs, err := mmpmon_parse(mmpmon_out, c.logger)
 	if err != nil {
+		level.Error(c.logger).Log("msg", err)
 		return err
 	}
 	for _, perf := range perfs {
@@ -131,13 +137,12 @@ func mmpmon(ctx context.Context) (string, error) {
 	cmd.Stdout = &out
 	err := cmd.Run()
 	if err != nil {
-		log.Error(err)
 		return "", err
 	}
 	return out.String(), nil
 }
 
-func mmpmon_parse(out string) ([]PerfMetrics, error) {
+func mmpmon_parse(out string, logger log.Logger) ([]PerfMetrics, error) {
 	var metrics []PerfMetrics
 	lines := strings.Split(out, "\n")
 	for _, l := range lines {
@@ -166,7 +171,7 @@ func mmpmon_parse(out string) ([]PerfMetrics, error) {
 					if val, err := strconv.ParseInt(values[i], 10, 64); err == nil {
 						f.SetInt(val)
 					} else {
-						log.Errorf("Error parsing %s value %s: %s", h, values[i], err.Error())
+						level.Error(logger).Log("msg", fmt.Sprintf("Error parsing %s value %s: %s", h, values[i], err.Error()))
 					}
 				}
 			}

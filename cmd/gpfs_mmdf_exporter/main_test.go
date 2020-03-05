@@ -14,7 +14,6 @@
 package main
 
 import (
-	"github.com/prometheus/common/log"
 	kingpin "gopkg.in/alecthomas/kingpin.v2"
 	"os"
 	"testing"
@@ -22,7 +21,7 @@ import (
 
 func TestMain(m *testing.M) {
 	if _, err := kingpin.CommandLine.Parse([]string{"--output=/dne"}); err != nil {
-		log.Fatal(err)
+		os.Exit(1)
 	}
 	exitVal := m.Run()
 	os.Exit(exitVal)

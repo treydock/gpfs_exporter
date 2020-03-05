@@ -15,14 +15,15 @@ package main
 
 import (
 	"fmt"
-	"github.com/prometheus/common/log"
-	kingpin "gopkg.in/alecthomas/kingpin.v2"
 	"io/ioutil"
 	"net/http"
 	"os"
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/go-kit/kit/log"
+	kingpin "gopkg.in/alecthomas/kingpin.v2"
 )
 
 const (
@@ -31,13 +32,16 @@ const (
 
 func TestMain(m *testing.M) {
 	if _, err := kingpin.CommandLine.Parse([]string{"--no-collector.mmpmon"}); err != nil {
-		log.Fatal(err)
+		os.Exit(1)
 	}
 	varTrue := true
 	disableExporterMetrics = &varTrue
 	go func() {
-		http.Handle("/metrics", metricsHandler())
-		log.Fatal(http.ListenAndServe(address, nil))
+		http.Handle("/metrics", metricsHandler(log.NewNopLogger()))
+		err := http.ListenAndServe(address, nil)
+		if err != nil {
+			os.Exit(1)
+		}
 	}()
 	time.Sleep(1 * time.Second)
 
@@ -47,12 +51,10 @@ func TestMain(m *testing.M) {
 }
 
 func TestMetricsHandler(t *testing.T) {
-	_ = log.Base().SetLevel("debug")
 	body, err := queryExporter()
 	if err != nil {
 		t.Fatalf("Unexpected error GET /metrics: %s", err.Error())
 	}
-	log.Debugf("body='%s'", body)
 	if !strings.Contains(body, "gpfs_exporter_collect_error{collector=\"mount\"} 0") {
 		t.Errorf("Unexpected value for gpfs_exporter_collect_error")
 	}

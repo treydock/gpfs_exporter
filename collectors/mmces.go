@@ -16,27 +16,28 @@ package collectors
 import (
 	"bytes"
 	"context"
+	"fmt"
 	"os"
 	"strings"
 	"time"
 
+	"github.com/go-kit/kit/log"
+	"github.com/go-kit/kit/log/level"
 	"github.com/prometheus/client_golang/prometheus"
-	"github.com/prometheus/common/log"
 	"gopkg.in/alecthomas/kingpin.v2"
 )
 
 var (
 	osHostname     = os.Hostname
-	fqdn           = getFQDN()
-	configNodeName = kingpin.Flag("collector.mmces.nodename", "CES node name to check, defaults to FQDN").Default(fqdn).String()
+	configNodeName = kingpin.Flag("collector.mmces.nodename", "CES node name to check, defaults to FQDN").Default("").String()
 	mmcesTimeout   = kingpin.Flag("collector.mmces.timeout", "Timeout for mmces execution").Default("5").Int()
 	cesServices    = []string{"AUTH", "BLOCK", "NETWORK", "AUTH_OBJ", "NFS", "OBJ", "SMB", "CES"}
 )
 
-func getFQDN() string {
+func getFQDN(logger log.Logger) string {
 	hostname, err := osHostname()
 	if err != nil {
-		log.Infof("Unable to determine FQDN: %v", err)
+		level.Info(logger).Log("msg", fmt.Sprintf("Unable to determine FQDN: %s", err.Error()))
 		return ""
 	}
 	return hostname
@@ -48,17 +49,19 @@ type CESMetric struct {
 }
 
 type MmcesCollector struct {
-	State *prometheus.Desc
+	State  *prometheus.Desc
+	logger log.Logger
 }
 
 func init() {
 	registerCollector("mmces", false, NewMmcesCollector)
 }
 
-func NewMmcesCollector() Collector {
+func NewMmcesCollector(logger log.Logger) Collector {
 	return &MmcesCollector{
 		State: prometheus.NewDesc(prometheus.BuildFQName(namespace, "ces", "state"),
 			"GPFS CES health status, 1=healthy 0=not healthy", []string{"service", "state"}, nil),
+		logger: logger,
 	}
 }
 
@@ -67,7 +70,7 @@ func (c *MmcesCollector) Describe(ch chan<- *prometheus.Desc) {
 }
 
 func (c *MmcesCollector) Collect(ch chan<- prometheus.Metric) {
-	log.Debug("Collecting mmces metrics")
+	level.Debug(c.logger).Log("msg", "Collecting mmces metrics")
 	err := c.collect(ch)
 	if err != nil {
 		ch <- prometheus.MustNewConstMetric(collectError, prometheus.GaugeValue, 1, "mmces")
@@ -80,22 +83,30 @@ func (c *MmcesCollector) collect(ch chan<- prometheus.Metric) error {
 	collectTime := time.Now()
 	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(*mmcesTimeout)*time.Second)
 	defer cancel()
+	var nodename string
 	if *configNodeName == "" {
-		log.Fatal("collector.mmces.nodename must be defined and could not be determined")
+		nodename = getFQDN(c.logger)
+		if nodename == "" {
+			level.Error(c.logger).Log("msg", "collector.mmces.nodename must be defined and could not be determined")
+			os.Exit(1)
+		}
+	} else {
+		nodename = *configNodeName
 	}
-	nodename := *configNodeName
 	mmces_state_out, err := mmces_state_show(nodename, ctx)
 	if ctx.Err() == context.DeadlineExceeded {
 		ch <- prometheus.MustNewConstMetric(collecTimeout, prometheus.GaugeValue, 1, "mmces")
-		log.Error("Timeout executing mmces")
+		level.Error(c.logger).Log("msg", "Timeout executing mmces")
 		return nil
 	}
 	ch <- prometheus.MustNewConstMetric(collecTimeout, prometheus.GaugeValue, 0, "mmces")
 	if err != nil {
+		level.Error(c.logger).Log("msg", err)
 		return err
 	}
 	metrics, err := mmces_state_show_parse(mmces_state_out)
 	if err != nil {
+		level.Error(c.logger).Log("msg", err)
 		return err
 	}
 	for _, m := range metrics {
@@ -112,7 +123,6 @@ func mmces_state_show(nodename string, ctx context.Context) (string, error) {
 	cmd.Stdout = &out
 	err := cmd.Run()
 	if err != nil {
-		log.Error(err)
 		return "", err
 	}
 	return out.String(), nil

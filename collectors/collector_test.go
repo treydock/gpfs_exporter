@@ -16,12 +16,13 @@ package collectors
 import (
 	"context"
 	"fmt"
-	"github.com/prometheus/client_golang/prometheus"
 	"os"
 	"os/exec"
 	"strconv"
 	"testing"
 	"time"
+
+	"github.com/prometheus/client_golang/prometheus"
 )
 
 var (

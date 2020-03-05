@@ -14,11 +14,16 @@
 package main
 
 import (
+	"fmt"
 	"net/http"
+	"os"
 
+	"github.com/go-kit/kit/log"
+	"github.com/go-kit/kit/log/level"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
-	"github.com/prometheus/common/log"
+	"github.com/prometheus/common/promlog"
+	"github.com/prometheus/common/promlog/flag"
 	"github.com/prometheus/common/version"
 	"github.com/treydock/gpfs_exporter/collectors"
 	"gopkg.in/alecthomas/kingpin.v2"
@@ -29,15 +34,15 @@ var (
 	disableExporterMetrics = kingpin.Flag("web.disable-exporter-metrics", "Exclude metrics about the exporter (promhttp_*, process_*, go_*)").Default("false").Bool()
 )
 
-func metricsHandler() http.HandlerFunc {
+func metricsHandler(logger log.Logger) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		registry := prometheus.NewRegistry()
 
-		gpfsCollector := collectors.NewGPFSCollector()
+		gpfsCollector := collectors.NewGPFSCollector(logger)
 		gpfsCollector.Lock()
 		defer gpfsCollector.Unlock()
 		for key, collector := range gpfsCollector.Collectors {
-			log.Debugf("Enabled collector %s", key)
+			level.Debug(logger).Log("msg", fmt.Sprintf("Enabled collector %s", key))
 			registry.MustRegister(collector)
 		}
 
@@ -53,18 +58,19 @@ func metricsHandler() http.HandlerFunc {
 }
 
 func main() {
-	log.AddFlags(kingpin.CommandLine)
+	promlogConfig := &promlog.Config{}
+	flag.AddFlags(kingpin.CommandLine, promlogConfig)
 	kingpin.Version(version.Print("gpfs_exporter"))
 	kingpin.HelpFlag.Short('h')
 	kingpin.Parse()
 
-	log.Infoln("Starting gpfs_exporter", version.Info())
-	log.Infoln("Build context", version.BuildContext())
-	log.Infof("Starting Server: %s", *listenAddr)
+	logger := promlog.New(promlogConfig)
+	level.Info(logger).Log("msg", "Starting gpfs_exporter", "version", version.Info())
+	level.Info(logger).Log("msg", "Build context", "build_context", version.BuildContext())
+	level.Info(logger).Log("msg", "Starting Server", "address", *listenAddr)
 
-	http.Handle("/metrics", metricsHandler())
+	http.Handle("/metrics", metricsHandler(logger))
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		//nolint:errcheck
 		w.Write([]byte(`<html>
              <head><title>GPFS Exporter</title></head>
              <body>
@@ -73,5 +79,9 @@ func main() {
              </body>
              </html>`))
 	})
-	log.Fatal(http.ListenAndServe(*listenAddr, nil))
+	err := http.ListenAndServe(*listenAddr, nil)
+	if err != nil {
+		level.Error(logger).Log("err", err)
+		os.Exit(1)
+	}
 }

@@ -14,6 +14,7 @@
 package collectors
 
 import (
+	"github.com/go-kit/kit/log"
 	"github.com/prometheus/client_golang/prometheus/testutil"
 	kingpin "gopkg.in/alecthomas/kingpin.v2"
 	"os/exec"
@@ -79,7 +80,7 @@ mmcesstate::0:1:::ib-protocol01.domain:HEALTHY:DISABLED:HEALTHY:DISABLED:HEALTHY
 		gpfs_ces_state{service="OBJ",state="DISABLED"} 0
 		gpfs_ces_state{service="SMB",state="HEALTHY"} 1
 	`
-	collector := NewMmcesCollector()
+	collector := NewMmcesCollector(log.NewNopLogger())
 	gatherers := setupGatherer(collector)
 	if val := testutil.CollectAndCount(collector); val != 11 {
 		t.Errorf("Unexpected collection count %d, expected 11", val)

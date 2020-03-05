@@ -14,6 +14,7 @@
 package collectors
 
 import (
+	"github.com/go-kit/kit/log"
 	"github.com/prometheus/client_golang/prometheus/testutil"
 	kingpin "gopkg.in/alecthomas/kingpin.v2"
 	"io/ioutil"
@@ -122,7 +123,7 @@ scratch              /fs/scratch          gpfs       rw,mtime,atime,quota=userqu
 		gpfs_mount_status{mount="/fs/project"} 1
 		gpfs_mount_status{mount="/fs/scratch"} 1
 	`
-	collector := NewMountCollector()
+	collector := NewMountCollector(log.NewNopLogger())
 	gatherers := setupGatherer(collector)
 	if val := testutil.CollectAndCount(collector); val != 6 {
 		t.Errorf("Unexpected collection count %d, expected 6", val)
