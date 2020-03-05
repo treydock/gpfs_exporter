@@ -16,6 +16,7 @@ Collectors are enabled or disabled via `--collector.<name>` and `--no-collector.
 
 Name | Description | Default
 -----|-------------|--------
+mmgetstate | Collect state via mmgetstate | Enabled
 mmpmon| Collect metrics from `mmpmon` using `fs_io_s` | Enabled
 mount | Check status of GPFS mounts. | Enabled
 verbs | Test if GPFS is using verbs interface | Disabled
@@ -55,6 +56,8 @@ The following sudo config assumes `gpfs_exporter` is running as `gpfs_exporter`.
 ```
 Defaults:gpfs_exporter !syslog
 Defaults:gpfs_exporter !requiretty
+# mmgetstate collector
+gpfs_exporter ALL=(ALL) NOPASSWD:/usr/lpp/mmfs/bin/mmgetstate -Y
 # mmpmon collector
 gpfs_exporter ALL=(ALL) NOPASSWD:/usr/lpp/mmfs/bin/mmpmon -s -p
 # mmhealth collector
