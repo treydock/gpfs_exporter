@@ -1,3 +1,10 @@
+## 0.8.0 / 2020-03-05
+
+### Changes
+
+* Add mmgetstate collector and metrics
+* Use promlog for logging
+
 ## 0.7.0 / 2020-03-02
 
 ### Changes
