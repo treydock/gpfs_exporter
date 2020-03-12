@@ -30,6 +30,7 @@ func TestParseMmdiagWaiters(t *testing.T) {
 	mockedStdout = `
 
 === mmdiag: waiters ===
+Waiting 6861.7395 sec since 11:04:20, ignored, thread 19428 FsckClientReaperThread: on ThCond 0x7F138008EC10 (FsckReaperCondvar), reason 'Waiting to reap fsck pointer'
 Waiting 40.4231 sec since 13:08:39, monitored, thread 120656 EventsExporterSenderThread: for poll on sock 1379
 Waiting 64.3890 sec since 17:55:45, monitored, thread 120655 NSDThread: for I/O completion
 Waiting 44.3890 sec since 17:55:45, monitored, thread 120656 NSDThread: for I/O completion
@@ -87,6 +88,7 @@ func TestMmdiagCollector(t *testing.T) {
 	execCommand = fakeExecCommand
 	mockedStdout = `
 === mmdiag: waiters ===
+Waiting 6861.7395 sec since 11:04:20, ignored, thread 19428 FsckClientReaperThread: on ThCond 0x7F138008EC10 (FsckReaperCondvar), reason 'Waiting to reap fsck pointer'
 Waiting 40.4231 sec since 13:08:39, monitored, thread 120656 EventsExporterSenderThread: for poll on sock 1379
 Waiting 64.3890 sec since 17:55:45, monitored, thread 120655 NSDThread: for I/O completion
 Waiting 44.3890 sec since 17:55:45, monitored, thread 120656 NSDThread: for I/O completion

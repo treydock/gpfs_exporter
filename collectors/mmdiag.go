@@ -29,7 +29,7 @@ import (
 )
 
 var (
-	defWaiterExclude      = "(EventsExporterSenderThread)"
+	defWaiterExclude      = "(EventsExporterSenderThread|Fsck)"
 	configWaiterThreshold = kingpin.Flag("collector.mmdiag.waiter-threshold", "Threshold for collected waiters").Default("30").Int()
 	configWaiterExclude   = kingpin.Flag("collector.mmdiag.waiter-exclude", "Pattern to exclude for waiters").Default(defWaiterExclude).String()
 	mmdiagTimeout         = kingpin.Flag("collector.mmdiag.timeout", "Timeout for mmdiag execution").Default("5").Int()
