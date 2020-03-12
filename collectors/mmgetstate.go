@@ -59,13 +59,18 @@ func (c *MmgetstateCollector) Describe(ch chan<- *prometheus.Desc) {
 func (c *MmgetstateCollector) Collect(ch chan<- prometheus.Metric) {
 	level.Debug(c.logger).Log("msg", "Collecting mmgetstate metrics")
 	collectTime := time.Now()
-	metric, err := c.collect(ch)
-	if err != nil {
+	timeout := 0
+	metric, err := c.collect()
+	if err == context.DeadlineExceeded {
+		level.Error(c.logger).Log("msg", "Timeout executing mmgetstate")
+		timeout = 1
+	} else if err != nil {
 		level.Error(c.logger).Log("msg", err)
 		ch <- prometheus.MustNewConstMetric(collectError, prometheus.GaugeValue, 1, "mmgetstate")
 	} else {
 		ch <- prometheus.MustNewConstMetric(collectError, prometheus.GaugeValue, 0, "mmgetstate")
 	}
+	ch <- prometheus.MustNewConstMetric(collecTimeout, prometheus.GaugeValue, float64(timeout), "mmgetstate")
 	for _, state := range mmgetstateStates {
 		if state == metric.state {
 			ch <- prometheus.MustNewConstMetric(c.state, prometheus.GaugeValue, 1, state)
@@ -81,7 +86,7 @@ func (c *MmgetstateCollector) Collect(ch chan<- prometheus.Metric) {
 	ch <- prometheus.MustNewConstMetric(collectDuration, prometheus.GaugeValue, time.Since(collectTime).Seconds(), "mmgetstate")
 }
 
-func (c *MmgetstateCollector) collect(ch chan<- prometheus.Metric) (MmgetstateMetrics, error) {
+func (c *MmgetstateCollector) collect() (MmgetstateMetrics, error) {
 	var metric MmgetstateMetrics
 	var out string
 	var err error
@@ -89,14 +94,11 @@ func (c *MmgetstateCollector) collect(ch chan<- prometheus.Metric) (MmgetstateMe
 	defer cancel()
 	out, err = mmgetstate(ctx)
 	if ctx.Err() == context.DeadlineExceeded {
-		ch <- prometheus.MustNewConstMetric(collecTimeout, prometheus.GaugeValue, 1, "mmgetstate")
-		level.Error(c.logger).Log("msg", "Timeout executing mmgetstate")
 		if *useCache {
 			metric = mmgetstateCache
 		}
-		return metric, nil
+		return metric, ctx.Err()
 	}
-	ch <- prometheus.MustNewConstMetric(collecTimeout, prometheus.GaugeValue, 0, "mmgetstate")
 	if err != nil {
 		if *useCache {
 			metric = mmgetstateCache

@@ -69,20 +69,25 @@ func (c *MmdiagCollector) Describe(ch chan<- *prometheus.Desc) {
 func (c *MmdiagCollector) Collect(ch chan<- prometheus.Metric) {
 	level.Debug(c.logger).Log("msg", "Collecting mmdiag metrics")
 	collectTime := time.Now()
-	diagMetric, err := c.collect(ch)
-	if err != nil {
+	timeout := 0
+	diagMetric, err := c.collect()
+	if err == context.DeadlineExceeded {
+		level.Error(c.logger).Log("msg", "Timeout executing mmdiag")
+		timeout = 1
+	} else if err != nil {
 		level.Error(c.logger).Log("msg", err)
 		ch <- prometheus.MustNewConstMetric(collectError, prometheus.GaugeValue, 1, "mmdiag")
 	} else {
 		ch <- prometheus.MustNewConstMetric(collectError, prometheus.GaugeValue, 0, "mmdiag")
 	}
+	ch <- prometheus.MustNewConstMetric(collecTimeout, prometheus.GaugeValue, float64(timeout), "mmdiag")
 	for _, waiter := range diagMetric.Waiters {
 		ch <- prometheus.MustNewConstMetric(c.Waiter, prometheus.GaugeValue, waiter.Seconds, waiter.Thread)
 	}
 	ch <- prometheus.MustNewConstMetric(collectDuration, prometheus.GaugeValue, time.Since(collectTime).Seconds(), "mmdiag")
 }
 
-func (c *MmdiagCollector) collect(ch chan<- prometheus.Metric) (DiagMetric, error) {
+func (c *MmdiagCollector) collect() (DiagMetric, error) {
 	var diagMetric DiagMetric
 	var out string
 	var err error
@@ -90,14 +95,11 @@ func (c *MmdiagCollector) collect(ch chan<- prometheus.Metric) (DiagMetric, erro
 	defer cancel()
 	out, err = mmdiag("--waiters", ctx)
 	if ctx.Err() == context.DeadlineExceeded {
-		ch <- prometheus.MustNewConstMetric(collecTimeout, prometheus.GaugeValue, 1, "mmdiag")
-		level.Error(c.logger).Log("msg", "Timeout executing mmdiag")
 		if *useCache {
 			diagMetric = mmdiagCache
 		}
-		return diagMetric, nil
+		return diagMetric, ctx.Err()
 	}
-	ch <- prometheus.MustNewConstMetric(collecTimeout, prometheus.GaugeValue, 0, "mmdiag")
 	if err != nil {
 		if *useCache {
 			diagMetric = mmdiagCache

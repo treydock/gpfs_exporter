@@ -58,13 +58,18 @@ func (c *VerbsCollector) Describe(ch chan<- *prometheus.Desc) {
 func (c *VerbsCollector) Collect(ch chan<- prometheus.Metric) {
 	level.Debug(c.logger).Log("msg", "Collecting verbs metrics")
 	collectTime := time.Now()
-	metric, err := c.collect(ch)
-	if err != nil {
+	timeout := 0
+	metric, err := c.collect()
+	if err == context.DeadlineExceeded {
+		timeout = 1
+		level.Error(c.logger).Log("msg", "Timeout executing verbs check")
+	} else if err != nil {
 		level.Error(c.logger).Log("msg", err)
 		ch <- prometheus.MustNewConstMetric(collectError, prometheus.GaugeValue, 1, "verbs")
 	} else {
 		ch <- prometheus.MustNewConstMetric(collectError, prometheus.GaugeValue, 0, "verbs")
 	}
+	ch <- prometheus.MustNewConstMetric(collecTimeout, prometheus.GaugeValue, float64(timeout), "verbs")
 	if metric.Status == "started" {
 		ch <- prometheus.MustNewConstMetric(c.Status, prometheus.GaugeValue, 1)
 	} else {
@@ -73,7 +78,7 @@ func (c *VerbsCollector) Collect(ch chan<- prometheus.Metric) {
 	ch <- prometheus.MustNewConstMetric(collectDuration, prometheus.GaugeValue, time.Since(collectTime).Seconds(), "verbs")
 }
 
-func (c *VerbsCollector) collect(ch chan<- prometheus.Metric) (VerbsMetrics, error) {
+func (c *VerbsCollector) collect() (VerbsMetrics, error) {
 	var out string
 	var err error
 	var metric VerbsMetrics
@@ -81,14 +86,11 @@ func (c *VerbsCollector) collect(ch chan<- prometheus.Metric) (VerbsMetrics, err
 	defer cancel()
 	out, err = verbs(ctx)
 	if ctx.Err() == context.DeadlineExceeded {
-		ch <- prometheus.MustNewConstMetric(collecTimeout, prometheus.GaugeValue, 1, "verbs")
-		level.Error(c.logger).Log("msg", "Timeout executing verbs check")
 		if *useCache {
 			metric = verbsCache
 		}
-		return metric, nil
+		return metric, ctx.Err()
 	}
-	ch <- prometheus.MustNewConstMetric(collecTimeout, prometheus.GaugeValue, 0, "verbs")
 	if err != nil {
 		if *useCache {
 			metric = verbsCache

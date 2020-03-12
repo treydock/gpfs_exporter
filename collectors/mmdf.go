@@ -151,13 +151,18 @@ func (c *MmdfCollector) Collect(ch chan<- prometheus.Metric) {
 		go func(fs string) {
 			defer wg.Done()
 			label := fmt.Sprintf("mmdf-%s", fs)
-			metric, err := c.mmdfCollect(fs, label, ch)
-			if err != nil {
+			timeout := 0
+			metric, err := c.mmdfCollect(fs)
+			if err == context.DeadlineExceeded {
+				level.Error(c.logger).Log("msg", fmt.Sprintf("Timeout executing %s", label))
+				timeout = 1
+			} else if err != nil {
 				level.Error(c.logger).Log("msg", err, "fs", fs)
 				ch <- prometheus.MustNewConstMetric(collectError, prometheus.GaugeValue, 1, label)
 			} else {
 				ch <- prometheus.MustNewConstMetric(collectError, prometheus.GaugeValue, 0, label)
 			}
+			ch <- prometheus.MustNewConstMetric(collecTimeout, prometheus.GaugeValue, float64(timeout), label)
 			ch <- prometheus.MustNewConstMetric(c.InodesUsed, prometheus.GaugeValue, float64(metric.InodesUsed), fs)
 			ch <- prometheus.MustNewConstMetric(c.InodesFree, prometheus.GaugeValue, float64(metric.InodesFree), fs)
 			ch <- prometheus.MustNewConstMetric(c.InodesAllocated, prometheus.GaugeValue, float64(metric.InodesAllocated), fs)
@@ -175,7 +180,7 @@ func (c *MmdfCollector) Collect(ch chan<- prometheus.Metric) {
 	wg.Wait()
 }
 
-func (c *MmdfCollector) mmdfCollect(fs string, label string, ch chan<- prometheus.Metric) (DFMetric, error) {
+func (c *MmdfCollector) mmdfCollect(fs string) (DFMetric, error) {
 	var dfMetric DFMetric
 	var out string
 	var err error
@@ -183,12 +188,9 @@ func (c *MmdfCollector) mmdfCollect(fs string, label string, ch chan<- prometheu
 	defer cancel()
 	out, err = mmdf(fs, ctx)
 	if ctx.Err() == context.DeadlineExceeded {
-		ch <- prometheus.MustNewConstMetric(collecTimeout, prometheus.GaugeValue, 1, label)
-		level.Error(c.logger).Log("msg", fmt.Sprintf("Timeout executing %s", label))
 		dfMetric = mmdfReadCache(fs)
-		return dfMetric, nil
+		return dfMetric, ctx.Err()
 	}
-	ch <- prometheus.MustNewConstMetric(collecTimeout, prometheus.GaugeValue, 0, label)
 	if err != nil {
 		dfMetric = mmdfReadCache(fs)
 		return dfMetric, err

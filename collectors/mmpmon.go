@@ -90,13 +90,18 @@ func (c *MmpmonCollector) Describe(ch chan<- *prometheus.Desc) {
 func (c *MmpmonCollector) Collect(ch chan<- prometheus.Metric) {
 	level.Debug(c.logger).Log("msg", "Collecting mmpmon metrics")
 	collectTime := time.Now()
-	perfs, err := c.collect(ch)
-	if err != nil {
+	timeout := 0
+	perfs, err := c.collect()
+	if err == context.DeadlineExceeded {
+		timeout = 1
+		level.Error(c.logger).Log("msg", "Timeout executing mmpmon")
+	} else if err != nil {
 		level.Error(c.logger).Log("msg", err)
 		ch <- prometheus.MustNewConstMetric(collectError, prometheus.GaugeValue, 1, "mmpmon")
 	} else {
 		ch <- prometheus.MustNewConstMetric(collectError, prometheus.GaugeValue, 0, "mmpmon")
 	}
+	ch <- prometheus.MustNewConstMetric(collecTimeout, prometheus.GaugeValue, float64(timeout), "mmpmon")
 	for _, perf := range perfs {
 		ch <- prometheus.MustNewConstMetric(c.read_bytes, prometheus.CounterValue, float64(perf.ReadBytes), perf.FS, perf.NodeName)
 		ch <- prometheus.MustNewConstMetric(c.write_bytes, prometheus.CounterValue, float64(perf.WriteBytes), perf.FS, perf.NodeName)
@@ -110,7 +115,7 @@ func (c *MmpmonCollector) Collect(ch chan<- prometheus.Metric) {
 	ch <- prometheus.MustNewConstMetric(collectDuration, prometheus.GaugeValue, time.Since(collectTime).Seconds(), "mmpmon")
 }
 
-func (c *MmpmonCollector) collect(ch chan<- prometheus.Metric) ([]PerfMetrics, error) {
+func (c *MmpmonCollector) collect() ([]PerfMetrics, error) {
 	var perfs []PerfMetrics
 	var mmpmon_out string
 	var err error
@@ -118,14 +123,11 @@ func (c *MmpmonCollector) collect(ch chan<- prometheus.Metric) ([]PerfMetrics, e
 	defer cancel()
 	mmpmon_out, err = mmpmon(ctx)
 	if ctx.Err() == context.DeadlineExceeded {
-		ch <- prometheus.MustNewConstMetric(collecTimeout, prometheus.GaugeValue, 1, "mmpmon")
-		level.Error(c.logger).Log("msg", "Timeout executing mmpmon")
 		if *useCache {
 			perfs = mmpmonCache
 		}
-		return perfs, nil
+		return perfs, ctx.Err()
 	}
-	ch <- prometheus.MustNewConstMetric(collecTimeout, prometheus.GaugeValue, 0, "mmpmon")
 	if err != nil {
 		if *useCache {
 			perfs = mmpmonCache

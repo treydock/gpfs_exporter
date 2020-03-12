@@ -73,13 +73,18 @@ func (c *MmcesCollector) Describe(ch chan<- *prometheus.Desc) {
 func (c *MmcesCollector) Collect(ch chan<- prometheus.Metric) {
 	level.Debug(c.logger).Log("msg", "Collecting mmces metrics")
 	collectTime := time.Now()
-	metrics, err := c.collect(ch)
-	if err != nil {
+	timeout := 0
+	metrics, err := c.collect()
+	if err == context.DeadlineExceeded {
+		level.Error(c.logger).Log("msg", "Timeout executing mmces")
+		timeout = 1
+	} else if err != nil {
 		level.Error(c.logger).Log("msg", err)
 		ch <- prometheus.MustNewConstMetric(collectError, prometheus.GaugeValue, 1, "mmces")
 	} else {
 		ch <- prometheus.MustNewConstMetric(collectError, prometheus.GaugeValue, 0, "mmces")
 	}
+	ch <- prometheus.MustNewConstMetric(collecTimeout, prometheus.GaugeValue, float64(timeout), "mmces")
 	for _, m := range metrics {
 		statusValue := parseMmcesState(m.State)
 		ch <- prometheus.MustNewConstMetric(c.State, prometheus.GaugeValue, statusValue, m.Service, m.State)
@@ -87,7 +92,7 @@ func (c *MmcesCollector) Collect(ch chan<- prometheus.Metric) {
 	ch <- prometheus.MustNewConstMetric(collectDuration, prometheus.GaugeValue, time.Since(collectTime).Seconds(), "mmces")
 }
 
-func (c *MmcesCollector) collect(ch chan<- prometheus.Metric) ([]CESMetric, error) {
+func (c *MmcesCollector) collect() ([]CESMetric, error) {
 	var err error
 	var mmces_state_out string
 	var metrics []CESMetric
@@ -105,14 +110,11 @@ func (c *MmcesCollector) collect(ch chan<- prometheus.Metric) ([]CESMetric, erro
 	}
 	mmces_state_out, err = mmces_state_show(nodename, ctx)
 	if ctx.Err() == context.DeadlineExceeded {
-		ch <- prometheus.MustNewConstMetric(collecTimeout, prometheus.GaugeValue, 1, "mmces")
-		level.Error(c.logger).Log("msg", "Timeout executing mmces")
 		if *useCache {
 			metrics = mmcesCache
 		}
-		return metrics, nil
+		return metrics, ctx.Err()
 	}
-	ch <- prometheus.MustNewConstMetric(collecTimeout, prometheus.GaugeValue, 0, "mmces")
 	if err != nil {
 		if *useCache {
 			metrics = mmcesCache

@@ -70,13 +70,18 @@ func (c *MmhealthCollector) Describe(ch chan<- *prometheus.Desc) {
 func (c *MmhealthCollector) Collect(ch chan<- prometheus.Metric) {
 	level.Debug(c.logger).Log("msg", "Collecting mmhealth metrics")
 	collectTime := time.Now()
-	metrics, err := c.collect(ch)
-	if err != nil {
+	timeout := 0
+	metrics, err := c.collect()
+	if err == context.DeadlineExceeded {
+		timeout = 1
+		level.Error(c.logger).Log("msg", "Timeout executing mmhealth")
+	} else if err != nil {
 		level.Error(c.logger).Log("msg", err)
 		ch <- prometheus.MustNewConstMetric(collectError, prometheus.GaugeValue, 1, "mmhealth")
 	} else {
 		ch <- prometheus.MustNewConstMetric(collectError, prometheus.GaugeValue, 0, "mmhealth")
 	}
+	ch <- prometheus.MustNewConstMetric(collecTimeout, prometheus.GaugeValue, float64(timeout), "mmhealth")
 	for _, m := range metrics {
 		statusValue := parseMmhealthStatus(m.Status)
 		ch <- prometheus.MustNewConstMetric(c.State, prometheus.GaugeValue, statusValue, m.Component, m.EntityName, m.EntityType, m.Status)
@@ -84,7 +89,7 @@ func (c *MmhealthCollector) Collect(ch chan<- prometheus.Metric) {
 	ch <- prometheus.MustNewConstMetric(collectDuration, prometheus.GaugeValue, time.Since(collectTime).Seconds(), "mmhealth")
 }
 
-func (c *MmhealthCollector) collect(ch chan<- prometheus.Metric) ([]HealthMetric, error) {
+func (c *MmhealthCollector) collect() ([]HealthMetric, error) {
 	var mmhealth_out string
 	var err error
 	var metrics []HealthMetric
@@ -92,14 +97,11 @@ func (c *MmhealthCollector) collect(ch chan<- prometheus.Metric) ([]HealthMetric
 	defer cancel()
 	mmhealth_out, err = mmhealth(ctx)
 	if ctx.Err() == context.DeadlineExceeded {
-		ch <- prometheus.MustNewConstMetric(collecTimeout, prometheus.GaugeValue, 1, "mmhealth")
-		level.Error(c.logger).Log("msg", "Timeout executing mmhealth")
 		if *useCache {
 			metrics = mmhealthCache
 		}
-		return metrics, nil
+		return metrics, ctx.Err()
 	}
-	ch <- prometheus.MustNewConstMetric(collecTimeout, prometheus.GaugeValue, 0, "mmhealth")
 	if err != nil {
 		if *useCache {
 			metrics = mmhealthCache
