@@ -27,6 +27,7 @@ import (
 
 var (
 	verbsTimeout = kingpin.Flag("collector.verbs.timeout", "Timeout for collecting verbs information").Default("5").Int()
+	verbsCache   = VerbsMetrics{}
 )
 
 type VerbsMetrics struct {
@@ -56,33 +57,12 @@ func (c *VerbsCollector) Describe(ch chan<- *prometheus.Desc) {
 
 func (c *VerbsCollector) Collect(ch chan<- prometheus.Metric) {
 	level.Debug(c.logger).Log("msg", "Collecting verbs metrics")
-	err := c.collect(ch)
+	collectTime := time.Now()
+	metric, err := c.collect(ch)
 	if err != nil {
 		ch <- prometheus.MustNewConstMetric(collectError, prometheus.GaugeValue, 1, "verbs")
 	} else {
 		ch <- prometheus.MustNewConstMetric(collectError, prometheus.GaugeValue, 0, "verbs")
-	}
-}
-
-func (c *VerbsCollector) collect(ch chan<- prometheus.Metric) error {
-	collectTime := time.Now()
-	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(*verbsTimeout)*time.Second)
-	defer cancel()
-	out, err := verbs(ctx)
-	if ctx.Err() == context.DeadlineExceeded {
-		ch <- prometheus.MustNewConstMetric(collecTimeout, prometheus.GaugeValue, 1, "verbs")
-		level.Error(c.logger).Log("msg", "Timeout executing verbs check")
-		return nil
-	}
-	ch <- prometheus.MustNewConstMetric(collecTimeout, prometheus.GaugeValue, 0, "verbs")
-	if err != nil {
-		level.Error(c.logger).Log("msg", err)
-		return err
-	}
-	metric, err := verbs_parse(out)
-	if err != nil {
-		level.Error(c.logger).Log("msg", err)
-		return err
 	}
 	if metric.Status == "started" {
 		ch <- prometheus.MustNewConstMetric(c.Status, prometheus.GaugeValue, 1)
@@ -90,7 +70,43 @@ func (c *VerbsCollector) collect(ch chan<- prometheus.Metric) error {
 		ch <- prometheus.MustNewConstMetric(c.Status, prometheus.GaugeValue, 0)
 	}
 	ch <- prometheus.MustNewConstMetric(collectDuration, prometheus.GaugeValue, time.Since(collectTime).Seconds(), "verbs")
-	return nil
+}
+
+func (c *VerbsCollector) collect(ch chan<- prometheus.Metric) (VerbsMetrics, error) {
+	var out string
+	var err error
+	var metric VerbsMetrics
+	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(*verbsTimeout)*time.Second)
+	defer cancel()
+	out, err = verbs(ctx)
+	if ctx.Err() == context.DeadlineExceeded {
+		ch <- prometheus.MustNewConstMetric(collecTimeout, prometheus.GaugeValue, 1, "verbs")
+		level.Error(c.logger).Log("msg", "Timeout executing verbs check")
+		if *useCache {
+			metric = verbsCache
+		}
+		return metric, nil
+	}
+	ch <- prometheus.MustNewConstMetric(collecTimeout, prometheus.GaugeValue, 0, "verbs")
+	if err != nil {
+		level.Error(c.logger).Log("msg", err)
+		if *useCache {
+			metric = verbsCache
+		}
+		return metric, err
+	}
+	metric, err = verbs_parse(out)
+	if err != nil {
+		level.Error(c.logger).Log("msg", err)
+		if *useCache {
+			metric = verbsCache
+		}
+		return metric, err
+	}
+	if *useCache {
+		verbsCache = metric
+	}
+	return metric, nil
 }
 
 func verbs(ctx context.Context) (string, error) {

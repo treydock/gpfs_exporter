@@ -33,6 +33,7 @@ const (
 )
 
 var (
+	useCache        = kingpin.Flag("exporter.use-cache", "Use cached metrics if commands timeout or produce errors").Default("false").Bool()
 	collectorState  = make(map[string]*bool)
 	factories       = make(map[string]func(logger log.Logger) Collector)
 	execCommand     = exec.CommandContext

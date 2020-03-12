@@ -36,6 +36,7 @@ var (
 		"entitytype": "EntityType",
 		"status":     "Status",
 	}
+	mmhealthCache = []HealthMetric{}
 )
 
 type HealthMetric struct {
@@ -68,40 +69,55 @@ func (c *MmhealthCollector) Describe(ch chan<- *prometheus.Desc) {
 
 func (c *MmhealthCollector) Collect(ch chan<- prometheus.Metric) {
 	level.Debug(c.logger).Log("msg", "Collecting mmhealth metrics")
-	err := c.collect(ch)
+	collectTime := time.Now()
+	metrics, err := c.collect(ch)
 	if err != nil {
 		ch <- prometheus.MustNewConstMetric(collectError, prometheus.GaugeValue, 1, "mmhealth")
 	} else {
 		ch <- prometheus.MustNewConstMetric(collectError, prometheus.GaugeValue, 0, "mmhealth")
-	}
-}
-
-func (c *MmhealthCollector) collect(ch chan<- prometheus.Metric) error {
-	collectTime := time.Now()
-	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(*mmhealthTimeout)*time.Second)
-	defer cancel()
-	mmhealth_out, err := mmhealth(ctx)
-	if ctx.Err() == context.DeadlineExceeded {
-		ch <- prometheus.MustNewConstMetric(collecTimeout, prometheus.GaugeValue, 1, "mmhealth")
-		level.Error(c.logger).Log("msg", "Timeout executing mmhealth")
-		return nil
-	}
-	ch <- prometheus.MustNewConstMetric(collecTimeout, prometheus.GaugeValue, 0, "mmhealth")
-	if err != nil {
-		level.Error(c.logger).Log("msg", err)
-		return err
-	}
-	metrics, err := mmhealth_parse(mmhealth_out, c.logger)
-	if err != nil {
-		level.Error(c.logger).Log("msg", err)
-		return err
 	}
 	for _, m := range metrics {
 		statusValue := parseMmhealthStatus(m.Status)
 		ch <- prometheus.MustNewConstMetric(c.State, prometheus.GaugeValue, statusValue, m.Component, m.EntityName, m.EntityType, m.Status)
 	}
 	ch <- prometheus.MustNewConstMetric(collectDuration, prometheus.GaugeValue, time.Since(collectTime).Seconds(), "mmhealth")
-	return nil
+}
+
+func (c *MmhealthCollector) collect(ch chan<- prometheus.Metric) ([]HealthMetric, error) {
+	var mmhealth_out string
+	var err error
+	var metrics []HealthMetric
+	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(*mmhealthTimeout)*time.Second)
+	defer cancel()
+	mmhealth_out, err = mmhealth(ctx)
+	if ctx.Err() == context.DeadlineExceeded {
+		ch <- prometheus.MustNewConstMetric(collecTimeout, prometheus.GaugeValue, 1, "mmhealth")
+		level.Error(c.logger).Log("msg", "Timeout executing mmhealth")
+		if *useCache {
+			metrics = mmhealthCache
+		}
+		return metrics, nil
+	}
+	ch <- prometheus.MustNewConstMetric(collecTimeout, prometheus.GaugeValue, 0, "mmhealth")
+	if err != nil {
+		level.Error(c.logger).Log("msg", err)
+		if *useCache {
+			metrics = mmhealthCache
+		}
+		return metrics, err
+	}
+	metrics, err = mmhealth_parse(mmhealth_out, c.logger)
+	if err != nil {
+		level.Error(c.logger).Log("msg", err)
+		if *useCache {
+			metrics = mmhealthCache
+		}
+		return metrics, err
+	}
+	if *useCache {
+		mmhealthCache = metrics
+	}
+	return metrics, nil
 }
 
 func mmhealth(ctx context.Context) (string, error) {

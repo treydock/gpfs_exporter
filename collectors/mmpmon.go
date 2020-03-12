@@ -42,6 +42,7 @@ var (
 		"_dir_": "ReadDir",
 		"_iu_":  "InodeUpdates",
 	}
+	mmpmonCache = []PerfMetrics{}
 )
 
 type PerfMetrics struct {
@@ -88,33 +89,12 @@ func (c *MmpmonCollector) Describe(ch chan<- *prometheus.Desc) {
 
 func (c *MmpmonCollector) Collect(ch chan<- prometheus.Metric) {
 	level.Debug(c.logger).Log("msg", "Collecting mmpmon metrics")
-	err := c.collect(ch)
+	collectTime := time.Now()
+	perfs, err := c.collect(ch)
 	if err != nil {
 		ch <- prometheus.MustNewConstMetric(collectError, prometheus.GaugeValue, 1, "mmpmon")
 	} else {
 		ch <- prometheus.MustNewConstMetric(collectError, prometheus.GaugeValue, 0, "mmpmon")
-	}
-}
-
-func (c *MmpmonCollector) collect(ch chan<- prometheus.Metric) error {
-	collectTime := time.Now()
-	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(*mmpmonTimeout)*time.Second)
-	defer cancel()
-	mmpmon_out, err := mmpmon(ctx)
-	if ctx.Err() == context.DeadlineExceeded {
-		ch <- prometheus.MustNewConstMetric(collecTimeout, prometheus.GaugeValue, 1, "mmpmon")
-		level.Error(c.logger).Log("msg", "Timeout executing mmpmon")
-		return nil
-	}
-	ch <- prometheus.MustNewConstMetric(collecTimeout, prometheus.GaugeValue, 0, "mmpmon")
-	if err != nil {
-		level.Error(c.logger).Log("msg", err)
-		return err
-	}
-	perfs, err := mmpmon_parse(mmpmon_out, c.logger)
-	if err != nil {
-		level.Error(c.logger).Log("msg", err)
-		return err
 	}
 	for _, perf := range perfs {
 		ch <- prometheus.MustNewConstMetric(c.read_bytes, prometheus.CounterValue, float64(perf.ReadBytes), perf.FS, perf.NodeName)
@@ -127,7 +107,43 @@ func (c *MmpmonCollector) collect(ch chan<- prometheus.Metric) error {
 		ch <- prometheus.MustNewConstMetric(c.operations, prometheus.CounterValue, float64(perf.InodeUpdates), perf.FS, perf.NodeName, "inode_updates")
 	}
 	ch <- prometheus.MustNewConstMetric(collectDuration, prometheus.GaugeValue, time.Since(collectTime).Seconds(), "mmpmon")
-	return nil
+}
+
+func (c *MmpmonCollector) collect(ch chan<- prometheus.Metric) ([]PerfMetrics, error) {
+	var perfs []PerfMetrics
+	var mmpmon_out string
+	var err error
+	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(*mmpmonTimeout)*time.Second)
+	defer cancel()
+	mmpmon_out, err = mmpmon(ctx)
+	if ctx.Err() == context.DeadlineExceeded {
+		ch <- prometheus.MustNewConstMetric(collecTimeout, prometheus.GaugeValue, 1, "mmpmon")
+		level.Error(c.logger).Log("msg", "Timeout executing mmpmon")
+		if *useCache {
+			perfs = mmpmonCache
+		}
+		return perfs, nil
+	}
+	ch <- prometheus.MustNewConstMetric(collecTimeout, prometheus.GaugeValue, 0, "mmpmon")
+	if err != nil {
+		level.Error(c.logger).Log("msg", err)
+		if *useCache {
+			perfs = mmpmonCache
+		}
+		return perfs, err
+	}
+	perfs, err = mmpmon_parse(mmpmon_out, c.logger)
+	if err != nil {
+		level.Error(c.logger).Log("msg", err)
+		if *useCache {
+			perfs = mmpmonCache
+		}
+		return perfs, err
+	}
+	if *useCache {
+		mmpmonCache = perfs
+	}
+	return perfs, nil
 }
 
 func mmpmon(ctx context.Context) (string, error) {

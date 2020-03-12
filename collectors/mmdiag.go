@@ -33,6 +33,7 @@ var (
 	configWaiterThreshold = kingpin.Flag("collector.mmdiag.waiter-threshold", "Threshold for collected waiters").Default("30").Int()
 	configWaiterExclude   = kingpin.Flag("collector.mmdiag.waiter-exclude", "Pattern to exclude for waiters").Default(defWaiterExclude).String()
 	mmdiagTimeout         = kingpin.Flag("collector.mmdiag.timeout", "Timeout for mmdiag execution").Default("5").Int()
+	mmdiagCache           = DiagMetric{}
 )
 
 type DiagMetric struct {
@@ -67,40 +68,54 @@ func (c *MmdiagCollector) Describe(ch chan<- *prometheus.Desc) {
 
 func (c *MmdiagCollector) Collect(ch chan<- prometheus.Metric) {
 	level.Debug(c.logger).Log("msg", "Collecting mmdiag metrics")
-	err := c.collect(ch)
+	collectTime := time.Now()
+	diagMetric, err := c.collect(ch)
 	if err != nil {
 		ch <- prometheus.MustNewConstMetric(collectError, prometheus.GaugeValue, 1, "mmdiag")
 	} else {
 		ch <- prometheus.MustNewConstMetric(collectError, prometheus.GaugeValue, 0, "mmdiag")
 	}
-}
-
-func (c *MmdiagCollector) collect(ch chan<- prometheus.Metric) error {
-	collectTime := time.Now()
-	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(*mmdiagTimeout)*time.Second)
-	defer cancel()
-	out, err := mmdiag("--waiters", ctx)
-	if ctx.Err() == context.DeadlineExceeded {
-		ch <- prometheus.MustNewConstMetric(collecTimeout, prometheus.GaugeValue, 1, "mmdiag")
-		level.Error(c.logger).Log("msg", "Timeout executing mmdiag")
-		return nil
-	}
-	ch <- prometheus.MustNewConstMetric(collecTimeout, prometheus.GaugeValue, 0, "mmdiag")
-	if err != nil {
-		level.Error(c.logger).Log("msg", err)
-		return err
-	}
-	var diagMetric DiagMetric
-	err = parse_mmdiag_waiters(out, &diagMetric, c.logger)
-	if err != nil {
-		level.Error(c.logger).Log("msg", err)
-		return err
-	}
 	for _, waiter := range diagMetric.Waiters {
 		ch <- prometheus.MustNewConstMetric(c.Waiter, prometheus.GaugeValue, waiter.Seconds, waiter.Thread)
 	}
 	ch <- prometheus.MustNewConstMetric(collectDuration, prometheus.GaugeValue, time.Since(collectTime).Seconds(), "mmdiag")
-	return nil
+}
+
+func (c *MmdiagCollector) collect(ch chan<- prometheus.Metric) (DiagMetric, error) {
+	var diagMetric DiagMetric
+	var out string
+	var err error
+	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(*mmdiagTimeout)*time.Second)
+	defer cancel()
+	out, err = mmdiag("--waiters", ctx)
+	if ctx.Err() == context.DeadlineExceeded {
+		ch <- prometheus.MustNewConstMetric(collecTimeout, prometheus.GaugeValue, 1, "mmdiag")
+		level.Error(c.logger).Log("msg", "Timeout executing mmdiag")
+		if *useCache {
+			diagMetric = mmdiagCache
+		}
+		return diagMetric, nil
+	}
+	ch <- prometheus.MustNewConstMetric(collecTimeout, prometheus.GaugeValue, 0, "mmdiag")
+	if err != nil {
+		level.Error(c.logger).Log("msg", err)
+		if *useCache {
+			diagMetric = mmdiagCache
+		}
+		return diagMetric, err
+	}
+	err = parse_mmdiag_waiters(out, &diagMetric, c.logger)
+	if err != nil {
+		level.Error(c.logger).Log("msg", err)
+		if *useCache {
+			diagMetric = mmdiagCache
+		}
+		return diagMetric, err
+	}
+	if *useCache {
+		mmdiagCache = diagMetric
+	}
+	return diagMetric, nil
 }
 
 func mmdiag(arg string, ctx context.Context) (string, error) {
