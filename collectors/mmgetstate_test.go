@@ -14,15 +14,18 @@
 package collectors
 
 import (
-	"github.com/go-kit/kit/log"
-	"github.com/prometheus/client_golang/prometheus/testutil"
 	"os/exec"
 	"strings"
 	"testing"
+
+	"github.com/go-kit/kit/log"
+	"github.com/prometheus/client_golang/prometheus/testutil"
+	"gopkg.in/alecthomas/kingpin.v2"
 )
 
 func TestParseMmgetstate(t *testing.T) {
 	execCommand = fakeExecCommand
+	mockedExitStatus = 0
 	mockedStdout = `
 mmgetstate::HEADER:version:reserved:reserved:nodeName:nodeNumber:state:quorum:nodesUp:totalNodes:remarks:cnfsState:
 mmgetstate::0:1:::ib-proj-nsd05.domain:11:active:4:7:1122::(undefined):
@@ -38,7 +41,11 @@ mmgetstate::0:1:::ib-proj-nsd05.domain:11:active:4:7:1122::(undefined):
 }
 
 func TestMmgetstateCollector(t *testing.T) {
+	if _, err := kingpin.CommandLine.Parse([]string{"--exporter.use-cache"}); err != nil {
+		t.Fatal(err)
+	}
 	execCommand = fakeExecCommand
+	mockedExitStatus = 0
 	mockedStdout = `
 mmgetstate::HEADER:version:reserved:reserved:nodeName:nodeNumber:state:quorum:nodesUp:totalNodes:remarks:cnfsState:
 mmgetstate::0:1:::ib-proj-nsd05.domain:11:active:4:7:1122::(undefined):

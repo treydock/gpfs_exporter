@@ -14,12 +14,13 @@
 package collectors
 
 import (
-	"github.com/go-kit/kit/log"
-	"github.com/prometheus/client_golang/prometheus/testutil"
-	kingpin "gopkg.in/alecthomas/kingpin.v2"
 	"os/exec"
 	"strings"
 	"testing"
+
+	"github.com/go-kit/kit/log"
+	"github.com/prometheus/client_golang/prometheus/testutil"
+	"gopkg.in/alecthomas/kingpin.v2"
 )
 
 func TestParseMmdiagWaiters(t *testing.T) {
@@ -27,6 +28,7 @@ func TestParseMmdiagWaiters(t *testing.T) {
 	configWaiterThreshold = &threshold
 	configWaiterExclude = &defWaiterExclude
 	execCommand = fakeExecCommand
+	mockedExitStatus = 0
 	mockedStdout = `
 
 === mmdiag: waiters ===
@@ -79,13 +81,14 @@ Waiting 0.0002 sec since 10:24:00, monitored, thread 22987 NSDThread: for I/O co
 }
 
 func TestMmdiagCollector(t *testing.T) {
-	if _, err := kingpin.CommandLine.Parse([]string{}); err != nil {
+	if _, err := kingpin.CommandLine.Parse([]string{"--exporter.use-cache"}); err != nil {
 		t.Fatal(err)
 	}
 	threshold := 30
 	configWaiterThreshold = &threshold
 	configWaiterExclude = &defWaiterExclude
 	execCommand = fakeExecCommand
+	mockedExitStatus = 0
 	mockedStdout = `
 === mmdiag: waiters ===
 Waiting 6861.7395 sec since 11:04:20, ignored, thread 19428 FsckClientReaperThread: on ThCond 0x7F138008EC10 (FsckReaperCondvar), reason 'Waiting to reap fsck pointer'

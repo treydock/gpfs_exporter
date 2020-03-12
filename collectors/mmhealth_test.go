@@ -14,15 +14,18 @@
 package collectors
 
 import (
-	"github.com/go-kit/kit/log"
-	"github.com/prometheus/client_golang/prometheus/testutil"
 	"os/exec"
 	"strings"
 	"testing"
+
+	"github.com/go-kit/kit/log"
+	"github.com/prometheus/client_golang/prometheus/testutil"
+	"gopkg.in/alecthomas/kingpin.v2"
 )
 
 func TestParseMmhealth(t *testing.T) {
 	execCommand = fakeExecCommand
+	mockedExitStatus = 0
 	mockedStdout = `
 mmhealth:Event:HEADER:version:reserved:reserved:node:component:entityname:entitytype:event:arguments:activesince:identifier:ishidden:
 mmhealth:State:HEADER:version:reserved:reserved:node:component:entityname:entitytype:status:laststatuschange:
@@ -60,6 +63,7 @@ mmhealth:State:0:1:::ib-cluster-rw02.example.com:FILESYSTEM:ess:FILESYSTEM:HEALT
 
 func TestParseMmhealthTips(t *testing.T) {
 	execCommand = fakeExecCommand
+	mockedExitStatus = 0
 	mockedStdout = `
 mmhealth:Event:HEADER:version:reserved:reserved:node:component:entityname:entitytype:event:arguments:activesince:identifier:ishidden:
 mmhealth:State:HEADER:version:reserved:reserved:node:component:entityname:entitytype:status:laststatuschange:
@@ -110,7 +114,11 @@ func TestParseMmhealthStatus(t *testing.T) {
 }
 
 func TestMmhealthCollector(t *testing.T) {
+	if _, err := kingpin.CommandLine.Parse([]string{"--exporter.use-cache"}); err != nil {
+		t.Fatal(err)
+	}
 	execCommand = fakeExecCommand
+	mockedExitStatus = 0
 	mockedStdout = `
 mmhealth:Event:HEADER:version:reserved:reserved:node:component:entityname:entitytype:event:arguments:activesince:identifier:ishidden:
 mmhealth:State:HEADER:version:reserved:reserved:node:component:entityname:entitytype:status:laststatuschange:

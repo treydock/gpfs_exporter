@@ -14,15 +14,18 @@
 package collectors
 
 import (
-	"github.com/go-kit/kit/log"
-	"github.com/prometheus/client_golang/prometheus/testutil"
 	"os/exec"
 	"strings"
 	"testing"
+
+	"github.com/go-kit/kit/log"
+	"github.com/prometheus/client_golang/prometheus/testutil"
+	"gopkg.in/alecthomas/kingpin.v2"
 )
 
 func TestParseVerbsDisabled(t *testing.T) {
 	execCommand = fakeExecCommand
+	mockedExitStatus = 0
 	mockedStdout = `
 VERBS RDMA status: disabled
 `
@@ -54,7 +57,11 @@ VERBS RDMA status: started
 }
 
 func TestVerbsCollector(t *testing.T) {
+	if _, err := kingpin.CommandLine.Parse([]string{"--exporter.use-cache"}); err != nil {
+		t.Fatal(err)
+	}
 	execCommand = fakeExecCommand
+	mockedExitStatus = 0
 	mockedStdout = `
 VERBS RDMA status: started
 `

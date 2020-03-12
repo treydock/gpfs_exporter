@@ -14,16 +14,18 @@
 package collectors
 
 import (
-	"github.com/go-kit/kit/log"
-	"github.com/prometheus/client_golang/prometheus/testutil"
-	kingpin "gopkg.in/alecthomas/kingpin.v2"
 	"os/exec"
 	"strings"
 	"testing"
+
+	"github.com/go-kit/kit/log"
+	"github.com/prometheus/client_golang/prometheus/testutil"
+	"gopkg.in/alecthomas/kingpin.v2"
 )
 
 func TestParseMmdf(t *testing.T) {
 	execCommand = fakeExecCommand
+	mockedExitStatus = 0
 	mockedStdout = `
 mmdf:nsd:HEADER:version:reserved:reserved:nsdName:storagePool:diskSize:failureGroup:metadata:data:freeBlocks:freeBlocksPct:freeFragments:freeFragmentsPct:diskAvailableForAlloc:
 mmdf:poolTotal:HEADER:version:reserved:reserved:poolName:poolSize:freeBlocks:freeBlocksPct:freeFragments:freeFragmentsPct:maxDiskSize:
@@ -62,12 +64,13 @@ mmdf:inode:0:1:::430741822:484301506:915043328:1332164000:
 }
 
 func TestMmdfCollector(t *testing.T) {
-	if _, err := kingpin.CommandLine.Parse([]string{}); err != nil {
+	if _, err := kingpin.CommandLine.Parse([]string{"--exporter.use-cache"}); err != nil {
 		t.Fatal(err)
 	}
 	filesystems := "project"
 	configFilesystems = &filesystems
 	execCommand = fakeExecCommand
+	mockedExitStatus = 0
 	mockedStdout = `
 mmdf:nsd:HEADER:version:reserved:reserved:nsdName:storagePool:diskSize:failureGroup:metadata:data:freeBlocks:freeBlocksPct:freeFragments:freeFragmentsPct:diskAvailableForAlloc:
 mmdf:poolTotal:HEADER:version:reserved:reserved:poolName:poolSize:freeBlocks:freeBlocksPct:freeFragments:freeFragmentsPct:maxDiskSize:

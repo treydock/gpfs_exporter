@@ -14,13 +14,14 @@
 package collectors
 
 import (
-	"github.com/go-kit/kit/log"
-	"github.com/prometheus/client_golang/prometheus/testutil"
-	kingpin "gopkg.in/alecthomas/kingpin.v2"
 	"io/ioutil"
 	"os"
 	"strings"
 	"testing"
+
+	"github.com/go-kit/kit/log"
+	"github.com/prometheus/client_golang/prometheus/testutil"
+	"gopkg.in/alecthomas/kingpin.v2"
 )
 
 func TestGetGPFSMounts(t *testing.T) {
