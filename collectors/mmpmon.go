@@ -92,6 +92,7 @@ func (c *MmpmonCollector) Collect(ch chan<- prometheus.Metric) {
 	collectTime := time.Now()
 	perfs, err := c.collect(ch)
 	if err != nil {
+		level.Error(c.logger).Log("msg", err)
 		ch <- prometheus.MustNewConstMetric(collectError, prometheus.GaugeValue, 1, "mmpmon")
 	} else {
 		ch <- prometheus.MustNewConstMetric(collectError, prometheus.GaugeValue, 0, "mmpmon")
@@ -126,7 +127,6 @@ func (c *MmpmonCollector) collect(ch chan<- prometheus.Metric) ([]PerfMetrics, e
 	}
 	ch <- prometheus.MustNewConstMetric(collecTimeout, prometheus.GaugeValue, 0, "mmpmon")
 	if err != nil {
-		level.Error(c.logger).Log("msg", err)
 		if *useCache {
 			perfs = mmpmonCache
 		}
@@ -134,7 +134,6 @@ func (c *MmpmonCollector) collect(ch chan<- prometheus.Metric) ([]PerfMetrics, e
 	}
 	perfs, err = mmpmon_parse(mmpmon_out, c.logger)
 	if err != nil {
-		level.Error(c.logger).Log("msg", err)
 		if *useCache {
 			perfs = mmpmonCache
 		}

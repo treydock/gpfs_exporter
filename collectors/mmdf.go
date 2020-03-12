@@ -135,6 +135,7 @@ func (c *MmdfCollector) Collect(ch chan<- prometheus.Metric) {
 			ch <- prometheus.MustNewConstMetric(collecTimeout, prometheus.GaugeValue, 0, "mmdf-mmlsfs")
 		}
 		if err != nil {
+			level.Error(c.logger).Log("msg", err)
 			ch <- prometheus.MustNewConstMetric(collectError, prometheus.GaugeValue, 1, "mmdf-mmlsfs")
 		} else {
 			ch <- prometheus.MustNewConstMetric(collectError, prometheus.GaugeValue, 0, "mmdf-mmlsfs")
@@ -152,6 +153,7 @@ func (c *MmdfCollector) Collect(ch chan<- prometheus.Metric) {
 			label := fmt.Sprintf("mmdf-%s", fs)
 			metric, err := c.mmdfCollect(fs, label, ch)
 			if err != nil {
+				level.Error(c.logger).Log("msg", err, "fs", fs)
 				ch <- prometheus.MustNewConstMetric(collectError, prometheus.GaugeValue, 1, label)
 			} else {
 				ch <- prometheus.MustNewConstMetric(collectError, prometheus.GaugeValue, 0, label)
@@ -188,13 +190,11 @@ func (c *MmdfCollector) mmdfCollect(fs string, label string, ch chan<- prometheu
 	}
 	ch <- prometheus.MustNewConstMetric(collecTimeout, prometheus.GaugeValue, 0, label)
 	if err != nil {
-		level.Error(c.logger).Log("msg", err)
 		dfMetric = mmdfReadCache(fs)
 		return dfMetric, err
 	}
 	dfMetric, err = parse_mmdf(out, c.logger)
 	if err != nil {
-		level.Error(c.logger).Log("msg", err)
 		dfMetric = mmdfReadCache(fs)
 		return dfMetric, err
 	}
@@ -206,12 +206,10 @@ func mmlfsfsFilesystems(ctx context.Context, logger log.Logger) ([]string, error
 	var filesystems []string
 	out, err := mmlsfs(ctx)
 	if err != nil {
-		level.Error(logger).Log("msg", err)
 		return nil, err
 	}
 	mmlsfs_filesystems, err := parse_mmlsfs(out)
 	if err != nil {
-		level.Error(logger).Log("msg", err)
 		return nil, err
 	}
 	for _, fs := range mmlsfs_filesystems {

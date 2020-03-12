@@ -60,6 +60,7 @@ func (c *VerbsCollector) Collect(ch chan<- prometheus.Metric) {
 	collectTime := time.Now()
 	metric, err := c.collect(ch)
 	if err != nil {
+		level.Error(c.logger).Log("msg", err)
 		ch <- prometheus.MustNewConstMetric(collectError, prometheus.GaugeValue, 1, "verbs")
 	} else {
 		ch <- prometheus.MustNewConstMetric(collectError, prometheus.GaugeValue, 0, "verbs")
@@ -89,7 +90,6 @@ func (c *VerbsCollector) collect(ch chan<- prometheus.Metric) (VerbsMetrics, err
 	}
 	ch <- prometheus.MustNewConstMetric(collecTimeout, prometheus.GaugeValue, 0, "verbs")
 	if err != nil {
-		level.Error(c.logger).Log("msg", err)
 		if *useCache {
 			metric = verbsCache
 		}
@@ -97,7 +97,6 @@ func (c *VerbsCollector) collect(ch chan<- prometheus.Metric) (VerbsMetrics, err
 	}
 	metric, err = verbs_parse(out)
 	if err != nil {
-		level.Error(c.logger).Log("msg", err)
 		if *useCache {
 			metric = verbsCache
 		}

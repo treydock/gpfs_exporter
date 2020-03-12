@@ -114,7 +114,6 @@ func (c *MmcesCollector) collect(ch chan<- prometheus.Metric) ([]CESMetric, erro
 	}
 	ch <- prometheus.MustNewConstMetric(collecTimeout, prometheus.GaugeValue, 0, "mmces")
 	if err != nil {
-		level.Error(c.logger).Log("msg", err)
 		if *useCache {
 			metrics = mmcesCache
 		}
@@ -122,7 +121,6 @@ func (c *MmcesCollector) collect(ch chan<- prometheus.Metric) ([]CESMetric, erro
 	}
 	metrics, err = mmces_state_show_parse(mmces_state_out)
 	if err != nil {
-		level.Error(c.logger).Log("msg", err)
 		if *useCache {
 			metrics = mmcesCache
 		}

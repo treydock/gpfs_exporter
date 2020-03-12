@@ -71,6 +71,7 @@ func (c *MmdiagCollector) Collect(ch chan<- prometheus.Metric) {
 	collectTime := time.Now()
 	diagMetric, err := c.collect(ch)
 	if err != nil {
+		level.Error(c.logger).Log("msg", err)
 		ch <- prometheus.MustNewConstMetric(collectError, prometheus.GaugeValue, 1, "mmdiag")
 	} else {
 		ch <- prometheus.MustNewConstMetric(collectError, prometheus.GaugeValue, 0, "mmdiag")
@@ -98,7 +99,6 @@ func (c *MmdiagCollector) collect(ch chan<- prometheus.Metric) (DiagMetric, erro
 	}
 	ch <- prometheus.MustNewConstMetric(collecTimeout, prometheus.GaugeValue, 0, "mmdiag")
 	if err != nil {
-		level.Error(c.logger).Log("msg", err)
 		if *useCache {
 			diagMetric = mmdiagCache
 		}
@@ -106,7 +106,6 @@ func (c *MmdiagCollector) collect(ch chan<- prometheus.Metric) (DiagMetric, erro
 	}
 	err = parse_mmdiag_waiters(out, &diagMetric, c.logger)
 	if err != nil {
-		level.Error(c.logger).Log("msg", err)
 		if *useCache {
 			diagMetric = mmdiagCache
 		}

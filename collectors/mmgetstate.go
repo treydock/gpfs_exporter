@@ -61,6 +61,7 @@ func (c *MmgetstateCollector) Collect(ch chan<- prometheus.Metric) {
 	collectTime := time.Now()
 	metric, err := c.collect(ch)
 	if err != nil {
+		level.Error(c.logger).Log("msg", err)
 		ch <- prometheus.MustNewConstMetric(collectError, prometheus.GaugeValue, 1, "mmgetstate")
 	} else {
 		ch <- prometheus.MustNewConstMetric(collectError, prometheus.GaugeValue, 0, "mmgetstate")
@@ -97,7 +98,6 @@ func (c *MmgetstateCollector) collect(ch chan<- prometheus.Metric) (MmgetstateMe
 	}
 	ch <- prometheus.MustNewConstMetric(collecTimeout, prometheus.GaugeValue, 0, "mmgetstate")
 	if err != nil {
-		level.Error(c.logger).Log("msg", err)
 		if *useCache {
 			metric = mmgetstateCache
 		}
@@ -105,7 +105,6 @@ func (c *MmgetstateCollector) collect(ch chan<- prometheus.Metric) (MmgetstateMe
 	}
 	metric, err = mmgetstate_parse(out)
 	if err != nil {
-		level.Error(c.logger).Log("msg", err)
 		if *useCache {
 			metric = mmgetstateCache
 		}

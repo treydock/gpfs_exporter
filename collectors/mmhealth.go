@@ -72,6 +72,7 @@ func (c *MmhealthCollector) Collect(ch chan<- prometheus.Metric) {
 	collectTime := time.Now()
 	metrics, err := c.collect(ch)
 	if err != nil {
+		level.Error(c.logger).Log("msg", err)
 		ch <- prometheus.MustNewConstMetric(collectError, prometheus.GaugeValue, 1, "mmhealth")
 	} else {
 		ch <- prometheus.MustNewConstMetric(collectError, prometheus.GaugeValue, 0, "mmhealth")
@@ -100,7 +101,6 @@ func (c *MmhealthCollector) collect(ch chan<- prometheus.Metric) ([]HealthMetric
 	}
 	ch <- prometheus.MustNewConstMetric(collecTimeout, prometheus.GaugeValue, 0, "mmhealth")
 	if err != nil {
-		level.Error(c.logger).Log("msg", err)
 		if *useCache {
 			metrics = mmhealthCache
 		}
@@ -108,7 +108,6 @@ func (c *MmhealthCollector) collect(ch chan<- prometheus.Metric) ([]HealthMetric
 	}
 	metrics, err = mmhealth_parse(mmhealth_out, c.logger)
 	if err != nil {
-		level.Error(c.logger).Log("msg", err)
 		if *useCache {
 			metrics = mmhealthCache
 		}
