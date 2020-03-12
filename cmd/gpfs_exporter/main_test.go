@@ -31,7 +31,7 @@ const (
 )
 
 func TestMain(m *testing.M) {
-	if _, err := kingpin.CommandLine.Parse([]string{"--no-collector.mmpmon"}); err != nil {
+	if _, err := kingpin.CommandLine.Parse([]string{"--no-collector.mmgetstate", "--no-collector.mmpmon"}); err != nil {
 		os.Exit(1)
 	}
 	varTrue := true
