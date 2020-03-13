@@ -72,7 +72,7 @@ func (c *VerbsCollector) Collect(ch chan<- prometheus.Metric) {
 	ch <- prometheus.MustNewConstMetric(collecTimeout, prometheus.GaugeValue, float64(timeout), "verbs")
 	if metric.Status == "started" {
 		ch <- prometheus.MustNewConstMetric(c.Status, prometheus.GaugeValue, 1)
-	} else {
+	} else if err == nil || *useCache {
 		ch <- prometheus.MustNewConstMetric(c.Status, prometheus.GaugeValue, 0)
 	}
 	ch <- prometheus.MustNewConstMetric(collectDuration, prometheus.GaugeValue, time.Since(collectTime).Seconds(), "verbs")
