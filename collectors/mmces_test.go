@@ -14,6 +14,7 @@
 package collectors
 
 import (
+	"context"
 	"os/exec"
 	"strings"
 	"testing"
@@ -111,6 +112,32 @@ func TestMMcesCollectorError(t *testing.T) {
 		t.Errorf("Unexpected collection count %d, expected 3", val)
 	}
 	if err := testutil.GatherAndCompare(gatherers, strings.NewReader(metadata+expected), "gpfs_exporter_collect_error"); err != nil {
+		t.Errorf("unexpected collecting result:\n%s", err)
+	}
+}
+
+func TestMMcesCollectorTimeout(t *testing.T) {
+	if _, err := kingpin.CommandLine.Parse([]string{"--collector.mmces.nodename=ib-protocol01.domain --exporter.use-cache"}); err != nil {
+		t.Fatal(err)
+	}
+	mmcesCollector = func(nodename string) ([]CESMetric, error) {
+		return []CESMetric{}, context.DeadlineExceeded
+	}
+	execCommand = fakeExecCommand
+	mockedExitStatus = 1
+	defer func() { execCommand = exec.CommandContext }()
+	metadata := `
+			# HELP gpfs_exporter_collect_timeout Indicates the collector timed out
+			# TYPE gpfs_exporter_collect_timeout gauge`
+	expected := `
+		gpfs_exporter_collect_timeout{collector="mmces"} 1
+	`
+	collector := NewMmcesCollector(log.NewNopLogger())
+	gatherers := setupGatherer(collector)
+	if val := testutil.CollectAndCount(collector); val != 3 {
+		t.Errorf("Unexpected collection count %d, expected 3", val)
+	}
+	if err := testutil.GatherAndCompare(gatherers, strings.NewReader(metadata+expected), "gpfs_exporter_collect_timeout"); err != nil {
 		t.Errorf("unexpected collecting result:\n%s", err)
 	}
 }

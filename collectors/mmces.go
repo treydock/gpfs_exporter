@@ -33,6 +33,7 @@ var (
 	mmcesTimeout   = kingpin.Flag("collector.mmces.timeout", "Timeout for mmces execution").Default("5").Int()
 	cesServices    = []string{"AUTH", "BLOCK", "NETWORK", "AUTH_OBJ", "NFS", "OBJ", "SMB", "CES"}
 	mmcesCache     = []CESMetric{}
+	mmcesCollector = mmcesCollect
 )
 
 func getFQDN(logger log.Logger) string {
@@ -74,30 +75,7 @@ func (c *MmcesCollector) Collect(ch chan<- prometheus.Metric) {
 	level.Debug(c.logger).Log("msg", "Collecting mmces metrics")
 	collectTime := time.Now()
 	timeout := 0
-	metrics, err := c.collect()
-	if err == context.DeadlineExceeded {
-		level.Error(c.logger).Log("msg", "Timeout executing mmces")
-		timeout = 1
-	} else if err != nil {
-		level.Error(c.logger).Log("msg", err)
-		ch <- prometheus.MustNewConstMetric(collectError, prometheus.GaugeValue, 1, "mmces")
-	} else {
-		ch <- prometheus.MustNewConstMetric(collectError, prometheus.GaugeValue, 0, "mmces")
-	}
-	ch <- prometheus.MustNewConstMetric(collecTimeout, prometheus.GaugeValue, float64(timeout), "mmces")
-	for _, m := range metrics {
-		statusValue := parseMmcesState(m.State)
-		ch <- prometheus.MustNewConstMetric(c.State, prometheus.GaugeValue, statusValue, m.Service, m.State)
-	}
-	ch <- prometheus.MustNewConstMetric(collectDuration, prometheus.GaugeValue, time.Since(collectTime).Seconds(), "mmces")
-}
-
-func (c *MmcesCollector) collect() ([]CESMetric, error) {
-	var err error
-	var mmces_state_out string
-	var metrics []CESMetric
-	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(*mmcesTimeout)*time.Second)
-	defer cancel()
+	errorMetric := 0
 	var nodename string
 	if *configNodeName == "" {
 		nodename = getFQDN(c.logger)
@@ -108,6 +86,29 @@ func (c *MmcesCollector) collect() ([]CESMetric, error) {
 	} else {
 		nodename = *configNodeName
 	}
+	metrics, err := mmcesCollector(nodename)
+	if err == context.DeadlineExceeded {
+		level.Error(c.logger).Log("msg", "Timeout executing mmces")
+		timeout = 1
+	} else if err != nil {
+		level.Error(c.logger).Log("msg", err)
+		errorMetric = 1
+	}
+	ch <- prometheus.MustNewConstMetric(collectError, prometheus.GaugeValue, float64(errorMetric), "mmces")
+	ch <- prometheus.MustNewConstMetric(collecTimeout, prometheus.GaugeValue, float64(timeout), "mmces")
+	for _, m := range metrics {
+		statusValue := parseMmcesState(m.State)
+		ch <- prometheus.MustNewConstMetric(c.State, prometheus.GaugeValue, statusValue, m.Service, m.State)
+	}
+	ch <- prometheus.MustNewConstMetric(collectDuration, prometheus.GaugeValue, time.Since(collectTime).Seconds(), "mmces")
+}
+
+func mmcesCollect(nodename string) ([]CESMetric, error) {
+	var err error
+	var mmces_state_out string
+	var metrics []CESMetric
+	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(*mmcesTimeout)*time.Second)
+	defer cancel()
 	mmces_state_out, err = mmces_state_show(nodename, ctx)
 	if ctx.Err() == context.DeadlineExceeded {
 		if *useCache {
