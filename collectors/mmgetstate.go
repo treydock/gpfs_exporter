@@ -60,17 +60,15 @@ func (c *MmgetstateCollector) Collect(ch chan<- prometheus.Metric) {
 	level.Debug(c.logger).Log("msg", "Collecting mmgetstate metrics")
 	collectTime := time.Now()
 	timeout := 0
+	errorMetric := 0
 	metric, err := c.collect()
 	if err == context.DeadlineExceeded {
 		level.Error(c.logger).Log("msg", "Timeout executing mmgetstate")
 		timeout = 1
 	} else if err != nil {
 		level.Error(c.logger).Log("msg", err)
-		ch <- prometheus.MustNewConstMetric(collectError, prometheus.GaugeValue, 1, "mmgetstate")
-	} else {
-		ch <- prometheus.MustNewConstMetric(collectError, prometheus.GaugeValue, 0, "mmgetstate")
+		errorMetric = 1
 	}
-	ch <- prometheus.MustNewConstMetric(collecTimeout, prometheus.GaugeValue, float64(timeout), "mmgetstate")
 	for _, state := range mmgetstateStates {
 		if state == metric.state {
 			ch <- prometheus.MustNewConstMetric(c.state, prometheus.GaugeValue, 1, state)
@@ -83,6 +81,8 @@ func (c *MmgetstateCollector) Collect(ch chan<- prometheus.Metric) {
 	} else {
 		ch <- prometheus.MustNewConstMetric(c.state, prometheus.GaugeValue, 0, "unknown")
 	}
+	ch <- prometheus.MustNewConstMetric(collectError, prometheus.GaugeValue, float64(errorMetric), "mmgetstate")
+	ch <- prometheus.MustNewConstMetric(collecTimeout, prometheus.GaugeValue, float64(timeout), "mmgetstate")
 	ch <- prometheus.MustNewConstMetric(collectDuration, prometheus.GaugeValue, time.Since(collectTime).Seconds(), "mmgetstate")
 }
 

@@ -152,17 +152,15 @@ func (c *MmdfCollector) Collect(ch chan<- prometheus.Metric) {
 			defer wg.Done()
 			label := fmt.Sprintf("mmdf-%s", fs)
 			timeout := 0
+			errorMetric := 0
 			metric, err := c.mmdfCollect(fs)
 			if err == context.DeadlineExceeded {
 				level.Error(c.logger).Log("msg", fmt.Sprintf("Timeout executing %s", label))
 				timeout = 1
 			} else if err != nil {
 				level.Error(c.logger).Log("msg", err, "fs", fs)
-				ch <- prometheus.MustNewConstMetric(collectError, prometheus.GaugeValue, 1, label)
-			} else {
-				ch <- prometheus.MustNewConstMetric(collectError, prometheus.GaugeValue, 0, label)
+				errorMetric = 1
 			}
-			ch <- prometheus.MustNewConstMetric(collecTimeout, prometheus.GaugeValue, float64(timeout), label)
 			ch <- prometheus.MustNewConstMetric(c.InodesUsed, prometheus.GaugeValue, float64(metric.InodesUsed), fs)
 			ch <- prometheus.MustNewConstMetric(c.InodesFree, prometheus.GaugeValue, float64(metric.InodesFree), fs)
 			ch <- prometheus.MustNewConstMetric(c.InodesAllocated, prometheus.GaugeValue, float64(metric.InodesAllocated), fs)
@@ -173,6 +171,8 @@ func (c *MmdfCollector) Collect(ch chan<- prometheus.Metric) {
 			ch <- prometheus.MustNewConstMetric(c.MetadataTotal, prometheus.GaugeValue, float64(metric.MetadataTotal), fs)
 			ch <- prometheus.MustNewConstMetric(c.MetadataFree, prometheus.GaugeValue, float64(metric.MetadataFree), fs)
 			ch <- prometheus.MustNewConstMetric(c.MetadataFreePercent, prometheus.GaugeValue, float64(metric.MetadataFreePercent), fs)
+			ch <- prometheus.MustNewConstMetric(collectError, prometheus.GaugeValue, float64(errorMetric), label)
+			ch <- prometheus.MustNewConstMetric(collecTimeout, prometheus.GaugeValue, float64(timeout), label)
 			ch <- prometheus.MustNewConstMetric(collectDuration, prometheus.GaugeValue, time.Since(collectTime).Seconds(), label)
 			ch <- prometheus.MustNewConstMetric(lastExecution, prometheus.GaugeValue, float64(time.Now().Unix()), label)
 		}(fs)

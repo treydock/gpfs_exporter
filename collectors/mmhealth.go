@@ -71,21 +71,21 @@ func (c *MmhealthCollector) Collect(ch chan<- prometheus.Metric) {
 	level.Debug(c.logger).Log("msg", "Collecting mmhealth metrics")
 	collectTime := time.Now()
 	timeout := 0
+	errorMetric := 0
 	metrics, err := c.collect()
 	if err == context.DeadlineExceeded {
 		timeout = 1
 		level.Error(c.logger).Log("msg", "Timeout executing mmhealth")
 	} else if err != nil {
 		level.Error(c.logger).Log("msg", err)
-		ch <- prometheus.MustNewConstMetric(collectError, prometheus.GaugeValue, 1, "mmhealth")
-	} else {
-		ch <- prometheus.MustNewConstMetric(collectError, prometheus.GaugeValue, 0, "mmhealth")
+		errorMetric = 1
 	}
-	ch <- prometheus.MustNewConstMetric(collecTimeout, prometheus.GaugeValue, float64(timeout), "mmhealth")
 	for _, m := range metrics {
 		statusValue := parseMmhealthStatus(m.Status)
 		ch <- prometheus.MustNewConstMetric(c.State, prometheus.GaugeValue, statusValue, m.Component, m.EntityName, m.EntityType, m.Status)
 	}
+	ch <- prometheus.MustNewConstMetric(collectError, prometheus.GaugeValue, float64(errorMetric), "mmhealth")
+	ch <- prometheus.MustNewConstMetric(collecTimeout, prometheus.GaugeValue, float64(timeout), "mmhealth")
 	ch <- prometheus.MustNewConstMetric(collectDuration, prometheus.GaugeValue, time.Since(collectTime).Seconds(), "mmhealth")
 }
 

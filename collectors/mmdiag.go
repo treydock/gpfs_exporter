@@ -70,20 +70,20 @@ func (c *MmdiagCollector) Collect(ch chan<- prometheus.Metric) {
 	level.Debug(c.logger).Log("msg", "Collecting mmdiag metrics")
 	collectTime := time.Now()
 	timeout := 0
+	errorMetric := 0
 	diagMetric, err := c.collect()
 	if err == context.DeadlineExceeded {
 		level.Error(c.logger).Log("msg", "Timeout executing mmdiag")
 		timeout = 1
 	} else if err != nil {
 		level.Error(c.logger).Log("msg", err)
-		ch <- prometheus.MustNewConstMetric(collectError, prometheus.GaugeValue, 1, "mmdiag")
-	} else {
-		ch <- prometheus.MustNewConstMetric(collectError, prometheus.GaugeValue, 0, "mmdiag")
+		errorMetric = 1
 	}
-	ch <- prometheus.MustNewConstMetric(collecTimeout, prometheus.GaugeValue, float64(timeout), "mmdiag")
 	for _, waiter := range diagMetric.Waiters {
 		ch <- prometheus.MustNewConstMetric(c.Waiter, prometheus.GaugeValue, waiter.Seconds, waiter.Thread)
 	}
+	ch <- prometheus.MustNewConstMetric(collectError, prometheus.GaugeValue, float64(errorMetric), "mmdiag")
+	ch <- prometheus.MustNewConstMetric(collecTimeout, prometheus.GaugeValue, float64(timeout), "mmdiag")
 	ch <- prometheus.MustNewConstMetric(collectDuration, prometheus.GaugeValue, time.Since(collectTime).Seconds(), "mmdiag")
 }
 

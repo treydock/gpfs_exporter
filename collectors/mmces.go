@@ -94,12 +94,12 @@ func (c *MmcesCollector) Collect(ch chan<- prometheus.Metric) {
 		level.Error(c.logger).Log("msg", err)
 		errorMetric = 1
 	}
-	ch <- prometheus.MustNewConstMetric(collectError, prometheus.GaugeValue, float64(errorMetric), "mmces")
-	ch <- prometheus.MustNewConstMetric(collecTimeout, prometheus.GaugeValue, float64(timeout), "mmces")
 	for _, m := range metrics {
 		statusValue := parseMmcesState(m.State)
 		ch <- prometheus.MustNewConstMetric(c.State, prometheus.GaugeValue, statusValue, m.Service, m.State)
 	}
+	ch <- prometheus.MustNewConstMetric(collectError, prometheus.GaugeValue, float64(errorMetric), "mmces")
+	ch <- prometheus.MustNewConstMetric(collecTimeout, prometheus.GaugeValue, float64(timeout), "mmces")
 	ch <- prometheus.MustNewConstMetric(collectDuration, prometheus.GaugeValue, time.Since(collectTime).Seconds(), "mmces")
 }
 
