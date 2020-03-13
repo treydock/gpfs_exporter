@@ -15,6 +15,7 @@ package collectors
 
 import (
 	"context"
+	"fmt"
 	"os/exec"
 	"strings"
 	"testing"
@@ -23,6 +24,13 @@ import (
 	"github.com/go-kit/kit/log"
 	"github.com/prometheus/client_golang/prometheus/testutil"
 	"gopkg.in/alecthomas/kingpin.v2"
+)
+
+var (
+	mmgetstateStdout = `
+mmgetstate::HEADER:version:reserved:reserved:nodeName:nodeNumber:state:quorum:nodesUp:totalNodes:remarks:cnfsState:
+mmgetstate::0:1:::ib-proj-nsd05.domain:11:active:4:7:1122::(undefined):
+`
 )
 
 func TestMmgetstate(t *testing.T) {
@@ -42,11 +50,7 @@ func TestMmgetstate(t *testing.T) {
 }
 
 func TestParseMmgetstate(t *testing.T) {
-	stdout := `
-mmgetstate::HEADER:version:reserved:reserved:nodeName:nodeNumber:state:quorum:nodesUp:totalNodes:remarks:cnfsState:
-mmgetstate::0:1:::ib-proj-nsd05.domain:11:active:4:7:1122::(undefined):
-`
-	metric, err := mmgetstate_parse(stdout)
+	metric, err := mmgetstate_parse(mmgetstateStdout)
 	if err != nil {
 		t.Errorf("Unexpected error: %s", err.Error())
 	}
@@ -56,20 +60,15 @@ mmgetstate::0:1:::ib-proj-nsd05.domain:11:active:4:7:1122::(undefined):
 }
 
 func TestMmgetstateCollector(t *testing.T) {
-	if _, err := kingpin.CommandLine.Parse([]string{"--exporter.use-cache"}); err != nil {
+	if _, err := kingpin.CommandLine.Parse([]string{}); err != nil {
 		t.Fatal(err)
 	}
-	stdout := `
-mmgetstate::HEADER:version:reserved:reserved:nodeName:nodeNumber:state:quorum:nodesUp:totalNodes:remarks:cnfsState:
-mmgetstate::0:1:::ib-proj-nsd05.domain:11:active:4:7:1122::(undefined):
-`
 	mmgetstateExec = func(ctx context.Context) (string, error) {
-		return stdout, nil
+		return mmgetstateStdout, nil
 	}
-	metadata := `
-		# HELP gpfs_state GPFS state
-		# TYPE gpfs_state gauge`
 	expected := `
+		# HELP gpfs_state GPFS state
+		# TYPE gpfs_state gauge
 		gpfs_state{state="active"} 1
 		gpfs_state{state="arbitrating"} 0
 		gpfs_state{state="down"} 0
@@ -80,7 +79,118 @@ mmgetstate::0:1:::ib-proj-nsd05.domain:11:active:4:7:1122::(undefined):
 	if val := testutil.CollectAndCount(collector); val != 7 {
 		t.Errorf("Unexpected collection count %d, expected 7", val)
 	}
-	if err := testutil.GatherAndCompare(gatherers, strings.NewReader(metadata+expected), "gpfs_state"); err != nil {
+	if err := testutil.GatherAndCompare(gatherers, strings.NewReader(expected), "gpfs_state"); err != nil {
 		t.Errorf("unexpected collecting result:\n%s", err)
+	}
+}
+
+func TestMMgetstateCollectorError(t *testing.T) {
+	if _, err := kingpin.CommandLine.Parse([]string{}); err != nil {
+		t.Fatal(err)
+	}
+	mmgetstateExec = func(ctx context.Context) (string, error) {
+		return "", fmt.Errorf("Error")
+	}
+	expected := `
+		# HELP gpfs_exporter_collect_error Indicates if error has occurred during collection
+		# TYPE gpfs_exporter_collect_error gauge
+		gpfs_exporter_collect_error{collector="mmgetstate"} 1
+	`
+	collector := NewMmgetstateCollector(log.NewNopLogger(), false)
+	gatherers := setupGatherer(collector)
+	if val := testutil.CollectAndCount(collector); val != 7 {
+		t.Errorf("Unexpected collection count %d, expected 7", val)
+	}
+	if err := testutil.GatherAndCompare(gatherers, strings.NewReader(expected), "gpfs_exporter_collect_error"); err != nil {
+		t.Errorf("unexpected collecting result:\n%s", err)
+	}
+}
+
+func TestMMgetstateCollectorTimeout(t *testing.T) {
+	if _, err := kingpin.CommandLine.Parse([]string{}); err != nil {
+		t.Fatal(err)
+	}
+	mmgetstateExec = func(ctx context.Context) (string, error) {
+		return "", context.DeadlineExceeded
+	}
+	expected := `
+		# HELP gpfs_exporter_collect_timeout Indicates the collector timed out
+		# TYPE gpfs_exporter_collect_timeout gauge
+		gpfs_exporter_collect_timeout{collector="mmgetstate"} 1
+	`
+	collector := NewMmgetstateCollector(log.NewNopLogger(), false)
+	gatherers := setupGatherer(collector)
+	if val := testutil.CollectAndCount(collector); val != 7 {
+		t.Errorf("Unexpected collection count %d, expected 7", val)
+	}
+	if err := testutil.GatherAndCompare(gatherers, strings.NewReader(expected), "gpfs_exporter_collect_timeout"); err != nil {
+		t.Errorf("unexpected collecting result:\n%s", err)
+	}
+}
+
+func TestMMgetstateCollectorCache(t *testing.T) {
+	if _, err := kingpin.CommandLine.Parse([]string{}); err != nil {
+		t.Fatal(err)
+	}
+	// build cache
+	mmgetstateExec = func(ctx context.Context) (string, error) {
+		return mmgetstateStdout, nil
+	}
+	collector := NewMmgetstateCollector(log.NewNopLogger(), true)
+	gatherers := setupGatherer(collector)
+	if val := testutil.CollectAndCount(collector); val != 7 {
+		t.Errorf("Unexpected collection count %d, expected 7", val)
+	}
+
+	mmgetstateExec = func(ctx context.Context) (string, error) {
+		return "", fmt.Errorf("Error")
+	}
+	expected := `
+		# HELP gpfs_state GPFS state
+		# TYPE gpfs_state gauge
+		gpfs_state{state="active"} 1
+		gpfs_state{state="arbitrating"} 0
+		gpfs_state{state="down"} 0
+		gpfs_state{state="unknown"} 0
+	`
+	errorMetrics := `
+		# HELP gpfs_exporter_collect_error Indicates if error has occurred during collection
+		# TYPE gpfs_exporter_collect_error gauge
+		gpfs_exporter_collect_error{collector="mmgetstate"} 1
+	`
+	if val := testutil.CollectAndCount(collector); val != 7 {
+		t.Errorf("Unexpected collection count %d, expected 7", val)
+	}
+	if err := testutil.GatherAndCompare(gatherers, strings.NewReader(expected+errorMetrics), "gpfs_state", "gpfs_exporter_collect_error"); err != nil {
+		t.Errorf("unexpected collecting result:\n%s", err)
+	}
+
+	timeoutMetrics := `
+		# HELP gpfs_exporter_collect_timeout Indicates the collector timed out
+		# TYPE gpfs_exporter_collect_timeout gauge
+		gpfs_exporter_collect_timeout{collector="mmgetstate"} 1
+	`
+	mmgetstateExec = func(ctx context.Context) (string, error) {
+		return "", context.DeadlineExceeded
+	}
+	if val := testutil.CollectAndCount(collector); val != 7 {
+		t.Errorf("Unexpected collection count %d, expected 7", val)
+	}
+	if err := testutil.GatherAndCompare(gatherers, strings.NewReader(expected+timeoutMetrics), "gpfs_state", "gpfs_exporter_collect_timeout"); err != nil {
+		t.Errorf("unexpected collecting result:\n%s", err)
+	}
+
+	mmgetstateCache = MmgetstateMetrics{}
+	mmgetstateExec = func(ctx context.Context) (string, error) {
+		return mmgetstateStdout, nil
+	}
+	if val := testutil.CollectAndCount(collector); val != 7 {
+		t.Errorf("Unexpected collection count %d, expected 7", val)
+	}
+	if err := testutil.GatherAndCompare(gatherers, strings.NewReader(expected), "gpfs_state"); err != nil {
+		t.Errorf("unexpected collecting result:\n%s", err)
+	}
+	if val := mmgetstateCache.state; val != "active" {
+		t.Errorf("Unexpected cache size %s, expected active", val)
 	}
 }
