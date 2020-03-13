@@ -14,6 +14,7 @@
 package collectors
 
 import (
+	"context"
 	"os/exec"
 	"strings"
 	"testing"
@@ -117,9 +118,7 @@ func TestMmhealthCollector(t *testing.T) {
 	if _, err := kingpin.CommandLine.Parse([]string{"--exporter.use-cache"}); err != nil {
 		t.Fatal(err)
 	}
-	execCommand = fakeExecCommand
-	mockedExitStatus = 0
-	mockedStdout = `
+	stdout := `
 mmhealth:Event:HEADER:version:reserved:reserved:node:component:entityname:entitytype:event:arguments:activesince:identifier:ishidden:
 mmhealth:State:HEADER:version:reserved:reserved:node:component:entityname:entitytype:status:laststatuschange:
 mmhealth:State:0:1:::ib-haswell1.example.com:NODE:ib-haswell1.example.com:NODE:TIPS:2020-01-27 09%3A35%3A21.859186 EST:
@@ -133,7 +132,9 @@ mmhealth:State:0:1:::ib-haswell1.example.com:FILESYSTEM:project:FILESYSTEM:HEALT
 mmhealth:State:0:1:::ib-haswell1.example.com:FILESYSTEM:scratch:FILESYSTEM:HEALTHY:2020-01-27 09%3A35%3A21.657798 EST:
 mmhealth:State:0:1:::ib-haswell1.example.com:FILESYSTEM:ess:FILESYSTEM:HEALTHY:2020-01-27 09%3A35%3A21.716417 EST:
 `
-	defer func() { execCommand = exec.CommandContext }()
+	mmhealthExec = func(ctx context.Context) (string, error) {
+		return stdout, nil
+	}
 	metadata := `
 		# HELP gpfs_health_status GPFS health status, 1=healthy 0=not healthy
 		# TYPE gpfs_health_status gauge`
@@ -148,7 +149,7 @@ mmhealth:State:0:1:::ib-haswell1.example.com:FILESYSTEM:ess:FILESYSTEM:HEALTHY:2
 		gpfs_health_status{component="NETWORK",entityname="mlx5_0/1",entitytype="IB_RDMA",status="HEALTHY"} 1
 		gpfs_health_status{component="NODE",entityname="ib-haswell1.example.com",entitytype="NODE",status="TIPS"} 0
 	`
-	collector := NewMmhealthCollector(log.NewNopLogger())
+	collector := NewMmhealthCollector(log.NewNopLogger(), false)
 	gatherers := setupGatherer(collector)
 	if val := testutil.CollectAndCount(collector); val != 12 {
 		t.Errorf("Unexpected collection count %d, expected 12", val)

@@ -14,6 +14,8 @@
 package collectors
 
 import (
+	"context"
+	"fmt"
 	"os/exec"
 	"strings"
 	"testing"
@@ -60,18 +62,18 @@ func TestVerbsCollector(t *testing.T) {
 	if _, err := kingpin.CommandLine.Parse([]string{"--exporter.use-cache"}); err != nil {
 		t.Fatal(err)
 	}
-	execCommand = fakeExecCommand
-	mockedExitStatus = 0
-	mockedStdout = `
+	stdout := `
 VERBS RDMA status: started
 `
-	defer func() { execCommand = exec.CommandContext }()
+	verbsExec = func(ctx context.Context) (string, error) {
+		return stdout, nil
+	}
 	expected := `
 		# HELP gpfs_verbs_status GPFS verbs status, 1=started 0=not started
 		# TYPE gpfs_verbs_status gauge
 		gpfs_verbs_status 1
 	`
-	collector := NewVerbsCollector(log.NewNopLogger())
+	collector := NewVerbsCollector(log.NewNopLogger(), false)
 	gatherers := setupGatherer(collector)
 	if val := testutil.CollectAndCount(collector); val != 4 {
 		t.Errorf("Unexpected collection count %d, expected 4", val)
@@ -85,16 +87,16 @@ func TestVerbsCollectorError(t *testing.T) {
 	if _, err := kingpin.CommandLine.Parse([]string{}); err != nil {
 		t.Fatal(err)
 	}
-	execCommand = fakeExecCommand
-	mockedExitStatus = 1
-	defer func() { execCommand = exec.CommandContext }()
+	verbsExec = func(ctx context.Context) (string, error) {
+		return "", fmt.Errorf("Error")
+	}
 	metadata := `
 			# HELP gpfs_exporter_collect_error Indicates if error has occurred during collection
 			# TYPE gpfs_exporter_collect_error gauge`
 	expected := `
 		gpfs_exporter_collect_error{collector="verbs"} 1
 	`
-	collector := NewVerbsCollector(log.NewNopLogger())
+	collector := NewVerbsCollector(log.NewNopLogger(), false)
 	gatherers := setupGatherer(collector)
 	if val := testutil.CollectAndCount(collector); val != 3 {
 		t.Errorf("Unexpected collection count %d, expected 3", val)

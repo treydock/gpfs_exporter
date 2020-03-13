@@ -34,6 +34,7 @@ var (
 	configWaiterExclude   = kingpin.Flag("collector.mmdiag.waiter-exclude", "Pattern to exclude for waiters").Default(defWaiterExclude).String()
 	mmdiagTimeout         = kingpin.Flag("collector.mmdiag.timeout", "Timeout for mmdiag execution").Default("5").Int()
 	mmdiagCache           = DiagMetric{}
+	mmdiagExec            = mmdiag
 )
 
 type DiagMetric struct {
@@ -46,19 +47,21 @@ type DiagWaiter struct {
 }
 
 type MmdiagCollector struct {
-	Waiter *prometheus.Desc
-	logger log.Logger
+	Waiter   *prometheus.Desc
+	logger   log.Logger
+	useCache bool
 }
 
 func init() {
 	registerCollector("mmdiag", false, NewMmdiagCollector)
 }
 
-func NewMmdiagCollector(logger log.Logger) Collector {
+func NewMmdiagCollector(logger log.Logger, useCache bool) Collector {
 	return &MmdiagCollector{
 		Waiter: prometheus.NewDesc(prometheus.BuildFQName(namespace, "mmdiag", "waiter"),
 			"GPFS max waiter in seconds", []string{"thread"}, nil),
-		logger: logger,
+		logger:   logger,
+		useCache: useCache,
 	}
 }
 
@@ -93,27 +96,27 @@ func (c *MmdiagCollector) collect() (DiagMetric, error) {
 	var err error
 	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(*mmdiagTimeout)*time.Second)
 	defer cancel()
-	out, err = mmdiag("--waiters", ctx)
+	out, err = mmdiagExec("--waiters", ctx)
 	if ctx.Err() == context.DeadlineExceeded {
-		if *useCache {
+		if c.useCache {
 			diagMetric = mmdiagCache
 		}
 		return diagMetric, ctx.Err()
 	}
 	if err != nil {
-		if *useCache {
+		if c.useCache {
 			diagMetric = mmdiagCache
 		}
 		return diagMetric, err
 	}
 	err = parse_mmdiag_waiters(out, &diagMetric, c.logger)
 	if err != nil {
-		if *useCache {
+		if c.useCache {
 			diagMetric = mmdiagCache
 		}
 		return diagMetric, err
 	}
-	if *useCache {
+	if c.useCache {
 		mmdiagCache = diagMetric
 	}
 	return diagMetric, nil

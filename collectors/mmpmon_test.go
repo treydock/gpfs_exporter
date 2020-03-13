@@ -14,6 +14,7 @@
 package collectors
 
 import (
+	"context"
 	"os/exec"
 	"strings"
 	"testing"
@@ -60,13 +61,13 @@ func TestMmpmonCollector(t *testing.T) {
 	if _, err := kingpin.CommandLine.Parse([]string{"--exporter.use-cache"}); err != nil {
 		t.Fatal(err)
 	}
-	execCommand = fakeExecCommand
-	mockedExitStatus = 0
-	mockedStdout = `
+	stdout := `
 _fs_io_s_ _n_ 10.22.0.106 _nn_ ib-pitzer-rw02.ten _rc_ 0 _t_ 1579358234 _tu_ 53212 _cl_ gpfs.osc.edu _fs_ scratch _d_ 48 _br_ 205607400434 _bw_ 74839282351 _oc_ 2377656 _cc_ 2201576 _rdc_ 59420404 _wc_ 18874626 _dir_ 40971 _iu_ 544768
 _fs_io_s_ _n_ 10.22.0.106 _nn_ ib-pitzer-rw02.ten _rc_ 0 _t_ 1579358234 _tu_ 53212 _cl_ gpfs.osc.edu _fs_ project _d_ 96 _br_ 0 _bw_ 0 _oc_ 513 _cc_ 513 _rdc_ 0 _wc_ 0 _dir_ 0 _iu_ 169
 `
-	defer func() { execCommand = exec.CommandContext }()
+	mmpmonExec = func(ctx context.Context) (string, error) {
+		return stdout, nil
+	}
 	expected := `
 		# HELP gpfs_perf_operations GPFS operationgs reported by mmpmon
 		# TYPE gpfs_perf_operations counter
@@ -91,7 +92,7 @@ _fs_io_s_ _n_ 10.22.0.106 _nn_ ib-pitzer-rw02.ten _rc_ 0 _t_ 1579358234 _tu_ 532
 		gpfs_perf_write_bytes{fs="project",nodename="ib-pitzer-rw02.ten"} 0
 		gpfs_perf_write_bytes{fs="scratch",nodename="ib-pitzer-rw02.ten"} 74839282351
 	`
-	collector := NewMmpmonCollector(log.NewNopLogger())
+	collector := NewMmpmonCollector(log.NewNopLogger(), false)
 	gatherers := setupGatherer(collector)
 	if val := testutil.CollectAndCount(collector); val != 19 {
 		t.Errorf("Unexpected collection count %d, expected 19", val)

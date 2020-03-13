@@ -15,6 +15,7 @@ package collectors
 
 import (
 	"context"
+	"fmt"
 	"os/exec"
 	"strings"
 	"testing"
@@ -63,13 +64,13 @@ func TestMMcesCollector(t *testing.T) {
 	if _, err := kingpin.CommandLine.Parse([]string{"--collector.mmces.nodename=ib-protocol01.domain --exporter.use-cache"}); err != nil {
 		t.Fatal(err)
 	}
-	execCommand = fakeExecCommand
-	mockedExitStatus = 0
-	mockedStdout = `
+	stdout := `
 mmcesstate::HEADER:version:reserved:reserved:NODE:AUTH:BLOCK:NETWORK:AUTH_OBJ:NFS:OBJ:SMB:CES:
 mmcesstate::0:1:::ib-protocol01.domain:HEALTHY:DISABLED:HEALTHY:DISABLED:HEALTHY:DISABLED:HEALTHY:HEALTHY:
 `
-	defer func() { execCommand = exec.CommandContext }()
+	mmcesExec = func(nodename string, ctx context.Context) (string, error) {
+		return stdout, nil
+	}
 	metadata := `
 			# HELP gpfs_ces_state GPFS CES health status, 1=healthy 0=not healthy
 			# TYPE gpfs_ces_state gauge`
@@ -83,7 +84,7 @@ mmcesstate::0:1:::ib-protocol01.domain:HEALTHY:DISABLED:HEALTHY:DISABLED:HEALTHY
 		gpfs_ces_state{service="OBJ",state="DISABLED"} 0
 		gpfs_ces_state{service="SMB",state="HEALTHY"} 1
 	`
-	collector := NewMmcesCollector(log.NewNopLogger())
+	collector := NewMmcesCollector(log.NewNopLogger(), false)
 	gatherers := setupGatherer(collector)
 	if val := testutil.CollectAndCount(collector); val != 11 {
 		t.Errorf("Unexpected collection count %d, expected 11", val)
@@ -94,19 +95,19 @@ mmcesstate::0:1:::ib-protocol01.domain:HEALTHY:DISABLED:HEALTHY:DISABLED:HEALTHY
 }
 
 func TestMMcesCollectorError(t *testing.T) {
-	if _, err := kingpin.CommandLine.Parse([]string{"--collector.mmces.nodename=ib-protocol01.domain --exporter.use-cache"}); err != nil {
+	if _, err := kingpin.CommandLine.Parse([]string{"--collector.mmces.nodename=ib-protocol01.domain"}); err != nil {
 		t.Fatal(err)
 	}
-	execCommand = fakeExecCommand
-	mockedExitStatus = 1
-	defer func() { execCommand = exec.CommandContext }()
+	mmcesExec = func(nodename string, ctx context.Context) (string, error) {
+		return "", fmt.Errorf("Error")
+	}
 	metadata := `
 			# HELP gpfs_exporter_collect_error Indicates if error has occurred during collection
 			# TYPE gpfs_exporter_collect_error gauge`
 	expected := `
 		gpfs_exporter_collect_error{collector="mmces"} 1
 	`
-	collector := NewMmcesCollector(log.NewNopLogger())
+	collector := NewMmcesCollector(log.NewNopLogger(), false)
 	gatherers := setupGatherer(collector)
 	if val := testutil.CollectAndCount(collector); val != 3 {
 		t.Errorf("Unexpected collection count %d, expected 3", val)
@@ -117,27 +118,64 @@ func TestMMcesCollectorError(t *testing.T) {
 }
 
 func TestMMcesCollectorTimeout(t *testing.T) {
-	if _, err := kingpin.CommandLine.Parse([]string{"--collector.mmces.nodename=ib-protocol01.domain --exporter.use-cache"}); err != nil {
+	if _, err := kingpin.CommandLine.Parse([]string{"--collector.mmces.nodename=ib-protocol01.domain"}); err != nil {
 		t.Fatal(err)
 	}
-	mmcesCollector = func(nodename string) ([]CESMetric, error) {
-		return []CESMetric{}, context.DeadlineExceeded
+	mmcesExec = func(nodename string, ctx context.Context) (string, error) {
+		return "", context.DeadlineExceeded
 	}
-	execCommand = fakeExecCommand
-	mockedExitStatus = 1
-	defer func() { execCommand = exec.CommandContext }()
 	metadata := `
 			# HELP gpfs_exporter_collect_timeout Indicates the collector timed out
 			# TYPE gpfs_exporter_collect_timeout gauge`
 	expected := `
 		gpfs_exporter_collect_timeout{collector="mmces"} 1
 	`
-	collector := NewMmcesCollector(log.NewNopLogger())
+	collector := NewMmcesCollector(log.NewNopLogger(), false)
 	gatherers := setupGatherer(collector)
 	if val := testutil.CollectAndCount(collector); val != 3 {
 		t.Errorf("Unexpected collection count %d, expected 3", val)
 	}
 	if err := testutil.GatherAndCompare(gatherers, strings.NewReader(metadata+expected), "gpfs_exporter_collect_timeout"); err != nil {
+		t.Errorf("unexpected collecting result:\n%s", err)
+	}
+}
+
+func TestMMcesCollectorErrorCache(t *testing.T) {
+	if _, err := kingpin.CommandLine.Parse([]string{"--collector.mmces.nodename=ib-protocol01.domain"}); err != nil {
+		t.Fatal(err)
+	}
+	metrics := []CESMetric{}
+	metrics = append(metrics, CESMetric{Service: "AUTH", State: "HEALTHY"})
+	metrics = append(metrics, CESMetric{Service: "CES", State: "HEALTHY"})
+	metrics = append(metrics, CESMetric{Service: "NETWORK", State: "HEALTHY"})
+	metrics = append(metrics, CESMetric{Service: "NFS", State: "HEALTHY"})
+	metrics = append(metrics, CESMetric{Service: "SMB", State: "HEALTHY"})
+	metrics = append(metrics, CESMetric{Service: "AUTH_OBJ", State: "DISABLED"})
+	metrics = append(metrics, CESMetric{Service: "BLOCK", State: "DISABLED"})
+	metrics = append(metrics, CESMetric{Service: "OBJ", State: "DISABLED"})
+	mmcesCache = metrics
+	mmcesExec = func(nodename string, ctx context.Context) (string, error) {
+		return "", fmt.Errorf("Error")
+	}
+	metadata := `
+			# HELP gpfs_ces_state GPFS CES health status, 1=healthy 0=not healthy
+			# TYPE gpfs_ces_state gauge`
+	expected := `
+		gpfs_ces_state{service="AUTH",state="HEALTHY"} 1
+		gpfs_ces_state{service="AUTH_OBJ",state="DISABLED"} 0
+		gpfs_ces_state{service="BLOCK",state="DISABLED"} 0
+		gpfs_ces_state{service="CES",state="HEALTHY"} 1
+		gpfs_ces_state{service="NETWORK",state="HEALTHY"} 1
+		gpfs_ces_state{service="NFS",state="HEALTHY"} 1
+		gpfs_ces_state{service="OBJ",state="DISABLED"} 0
+		gpfs_ces_state{service="SMB",state="HEALTHY"} 1
+	`
+	collector := NewMmcesCollector(log.NewNopLogger(), true)
+	gatherers := setupGatherer(collector)
+	if val := testutil.CollectAndCount(collector); val != 11 {
+		t.Errorf("Unexpected collection count %d, expected 11", val)
+	}
+	if err := testutil.GatherAndCompare(gatherers, strings.NewReader(metadata+expected), "gpfs_ces_state"); err != nil {
 		t.Errorf("unexpected collecting result:\n%s", err)
 	}
 }

@@ -14,6 +14,7 @@
 package collectors
 
 import (
+	"context"
 	"os/exec"
 	"strings"
 	"testing"
@@ -44,13 +45,13 @@ func TestMmgetstateCollector(t *testing.T) {
 	if _, err := kingpin.CommandLine.Parse([]string{"--exporter.use-cache"}); err != nil {
 		t.Fatal(err)
 	}
-	execCommand = fakeExecCommand
-	mockedExitStatus = 0
-	mockedStdout = `
+	stdout := `
 mmgetstate::HEADER:version:reserved:reserved:nodeName:nodeNumber:state:quorum:nodesUp:totalNodes:remarks:cnfsState:
 mmgetstate::0:1:::ib-proj-nsd05.domain:11:active:4:7:1122::(undefined):
 `
-	defer func() { execCommand = exec.CommandContext }()
+	mmgetstateExec = func(ctx context.Context) (string, error) {
+		return stdout, nil
+	}
 	metadata := `
 		# HELP gpfs_state GPFS state
 		# TYPE gpfs_state gauge`
@@ -60,7 +61,7 @@ mmgetstate::0:1:::ib-proj-nsd05.domain:11:active:4:7:1122::(undefined):
 		gpfs_state{state="down"} 0
 		gpfs_state{state="unknown"} 0
 	`
-	collector := NewMmgetstateCollector(log.NewNopLogger())
+	collector := NewMmgetstateCollector(log.NewNopLogger(), false)
 	gatherers := setupGatherer(collector)
 	if val := testutil.CollectAndCount(collector); val != 7 {
 		t.Errorf("Unexpected collection count %d, expected 7", val)

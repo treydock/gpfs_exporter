@@ -43,6 +43,7 @@ var (
 		"_iu_":  "InodeUpdates",
 	}
 	mmpmonCache = []PerfMetrics{}
+	mmpmonExec  = mmpmon
 )
 
 type PerfMetrics struct {
@@ -63,13 +64,14 @@ type MmpmonCollector struct {
 	write_bytes *prometheus.Desc
 	operations  *prometheus.Desc
 	logger      log.Logger
+	useCache    bool
 }
 
 func init() {
 	registerCollector("mmpmon", true, NewMmpmonCollector)
 }
 
-func NewMmpmonCollector(logger log.Logger) Collector {
+func NewMmpmonCollector(logger log.Logger, useCache bool) Collector {
 	return &MmpmonCollector{
 		read_bytes: prometheus.NewDesc(prometheus.BuildFQName(namespace, "perf", "read_bytes"),
 			"GPFS read bytes", []string{"fs", "nodename"}, nil),
@@ -77,7 +79,8 @@ func NewMmpmonCollector(logger log.Logger) Collector {
 			"GPFS write bytes", []string{"fs", "nodename"}, nil),
 		operations: prometheus.NewDesc(prometheus.BuildFQName(namespace, "perf", "operations"),
 			"GPFS operationgs reported by mmpmon", []string{"fs", "nodename", "operation"}, nil),
-		logger: logger,
+		logger:   logger,
+		useCache: useCache,
 	}
 }
 
@@ -121,27 +124,27 @@ func (c *MmpmonCollector) collect() ([]PerfMetrics, error) {
 	var err error
 	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(*mmpmonTimeout)*time.Second)
 	defer cancel()
-	mmpmon_out, err = mmpmon(ctx)
+	mmpmon_out, err = mmpmonExec(ctx)
 	if ctx.Err() == context.DeadlineExceeded {
-		if *useCache {
+		if c.useCache {
 			perfs = mmpmonCache
 		}
 		return perfs, ctx.Err()
 	}
 	if err != nil {
-		if *useCache {
+		if c.useCache {
 			perfs = mmpmonCache
 		}
 		return perfs, err
 	}
 	perfs, err = mmpmon_parse(mmpmon_out, c.logger)
 	if err != nil {
-		if *useCache {
+		if c.useCache {
 			perfs = mmpmonCache
 		}
 		return perfs, err
 	}
-	if *useCache {
+	if c.useCache {
 		mmpmonCache = perfs
 	}
 	return perfs, nil

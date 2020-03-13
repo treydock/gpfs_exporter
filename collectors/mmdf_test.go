@@ -14,6 +14,7 @@
 package collectors
 
 import (
+	"context"
 	"os/exec"
 	"strings"
 	"testing"
@@ -69,9 +70,7 @@ func TestMmdfCollector(t *testing.T) {
 	}
 	filesystems := "project"
 	configFilesystems = &filesystems
-	execCommand = fakeExecCommand
-	mockedExitStatus = 0
-	mockedStdout = `
+	stdout := `
 mmdf:nsd:HEADER:version:reserved:reserved:nsdName:storagePool:diskSize:failureGroup:metadata:data:freeBlocks:freeBlocksPct:freeFragments:freeFragmentsPct:diskAvailableForAlloc:
 mmdf:poolTotal:HEADER:version:reserved:reserved:poolName:poolSize:freeBlocks:freeBlocksPct:freeFragments:freeFragmentsPct:maxDiskSize:
 mmdf:data:HEADER:version:reserved:reserved:totalData:freeBlocks:freeBlocksPct:freeFragments:freeFragmentsPct:
@@ -86,7 +85,9 @@ mmdf:metadata:0:1:::13891534848:6011299328:43:58139768:0:
 mmdf:fsTotal:0:1:::3661677723648:481202021888:14:12117655064:0:
 mmdf:inode:0:1:::430741822:484301506:915043328:1332164000:
 `
-	defer func() { execCommand = exec.CommandContext }()
+	mmdfExec = func(fs string, ctx context.Context) (string, error) {
+		return stdout, nil
+	}
 	expected := `
 		# HELP gpfs_fs_free_bytes GPFS filesystem free size in bytes
 		# TYPE gpfs_fs_free_bytes gauge
@@ -119,7 +120,7 @@ mmdf:inode:0:1:::430741822:484301506:915043328:1332164000:
 		# TYPE gpfs_fs_total_bytes gauge
 		gpfs_fs_total_bytes{fs="project"} 3749557989015552
 	`
-	collector := NewMmdfCollector(log.NewNopLogger())
+	collector := NewMmdfCollector(log.NewNopLogger(), false)
 	gatherers := setupGatherer(collector)
 	if val := testutil.CollectAndCount(collector); val != 14 {
 		t.Errorf("Unexpected collection count %d, expected 14", val)

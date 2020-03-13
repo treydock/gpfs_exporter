@@ -14,6 +14,7 @@
 package collectors
 
 import (
+	"context"
 	"os/exec"
 	"strings"
 	"testing"
@@ -87,9 +88,7 @@ func TestMmdiagCollector(t *testing.T) {
 	threshold := 30
 	configWaiterThreshold = &threshold
 	configWaiterExclude = &defWaiterExclude
-	execCommand = fakeExecCommand
-	mockedExitStatus = 0
-	mockedStdout = `
+	stdout := `
 === mmdiag: waiters ===
 Waiting 6861.7395 sec since 11:04:20, ignored, thread 19428 FsckClientReaperThread: on ThCond 0x7F138008EC10 (FsckReaperCondvar), reason 'Waiting to reap fsck pointer'
 Waiting 40.4231 sec since 13:08:39, monitored, thread 120656 EventsExporterSenderThread: for poll on sock 1379
@@ -115,7 +114,9 @@ Waiting 0.0023 sec since 10:24:00, monitored, thread 22922 NSDThread: for I/O co
 Waiting 0.0022 sec since 10:24:00, monitored, thread 22931 NSDThread: for I/O completion
 Waiting 0.0002 sec since 10:24:00, monitored, thread 22987 NSDThread: for I/O completion
 `
-	defer func() { execCommand = exec.CommandContext }()
+	mmdiagExec = func(arg string, ctx context.Context) (string, error) {
+		return stdout, nil
+	}
 	metadata := `
 			# HELP gpfs_mmdiag_waiter GPFS max waiter in seconds
 			# TYPE gpfs_mmdiag_waiter gauge`
@@ -123,7 +124,7 @@ Waiting 0.0002 sec since 10:24:00, monitored, thread 22987 NSDThread: for I/O co
 		gpfs_mmdiag_waiter{thread="120655"} 64.3890
 		gpfs_mmdiag_waiter{thread="120656"} 44.3890
 	`
-	collector := NewMmdiagCollector(log.NewNopLogger())
+	collector := NewMmdiagCollector(log.NewNopLogger(), false)
 	gatherers := setupGatherer(collector)
 	if val := testutil.CollectAndCount(collector); val != 5 {
 		t.Errorf("Unexpected collection count %d, expected 5", val)

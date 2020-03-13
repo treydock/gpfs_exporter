@@ -48,6 +48,7 @@ var (
 	}
 	mmdfCacheMutex = sync.RWMutex{}
 	mmdfCache      = make(map[string]DFMetric)
+	mmdfExec       = mmdf
 )
 
 type DFMetric struct {
@@ -76,13 +77,14 @@ type MmdfCollector struct {
 	MetadataFree        *prometheus.Desc
 	MetadataFreePercent *prometheus.Desc
 	logger              log.Logger
+	useCache            bool
 }
 
 func init() {
 	registerCollector("mmdf", false, NewMmdfCollector)
 }
 
-func NewMmdfCollector(logger log.Logger) Collector {
+func NewMmdfCollector(logger log.Logger, useCache bool) Collector {
 	return &MmdfCollector{
 		InodesUsed: prometheus.NewDesc(prometheus.BuildFQName(namespace, "fs", "inodes_used"),
 			"GPFS filesystem inodes used", []string{"fs"}, nil),
@@ -104,7 +106,8 @@ func NewMmdfCollector(logger log.Logger) Collector {
 			"GPFS metadata free size in bytes", []string{"fs"}, nil),
 		MetadataFreePercent: prometheus.NewDesc(prometheus.BuildFQName(namespace, "fs", "metadata_free_percent"),
 			"GPFS metadata free percent", []string{"fs"}, nil),
-		logger: logger,
+		logger:   logger,
+		useCache: useCache,
 	}
 }
 
@@ -186,21 +189,21 @@ func (c *MmdfCollector) mmdfCollect(fs string) (DFMetric, error) {
 	var err error
 	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(*mmdfTimeout)*time.Second)
 	defer cancel()
-	out, err = mmdf(fs, ctx)
+	out, err = mmdfExec(fs, ctx)
 	if ctx.Err() == context.DeadlineExceeded {
-		dfMetric = mmdfReadCache(fs)
+		dfMetric = c.mmdfReadCache(fs)
 		return dfMetric, ctx.Err()
 	}
 	if err != nil {
-		dfMetric = mmdfReadCache(fs)
+		dfMetric = c.mmdfReadCache(fs)
 		return dfMetric, err
 	}
 	dfMetric, err = parse_mmdf(out, c.logger)
 	if err != nil {
-		dfMetric = mmdfReadCache(fs)
+		dfMetric = c.mmdfReadCache(fs)
 		return dfMetric, err
 	}
-	mmdfWriteCache(fs, dfMetric)
+	c.mmdfWriteCache(fs, dfMetric)
 	return dfMetric, nil
 }
 
@@ -279,9 +282,9 @@ func parse_mmdf(out string, logger log.Logger) (DFMetric, error) {
 	return dfMetrics, nil
 }
 
-func mmdfReadCache(fs string) DFMetric {
+func (c *MmdfCollector) mmdfReadCache(fs string) DFMetric {
 	var dfMetric DFMetric
-	if *useCache {
+	if c.useCache {
 		mmdfCacheMutex.RLock()
 		if cache, ok := mmdfCache[fs]; ok {
 			dfMetric = cache
@@ -291,8 +294,8 @@ func mmdfReadCache(fs string) DFMetric {
 	return dfMetric
 }
 
-func mmdfWriteCache(fs string, dfMetric DFMetric) {
-	if *useCache {
+func (c *MmdfCollector) mmdfWriteCache(fs string, dfMetric DFMetric) {
+	if c.useCache {
 		mmdfCacheMutex.Lock()
 		mmdfCache[fs] = dfMetric
 		mmdfCacheMutex.Unlock()
