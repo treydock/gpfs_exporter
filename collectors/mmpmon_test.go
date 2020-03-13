@@ -79,7 +79,7 @@ func TestMmpmonCollector(t *testing.T) {
 	if _, err := kingpin.CommandLine.Parse([]string{}); err != nil {
 		t.Fatal(err)
 	}
-	mmpmonExec = func(ctx context.Context) (string, error) {
+	MmpmonExec = func(ctx context.Context) (string, error) {
 		return mmpmonStdout, nil
 	}
 	expected := `
@@ -120,7 +120,7 @@ func TestMMpmonCollectorError(t *testing.T) {
 	if _, err := kingpin.CommandLine.Parse([]string{}); err != nil {
 		t.Fatal(err)
 	}
-	mmpmonExec = func(ctx context.Context) (string, error) {
+	MmpmonExec = func(ctx context.Context) (string, error) {
 		return "", fmt.Errorf("Error")
 	}
 	expected := `
@@ -142,7 +142,7 @@ func TestMMpmonCollectorTimeout(t *testing.T) {
 	if _, err := kingpin.CommandLine.Parse([]string{}); err != nil {
 		t.Fatal(err)
 	}
-	mmpmonExec = func(ctx context.Context) (string, error) {
+	MmpmonExec = func(ctx context.Context) (string, error) {
 		return "", context.DeadlineExceeded
 	}
 	expected := `
@@ -189,7 +189,7 @@ func TestMMpmonCollectorNoCache(t *testing.T) {
 		gpfs_perf_write_bytes{fs="scratch",nodename="ib-pitzer-rw02.ten"} 74839282351
 	`
 	// build cache
-	mmpmonExec = func(ctx context.Context) (string, error) {
+	MmpmonExec = func(ctx context.Context) (string, error) {
 		return mmpmonStdout, nil
 	}
 	collector := NewMmpmonCollector(log.NewNopLogger(), true)
@@ -198,7 +198,7 @@ func TestMMpmonCollectorNoCache(t *testing.T) {
 		t.Errorf("Unexpected collection count %d, expected 19", val)
 	}
 
-	mmpmonExec = func(ctx context.Context) (string, error) {
+	MmpmonExec = func(ctx context.Context) (string, error) {
 		return "", fmt.Errorf("Error")
 	}
 	errorMetrics := `
@@ -219,7 +219,7 @@ func TestMMpmonCollectorNoCache(t *testing.T) {
 		# TYPE gpfs_exporter_collect_timeout gauge
 		gpfs_exporter_collect_timeout{collector="mmpmon"} 1
 	`
-	mmpmonExec = func(ctx context.Context) (string, error) {
+	MmpmonExec = func(ctx context.Context) (string, error) {
 		return "", context.DeadlineExceeded
 	}
 	if val := testutil.CollectAndCount(collector); val != 3 {
@@ -231,7 +231,7 @@ func TestMMpmonCollectorNoCache(t *testing.T) {
 	}
 
 	mmpmonCache = []PerfMetrics{}
-	mmpmonExec = func(ctx context.Context) (string, error) {
+	MmpmonExec = func(ctx context.Context) (string, error) {
 		return mmpmonStdout, nil
 	}
 	if val := testutil.CollectAndCount(collector); val != 19 {

@@ -14,6 +14,7 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"io/ioutil"
 	"net/http"
@@ -23,15 +24,27 @@ import (
 	"time"
 
 	"github.com/go-kit/kit/log"
-	kingpin "gopkg.in/alecthomas/kingpin.v2"
+	"github.com/treydock/gpfs_exporter/collectors"
+	"gopkg.in/alecthomas/kingpin.v2"
 )
 
 const (
 	address = "localhost:19303"
 )
 
+var (
+	mmpmonStdout = `
+_fs_io_s_ _n_ 10.22.0.106 _nn_ ib-pitzer-rw02.ten _rc_ 0 _t_ 1579358234 _tu_ 53212 _cl_ gpfs.osc.edu _fs_ scratch _d_ 48 _br_ 205607400434 _bw_ 74839282351 _oc_ 2377656 _cc_ 2201576 _rdc_ 59420404 _wc_ 18874626 _dir_ 40971 _iu_ 544768
+_fs_io_s_ _n_ 10.22.0.106 _nn_ ib-pitzer-rw02.ten _rc_ 0 _t_ 1579358234 _tu_ 53212 _cl_ gpfs.osc.edu _fs_ project _d_ 96 _br_ 0 _bw_ 0 _oc_ 513 _cc_ 513 _rdc_ 0 _wc_ 0 _dir_ 0 _iu_ 169
+`
+	mmgetstateStdout = `
+mmgetstate::HEADER:version:reserved:reserved:nodeName:nodeNumber:state:quorum:nodesUp:totalNodes:remarks:cnfsState:
+mmgetstate::0:1:::ib-proj-nsd05.domain:11:active:4:7:1122::(undefined):
+`
+)
+
 func TestMain(m *testing.M) {
-	if _, err := kingpin.CommandLine.Parse([]string{"--no-collector.mmgetstate", "--no-collector.mmpmon"}); err != nil {
+	if _, err := kingpin.CommandLine.Parse([]string{}); err != nil {
 		os.Exit(1)
 	}
 	varTrue := true
@@ -51,6 +64,12 @@ func TestMain(m *testing.M) {
 }
 
 func TestMetricsHandler(t *testing.T) {
+	collectors.MmgetstateExec = func(ctx context.Context) (string, error) {
+		return mmgetstateStdout, nil
+	}
+	collectors.MmpmonExec = func(ctx context.Context) (string, error) {
+		return mmpmonStdout, nil
+	}
 	body, err := queryExporter()
 	if err != nil {
 		t.Fatalf("Unexpected error GET /metrics: %s", err.Error())

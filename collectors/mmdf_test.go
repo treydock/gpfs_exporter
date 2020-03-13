@@ -88,7 +88,7 @@ func TestMmdfCollector(t *testing.T) {
 	}
 	filesystems := "project"
 	configFilesystems = &filesystems
-	mmdfExec = func(fs string, ctx context.Context) (string, error) {
+	MmdfExec = func(fs string, ctx context.Context) (string, error) {
 		return mmdfStdout, nil
 	}
 	expected := `
@@ -142,7 +142,7 @@ func TestMmdfCollectorError(t *testing.T) {
 	}
 	filesystems := "project"
 	configFilesystems = &filesystems
-	mmdfExec = func(fs string, ctx context.Context) (string, error) {
+	MmdfExec = func(fs string, ctx context.Context) (string, error) {
 		return "", fmt.Errorf("Error")
 	}
 	expected := `
@@ -166,7 +166,7 @@ func TestMmdfCollectorTimeout(t *testing.T) {
 	}
 	filesystems := "project"
 	configFilesystems = &filesystems
-	mmdfExec = func(fs string, ctx context.Context) (string, error) {
+	MmdfExec = func(fs string, ctx context.Context) (string, error) {
 		return "", context.DeadlineExceeded
 	}
 	expected := `
@@ -191,7 +191,7 @@ func TestMmdfCollectorCache(t *testing.T) {
 	filesystems := "project"
 	configFilesystems = &filesystems
 	// build cache
-	mmdfExec = func(fs string, ctx context.Context) (string, error) {
+	MmdfExec = func(fs string, ctx context.Context) (string, error) {
 		return mmdfStdout, nil
 	}
 	collector := NewMmdfCollector(log.NewNopLogger(), true)
@@ -200,7 +200,7 @@ func TestMmdfCollectorCache(t *testing.T) {
 		t.Errorf("Unexpected collection count %d, expected 14", val)
 	}
 
-	mmdfExec = func(fs string, ctx context.Context) (string, error) {
+	MmdfExec = func(fs string, ctx context.Context) (string, error) {
 		return "", fmt.Errorf("Error")
 	}
 	expected := `
@@ -255,7 +255,7 @@ func TestMmdfCollectorCache(t *testing.T) {
 		# TYPE gpfs_exporter_collect_timeout gauge
 		gpfs_exporter_collect_timeout{collector="mmdf-project"} 1
 	`
-	mmdfExec = func(fs string, ctx context.Context) (string, error) {
+	MmdfExec = func(fs string, ctx context.Context) (string, error) {
 		return "", context.DeadlineExceeded
 	}
 	if val := testutil.CollectAndCount(collector); val != 14 {
@@ -269,7 +269,7 @@ func TestMmdfCollectorCache(t *testing.T) {
 	}
 
 	mmdfCache = make(map[string]DFMetric)
-	mmdfExec = func(fs string, ctx context.Context) (string, error) {
+	MmdfExec = func(fs string, ctx context.Context) (string, error) {
 		return mmdfStdout, nil
 	}
 	if val := testutil.CollectAndCount(collector); val != 14 {

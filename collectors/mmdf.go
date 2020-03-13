@@ -48,7 +48,7 @@ var (
 	}
 	mmdfCacheMutex = sync.RWMutex{}
 	mmdfCache      = make(map[string]DFMetric)
-	mmdfExec       = mmdf
+	MmdfExec       = mmdf
 )
 
 type DFMetric struct {
@@ -192,7 +192,7 @@ func (c *MmdfCollector) mmdfCollect(fs string) (DFMetric, error) {
 	var err error
 	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(*mmdfTimeout)*time.Second)
 	defer cancel()
-	out, err = mmdfExec(fs, ctx)
+	out, err = MmdfExec(fs, ctx)
 	if ctx.Err() == context.DeadlineExceeded {
 		dfMetric = c.mmdfReadCache(fs)
 		return dfMetric, ctx.Err()
