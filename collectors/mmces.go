@@ -32,6 +32,8 @@ var (
 	configNodeName = kingpin.Flag("collector.mmces.nodename", "CES node name to check, defaults to FQDN").Default("").String()
 	mmcesTimeout   = kingpin.Flag("collector.mmces.timeout", "Timeout for mmces execution").Default("5").Int()
 	cesServices    = []string{"AUTH", "BLOCK", "NETWORK", "AUTH_OBJ", "NFS", "OBJ", "SMB", "CES"}
+	mmcesCache     = []CESMetric{}
+	mmcesExec      = mmces
 )
 
 func getFQDN(logger log.Logger) string {
@@ -49,19 +51,21 @@ type CESMetric struct {
 }
 
 type MmcesCollector struct {
-	State  *prometheus.Desc
-	logger log.Logger
+	State    *prometheus.Desc
+	logger   log.Logger
+	useCache bool
 }
 
 func init() {
 	registerCollector("mmces", false, NewMmcesCollector)
 }
 
-func NewMmcesCollector(logger log.Logger) Collector {
+func NewMmcesCollector(logger log.Logger, useCache bool) Collector {
 	return &MmcesCollector{
 		State: prometheus.NewDesc(prometheus.BuildFQName(namespace, "ces", "state"),
 			"GPFS CES health status, 1=healthy 0=not healthy", []string{"service", "state"}, nil),
-		logger: logger,
+		logger:   logger,
+		useCache: useCache,
 	}
 }
 
@@ -71,18 +75,9 @@ func (c *MmcesCollector) Describe(ch chan<- *prometheus.Desc) {
 
 func (c *MmcesCollector) Collect(ch chan<- prometheus.Metric) {
 	level.Debug(c.logger).Log("msg", "Collecting mmces metrics")
-	err := c.collect(ch)
-	if err != nil {
-		ch <- prometheus.MustNewConstMetric(collectError, prometheus.GaugeValue, 1, "mmces")
-	} else {
-		ch <- prometheus.MustNewConstMetric(collectError, prometheus.GaugeValue, 0, "mmces")
-	}
-}
-
-func (c *MmcesCollector) collect(ch chan<- prometheus.Metric) error {
 	collectTime := time.Now()
-	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(*mmcesTimeout)*time.Second)
-	defer cancel()
+	timeout := 0
+	errorMetric := 0
 	var nodename string
 	if *configNodeName == "" {
 		nodename = getFQDN(c.logger)
@@ -93,31 +88,56 @@ func (c *MmcesCollector) collect(ch chan<- prometheus.Metric) error {
 	} else {
 		nodename = *configNodeName
 	}
-	mmces_state_out, err := mmces_state_show(nodename, ctx)
-	if ctx.Err() == context.DeadlineExceeded {
-		ch <- prometheus.MustNewConstMetric(collecTimeout, prometheus.GaugeValue, 1, "mmces")
+	metrics, err := c.collect(nodename)
+	if err == context.DeadlineExceeded {
 		level.Error(c.logger).Log("msg", "Timeout executing mmces")
-		return nil
-	}
-	ch <- prometheus.MustNewConstMetric(collecTimeout, prometheus.GaugeValue, 0, "mmces")
-	if err != nil {
+		timeout = 1
+	} else if err != nil {
 		level.Error(c.logger).Log("msg", err)
-		return err
-	}
-	metrics, err := mmces_state_show_parse(mmces_state_out)
-	if err != nil {
-		level.Error(c.logger).Log("msg", err)
-		return err
+		errorMetric = 1
 	}
 	for _, m := range metrics {
 		statusValue := parseMmcesState(m.State)
 		ch <- prometheus.MustNewConstMetric(c.State, prometheus.GaugeValue, statusValue, m.Service, m.State)
 	}
+	ch <- prometheus.MustNewConstMetric(collectError, prometheus.GaugeValue, float64(errorMetric), "mmces")
+	ch <- prometheus.MustNewConstMetric(collecTimeout, prometheus.GaugeValue, float64(timeout), "mmces")
 	ch <- prometheus.MustNewConstMetric(collectDuration, prometheus.GaugeValue, time.Since(collectTime).Seconds(), "mmces")
-	return nil
 }
 
-func mmces_state_show(nodename string, ctx context.Context) (string, error) {
+func (c *MmcesCollector) collect(nodename string) ([]CESMetric, error) {
+	var err error
+	var mmces_state_out string
+	var metrics []CESMetric
+	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(*mmcesTimeout)*time.Second)
+	defer cancel()
+	mmces_state_out, err = mmcesExec(nodename, ctx)
+	if ctx.Err() == context.DeadlineExceeded {
+		if c.useCache {
+			metrics = mmcesCache
+		}
+		return metrics, ctx.Err()
+	}
+	if err != nil {
+		if c.useCache {
+			metrics = mmcesCache
+		}
+		return metrics, err
+	}
+	metrics, err = mmces_state_show_parse(mmces_state_out)
+	if err != nil {
+		if c.useCache {
+			metrics = mmcesCache
+		}
+		return metrics, err
+	}
+	if c.useCache {
+		mmcesCache = metrics
+	}
+	return metrics, nil
+}
+
+func mmces(nodename string, ctx context.Context) (string, error) {
 	cmd := execCommand(ctx, "sudo", "/usr/lpp/mmfs/bin/mmces", "state", "show", "-N", nodename, "-Y")
 	var out bytes.Buffer
 	cmd.Stdout = &out

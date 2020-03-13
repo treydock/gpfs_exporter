@@ -46,6 +46,9 @@ var (
 		"metadata:freeBlocks":    "MetadataFree",
 		"metadata:freeBlocksPct": "MetadataFreePercent",
 	}
+	mmdfCacheMutex = sync.RWMutex{}
+	mmdfCache      = make(map[string]DFMetric)
+	mmdfExec       = mmdf
 )
 
 type DFMetric struct {
@@ -74,13 +77,14 @@ type MmdfCollector struct {
 	MetadataFree        *prometheus.Desc
 	MetadataFreePercent *prometheus.Desc
 	logger              log.Logger
+	useCache            bool
 }
 
 func init() {
 	registerCollector("mmdf", false, NewMmdfCollector)
 }
 
-func NewMmdfCollector(logger log.Logger) Collector {
+func NewMmdfCollector(logger log.Logger, useCache bool) Collector {
 	return &MmdfCollector{
 		InodesUsed: prometheus.NewDesc(prometheus.BuildFQName(namespace, "fs", "inodes_used"),
 			"GPFS filesystem inodes used", []string{"fs"}, nil),
@@ -102,7 +106,8 @@ func NewMmdfCollector(logger log.Logger) Collector {
 			"GPFS metadata free size in bytes", []string{"fs"}, nil),
 		MetadataFreePercent: prometheus.NewDesc(prometheus.BuildFQName(namespace, "fs", "metadata_free_percent"),
 			"GPFS metadata free percent", []string{"fs"}, nil),
-		logger: logger,
+		logger:   logger,
+		useCache: useCache,
 	}
 }
 
@@ -133,6 +138,7 @@ func (c *MmdfCollector) Collect(ch chan<- prometheus.Metric) {
 			ch <- prometheus.MustNewConstMetric(collecTimeout, prometheus.GaugeValue, 0, "mmdf-mmlsfs")
 		}
 		if err != nil {
+			level.Error(c.logger).Log("msg", err)
 			ch <- prometheus.MustNewConstMetric(collectError, prometheus.GaugeValue, 1, "mmdf-mmlsfs")
 		} else {
 			ch <- prometheus.MustNewConstMetric(collectError, prometheus.GaugeValue, 0, "mmdf-mmlsfs")
@@ -147,62 +153,71 @@ func (c *MmdfCollector) Collect(ch chan<- prometheus.Metric) {
 		collectTime := time.Now()
 		go func(fs string) {
 			defer wg.Done()
-			ctx, cancel := context.WithTimeout(context.Background(), time.Duration(*mmdfTimeout)*time.Second)
-			defer cancel()
 			label := fmt.Sprintf("mmdf-%s", fs)
-			err := c.mmdfCollect(fs, ch, ctx)
-			if ctx.Err() == context.DeadlineExceeded {
-				ch <- prometheus.MustNewConstMetric(collecTimeout, prometheus.GaugeValue, 1, label)
+			timeout := 0
+			errorMetric := 0
+			metric, err := c.mmdfCollect(fs)
+			if err == context.DeadlineExceeded {
 				level.Error(c.logger).Log("msg", fmt.Sprintf("Timeout executing %s", label))
+				timeout = 1
+			} else if err != nil {
+				level.Error(c.logger).Log("msg", err, "fs", fs)
+				errorMetric = 1
+			}
+			ch <- prometheus.MustNewConstMetric(collectError, prometheus.GaugeValue, float64(errorMetric), label)
+			ch <- prometheus.MustNewConstMetric(collecTimeout, prometheus.GaugeValue, float64(timeout), label)
+			ch <- prometheus.MustNewConstMetric(collectDuration, prometheus.GaugeValue, time.Since(collectTime).Seconds(), label)
+			if err != nil && !c.useCache {
 				return
 			}
-			ch <- prometheus.MustNewConstMetric(collecTimeout, prometheus.GaugeValue, 0, label)
-			if err != nil {
-				ch <- prometheus.MustNewConstMetric(collectError, prometheus.GaugeValue, 1, label)
-			} else {
-				ch <- prometheus.MustNewConstMetric(collectError, prometheus.GaugeValue, 0, label)
-			}
-			ch <- prometheus.MustNewConstMetric(collectDuration, prometheus.GaugeValue, time.Since(collectTime).Seconds(), label)
+			ch <- prometheus.MustNewConstMetric(c.InodesUsed, prometheus.GaugeValue, float64(metric.InodesUsed), fs)
+			ch <- prometheus.MustNewConstMetric(c.InodesFree, prometheus.GaugeValue, float64(metric.InodesFree), fs)
+			ch <- prometheus.MustNewConstMetric(c.InodesAllocated, prometheus.GaugeValue, float64(metric.InodesAllocated), fs)
+			ch <- prometheus.MustNewConstMetric(c.InodesTotal, prometheus.GaugeValue, float64(metric.InodesTotal), fs)
+			ch <- prometheus.MustNewConstMetric(c.FSTotal, prometheus.GaugeValue, float64(metric.FSTotal), fs)
+			ch <- prometheus.MustNewConstMetric(c.FSFree, prometheus.GaugeValue, float64(metric.FSFree), fs)
+			ch <- prometheus.MustNewConstMetric(c.FSFreePercent, prometheus.GaugeValue, float64(metric.FSFreePercent), fs)
+			ch <- prometheus.MustNewConstMetric(c.MetadataTotal, prometheus.GaugeValue, float64(metric.MetadataTotal), fs)
+			ch <- prometheus.MustNewConstMetric(c.MetadataFree, prometheus.GaugeValue, float64(metric.MetadataFree), fs)
+			ch <- prometheus.MustNewConstMetric(c.MetadataFreePercent, prometheus.GaugeValue, float64(metric.MetadataFreePercent), fs)
 			ch <- prometheus.MustNewConstMetric(lastExecution, prometheus.GaugeValue, float64(time.Now().Unix()), label)
 		}(fs)
 	}
 	wg.Wait()
 }
 
-func (c *MmdfCollector) mmdfCollect(fs string, ch chan<- prometheus.Metric, ctx context.Context) error {
-	out, err := mmdf(fs, ctx)
-	if err != nil {
-		level.Error(c.logger).Log("msg", err)
-		return err
+func (c *MmdfCollector) mmdfCollect(fs string) (DFMetric, error) {
+	var dfMetric DFMetric
+	var out string
+	var err error
+	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(*mmdfTimeout)*time.Second)
+	defer cancel()
+	out, err = mmdfExec(fs, ctx)
+	if ctx.Err() == context.DeadlineExceeded {
+		dfMetric = c.mmdfReadCache(fs)
+		return dfMetric, ctx.Err()
 	}
-	dfMetric, err := parse_mmdf(out, c.logger)
 	if err != nil {
-		level.Error(c.logger).Log("msg", err)
-		return err
+		dfMetric = c.mmdfReadCache(fs)
+		return dfMetric, err
 	}
-	ch <- prometheus.MustNewConstMetric(c.InodesUsed, prometheus.GaugeValue, float64(dfMetric.InodesUsed), fs)
-	ch <- prometheus.MustNewConstMetric(c.InodesFree, prometheus.GaugeValue, float64(dfMetric.InodesFree), fs)
-	ch <- prometheus.MustNewConstMetric(c.InodesAllocated, prometheus.GaugeValue, float64(dfMetric.InodesAllocated), fs)
-	ch <- prometheus.MustNewConstMetric(c.InodesTotal, prometheus.GaugeValue, float64(dfMetric.InodesTotal), fs)
-	ch <- prometheus.MustNewConstMetric(c.FSTotal, prometheus.GaugeValue, float64(dfMetric.FSTotal), fs)
-	ch <- prometheus.MustNewConstMetric(c.FSFree, prometheus.GaugeValue, float64(dfMetric.FSFree), fs)
-	ch <- prometheus.MustNewConstMetric(c.FSFreePercent, prometheus.GaugeValue, float64(dfMetric.FSFreePercent), fs)
-	ch <- prometheus.MustNewConstMetric(c.MetadataTotal, prometheus.GaugeValue, float64(dfMetric.MetadataTotal), fs)
-	ch <- prometheus.MustNewConstMetric(c.MetadataFree, prometheus.GaugeValue, float64(dfMetric.MetadataFree), fs)
-	ch <- prometheus.MustNewConstMetric(c.MetadataFreePercent, prometheus.GaugeValue, float64(dfMetric.MetadataFreePercent), fs)
-	return nil
+	dfMetric, err = parse_mmdf(out, c.logger)
+	if err != nil {
+		dfMetric = c.mmdfReadCache(fs)
+		return dfMetric, err
+	}
+	c.mmdfWriteCache(fs, dfMetric)
+	return dfMetric, nil
 }
 
 func mmlfsfsFilesystems(ctx context.Context, logger log.Logger) ([]string, error) {
 	var filesystems []string
 	out, err := mmlsfs(ctx)
 	if err != nil {
-		level.Error(logger).Log("msg", err)
 		return nil, err
 	}
 	mmlsfs_filesystems, err := parse_mmlsfs(out)
 	if err != nil {
-		level.Error(logger).Log("msg", err)
 		return nil, err
 	}
 	for _, fs := range mmlsfs_filesystems {
@@ -268,4 +283,24 @@ func parse_mmdf(out string, logger log.Logger) (DFMetric, error) {
 		}
 	}
 	return dfMetrics, nil
+}
+
+func (c *MmdfCollector) mmdfReadCache(fs string) DFMetric {
+	var dfMetric DFMetric
+	if c.useCache {
+		mmdfCacheMutex.RLock()
+		if cache, ok := mmdfCache[fs]; ok {
+			dfMetric = cache
+		}
+		mmdfCacheMutex.RUnlock()
+	}
+	return dfMetric
+}
+
+func (c *MmdfCollector) mmdfWriteCache(fs string, dfMetric DFMetric) {
+	if c.useCache {
+		mmdfCacheMutex.Lock()
+		mmdfCache[fs] = dfMetric
+		mmdfCacheMutex.Unlock()
+	}
 }

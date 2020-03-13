@@ -35,7 +35,7 @@ var (
 
 func collect(logger log.Logger) {
 	registry := prometheus.NewRegistry()
-	registry.MustRegister(collectors.NewMmdfCollector(logger))
+	registry.MustRegister(collectors.NewMmdfCollector(logger, false))
 	err := prometheus.WriteToTextfile(*output, registry)
 	if err != nil {
 		level.Error(logger).Log("msg", err)

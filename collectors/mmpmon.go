@@ -42,6 +42,8 @@ var (
 		"_dir_": "ReadDir",
 		"_iu_":  "InodeUpdates",
 	}
+	mmpmonCache = []PerfMetrics{}
+	mmpmonExec  = mmpmon
 )
 
 type PerfMetrics struct {
@@ -62,13 +64,14 @@ type MmpmonCollector struct {
 	write_bytes *prometheus.Desc
 	operations  *prometheus.Desc
 	logger      log.Logger
+	useCache    bool
 }
 
 func init() {
 	registerCollector("mmpmon", true, NewMmpmonCollector)
 }
 
-func NewMmpmonCollector(logger log.Logger) Collector {
+func NewMmpmonCollector(logger log.Logger, useCache bool) Collector {
 	return &MmpmonCollector{
 		read_bytes: prometheus.NewDesc(prometheus.BuildFQName(namespace, "perf", "read_bytes"),
 			"GPFS read bytes", []string{"fs", "nodename"}, nil),
@@ -76,7 +79,8 @@ func NewMmpmonCollector(logger log.Logger) Collector {
 			"GPFS write bytes", []string{"fs", "nodename"}, nil),
 		operations: prometheus.NewDesc(prometheus.BuildFQName(namespace, "perf", "operations"),
 			"GPFS operationgs reported by mmpmon", []string{"fs", "nodename", "operation"}, nil),
-		logger: logger,
+		logger:   logger,
+		useCache: false,
 	}
 }
 
@@ -88,33 +92,16 @@ func (c *MmpmonCollector) Describe(ch chan<- *prometheus.Desc) {
 
 func (c *MmpmonCollector) Collect(ch chan<- prometheus.Metric) {
 	level.Debug(c.logger).Log("msg", "Collecting mmpmon metrics")
-	err := c.collect(ch)
-	if err != nil {
-		ch <- prometheus.MustNewConstMetric(collectError, prometheus.GaugeValue, 1, "mmpmon")
-	} else {
-		ch <- prometheus.MustNewConstMetric(collectError, prometheus.GaugeValue, 0, "mmpmon")
-	}
-}
-
-func (c *MmpmonCollector) collect(ch chan<- prometheus.Metric) error {
 	collectTime := time.Now()
-	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(*mmpmonTimeout)*time.Second)
-	defer cancel()
-	mmpmon_out, err := mmpmon(ctx)
-	if ctx.Err() == context.DeadlineExceeded {
-		ch <- prometheus.MustNewConstMetric(collecTimeout, prometheus.GaugeValue, 1, "mmpmon")
+	timeout := 0
+	errorMetric := 0
+	perfs, err := c.collect()
+	if err == context.DeadlineExceeded {
+		timeout = 1
 		level.Error(c.logger).Log("msg", "Timeout executing mmpmon")
-		return nil
-	}
-	ch <- prometheus.MustNewConstMetric(collecTimeout, prometheus.GaugeValue, 0, "mmpmon")
-	if err != nil {
+	} else if err != nil {
 		level.Error(c.logger).Log("msg", err)
-		return err
-	}
-	perfs, err := mmpmon_parse(mmpmon_out, c.logger)
-	if err != nil {
-		level.Error(c.logger).Log("msg", err)
-		return err
+		errorMetric = 1
 	}
 	for _, perf := range perfs {
 		ch <- prometheus.MustNewConstMetric(c.read_bytes, prometheus.CounterValue, float64(perf.ReadBytes), perf.FS, perf.NodeName)
@@ -126,8 +113,41 @@ func (c *MmpmonCollector) collect(ch chan<- prometheus.Metric) error {
 		ch <- prometheus.MustNewConstMetric(c.operations, prometheus.CounterValue, float64(perf.ReadDir), perf.FS, perf.NodeName, "read_dir")
 		ch <- prometheus.MustNewConstMetric(c.operations, prometheus.CounterValue, float64(perf.InodeUpdates), perf.FS, perf.NodeName, "inode_updates")
 	}
+	ch <- prometheus.MustNewConstMetric(collectError, prometheus.GaugeValue, float64(errorMetric), "mmpmon")
+	ch <- prometheus.MustNewConstMetric(collecTimeout, prometheus.GaugeValue, float64(timeout), "mmpmon")
 	ch <- prometheus.MustNewConstMetric(collectDuration, prometheus.GaugeValue, time.Since(collectTime).Seconds(), "mmpmon")
-	return nil
+}
+
+func (c *MmpmonCollector) collect() ([]PerfMetrics, error) {
+	var perfs []PerfMetrics
+	var mmpmon_out string
+	var err error
+	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(*mmpmonTimeout)*time.Second)
+	defer cancel()
+	mmpmon_out, err = mmpmonExec(ctx)
+	if ctx.Err() == context.DeadlineExceeded {
+		if c.useCache {
+			perfs = mmpmonCache
+		}
+		return perfs, ctx.Err()
+	}
+	if err != nil {
+		if c.useCache {
+			perfs = mmpmonCache
+		}
+		return perfs, err
+	}
+	perfs, err = mmpmon_parse(mmpmon_out, c.logger)
+	if err != nil {
+		if c.useCache {
+			perfs = mmpmonCache
+		}
+		return perfs, err
+	}
+	if c.useCache {
+		mmpmonCache = perfs
+	}
+	return perfs, nil
 }
 
 func mmpmon(ctx context.Context) (string, error) {

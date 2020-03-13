@@ -14,22 +14,43 @@
 package collectors
 
 import (
-	"github.com/go-kit/kit/log"
-	"github.com/prometheus/client_golang/prometheus/testutil"
-	kingpin "gopkg.in/alecthomas/kingpin.v2"
+	"context"
+	"fmt"
 	"os/exec"
 	"strings"
 	"testing"
+	"time"
+
+	"github.com/go-kit/kit/log"
+	"github.com/prometheus/client_golang/prometheus/testutil"
+	"gopkg.in/alecthomas/kingpin.v2"
 )
 
-func TestParseMmcesStateShow(t *testing.T) {
-	execCommand = fakeExecCommand
-	mockedStdout = `
+var (
+	mmcesStdout = `
 mmcesstate::HEADER:version:reserved:reserved:NODE:AUTH:BLOCK:NETWORK:AUTH_OBJ:NFS:OBJ:SMB:CES:
 mmcesstate::0:1:::ib-protocol01.domain:HEALTHY:DISABLED:HEALTHY:DISABLED:HEALTHY:DISABLED:HEALTHY:HEALTHY:
 `
+)
+
+func TestMmces(t *testing.T) {
+	execCommand = fakeExecCommand
+	mockedExitStatus = 0
+	mockedStdout = "foo"
 	defer func() { execCommand = exec.CommandContext }()
-	metrics, err := mmces_state_show_parse(mockedStdout)
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	out, err := mmces("ib-protocol01.domain", ctx)
+	if err != nil {
+		t.Errorf("Unexpected error: %s", err.Error())
+	}
+	if out != mockedStdout {
+		t.Errorf("Unexpected out: %s", out)
+	}
+}
+
+func TestParseMmcesStateShow(t *testing.T) {
+	metrics, err := mmces_state_show_parse(mmcesStdout)
 	if err != nil {
 		t.Errorf("Unexpected error: %s", err.Error())
 	}
@@ -58,19 +79,15 @@ func TestParseMmcesState(t *testing.T) {
 }
 
 func TestMMcesCollector(t *testing.T) {
-	if _, err := kingpin.CommandLine.Parse([]string{"--collector.mmces.nodename=ib-protocol01.domain"}); err != nil {
+	if _, err := kingpin.CommandLine.Parse([]string{"--collector.mmces.nodename=ib-protocol01.domain --exporter.use-cache"}); err != nil {
 		t.Fatal(err)
 	}
-	execCommand = fakeExecCommand
-	mockedStdout = `
-mmcesstate::HEADER:version:reserved:reserved:NODE:AUTH:BLOCK:NETWORK:AUTH_OBJ:NFS:OBJ:SMB:CES:
-mmcesstate::0:1:::ib-protocol01.domain:HEALTHY:DISABLED:HEALTHY:DISABLED:HEALTHY:DISABLED:HEALTHY:HEALTHY:
-`
-	defer func() { execCommand = exec.CommandContext }()
-	metadata := `
-			# HELP gpfs_ces_state GPFS CES health status, 1=healthy 0=not healthy
-			# TYPE gpfs_ces_state gauge`
+	mmcesExec = func(nodename string, ctx context.Context) (string, error) {
+		return mmcesStdout, nil
+	}
 	expected := `
+		# HELP gpfs_ces_state GPFS CES health status, 1=healthy 0=not healthy
+		# TYPE gpfs_ces_state gauge
 		gpfs_ces_state{service="AUTH",state="HEALTHY"} 1
 		gpfs_ces_state{service="AUTH_OBJ",state="DISABLED"} 0
 		gpfs_ces_state{service="BLOCK",state="DISABLED"} 0
@@ -80,12 +97,127 @@ mmcesstate::0:1:::ib-protocol01.domain:HEALTHY:DISABLED:HEALTHY:DISABLED:HEALTHY
 		gpfs_ces_state{service="OBJ",state="DISABLED"} 0
 		gpfs_ces_state{service="SMB",state="HEALTHY"} 1
 	`
-	collector := NewMmcesCollector(log.NewNopLogger())
+	collector := NewMmcesCollector(log.NewNopLogger(), false)
 	gatherers := setupGatherer(collector)
 	if val := testutil.CollectAndCount(collector); val != 11 {
 		t.Errorf("Unexpected collection count %d, expected 11", val)
 	}
-	if err := testutil.GatherAndCompare(gatherers, strings.NewReader(metadata+expected), "gpfs_ces_state"); err != nil {
+	if err := testutil.GatherAndCompare(gatherers, strings.NewReader(expected), "gpfs_ces_state"); err != nil {
 		t.Errorf("unexpected collecting result:\n%s", err)
+	}
+}
+
+func TestMMcesCollectorError(t *testing.T) {
+	if _, err := kingpin.CommandLine.Parse([]string{"--collector.mmces.nodename=ib-protocol01.domain"}); err != nil {
+		t.Fatal(err)
+	}
+	mmcesExec = func(nodename string, ctx context.Context) (string, error) {
+		return "", fmt.Errorf("Error")
+	}
+	expected := `
+		# HELP gpfs_exporter_collect_error Indicates if error has occurred during collection
+		# TYPE gpfs_exporter_collect_error gauge
+		gpfs_exporter_collect_error{collector="mmces"} 1
+	`
+	collector := NewMmcesCollector(log.NewNopLogger(), false)
+	gatherers := setupGatherer(collector)
+	if val := testutil.CollectAndCount(collector); val != 3 {
+		t.Errorf("Unexpected collection count %d, expected 3", val)
+	}
+	if err := testutil.GatherAndCompare(gatherers, strings.NewReader(expected), "gpfs_exporter_collect_error"); err != nil {
+		t.Errorf("unexpected collecting result:\n%s", err)
+	}
+}
+
+func TestMMcesCollectorTimeout(t *testing.T) {
+	if _, err := kingpin.CommandLine.Parse([]string{"--collector.mmces.nodename=ib-protocol01.domain"}); err != nil {
+		t.Fatal(err)
+	}
+	mmcesExec = func(nodename string, ctx context.Context) (string, error) {
+		return "", context.DeadlineExceeded
+	}
+	expected := `
+		# HELP gpfs_exporter_collect_timeout Indicates the collector timed out
+		# TYPE gpfs_exporter_collect_timeout gauge
+		gpfs_exporter_collect_timeout{collector="mmces"} 1
+	`
+	collector := NewMmcesCollector(log.NewNopLogger(), false)
+	gatherers := setupGatherer(collector)
+	if val := testutil.CollectAndCount(collector); val != 3 {
+		t.Errorf("Unexpected collection count %d, expected 3", val)
+	}
+	if err := testutil.GatherAndCompare(gatherers, strings.NewReader(expected), "gpfs_exporter_collect_timeout"); err != nil {
+		t.Errorf("unexpected collecting result:\n%s", err)
+	}
+}
+
+func TestMMcesCollectorCache(t *testing.T) {
+	if _, err := kingpin.CommandLine.Parse([]string{"--collector.mmces.nodename=ib-protocol01.domain"}); err != nil {
+		t.Fatal(err)
+	}
+	// build cache
+	mmcesExec = func(nodename string, ctx context.Context) (string, error) {
+		return mmcesStdout, nil
+	}
+	collector := NewMmcesCollector(log.NewNopLogger(), true)
+	gatherers := setupGatherer(collector)
+	if val := testutil.CollectAndCount(collector); val != 11 {
+		t.Errorf("Unexpected collection count %d, expected 11", val)
+	}
+
+	mmcesExec = func(nodename string, ctx context.Context) (string, error) {
+		return "", fmt.Errorf("Error")
+	}
+	expected := `
+		# HELP gpfs_ces_state GPFS CES health status, 1=healthy 0=not healthy
+		# TYPE gpfs_ces_state gauge
+		gpfs_ces_state{service="AUTH",state="HEALTHY"} 1
+		gpfs_ces_state{service="AUTH_OBJ",state="DISABLED"} 0
+		gpfs_ces_state{service="BLOCK",state="DISABLED"} 0
+		gpfs_ces_state{service="CES",state="HEALTHY"} 1
+		gpfs_ces_state{service="NETWORK",state="HEALTHY"} 1
+		gpfs_ces_state{service="NFS",state="HEALTHY"} 1
+		gpfs_ces_state{service="OBJ",state="DISABLED"} 0
+		gpfs_ces_state{service="SMB",state="HEALTHY"} 1
+	`
+	errorMetrics := `
+		# HELP gpfs_exporter_collect_error Indicates if error has occurred during collection
+		# TYPE gpfs_exporter_collect_error gauge
+		gpfs_exporter_collect_error{collector="mmces"} 1
+	`
+	if val := testutil.CollectAndCount(collector); val != 11 {
+		t.Errorf("Unexpected collection count %d, expected 11", val)
+	}
+	if err := testutil.GatherAndCompare(gatherers, strings.NewReader(expected+errorMetrics), "gpfs_ces_state", "gpfs_exporter_collect_error"); err != nil {
+		t.Errorf("unexpected collecting result:\n%s", err)
+	}
+
+	timeoutMetrics := `
+		# HELP gpfs_exporter_collect_timeout Indicates the collector timed out
+		# TYPE gpfs_exporter_collect_timeout gauge
+		gpfs_exporter_collect_timeout{collector="mmces"} 1
+	`
+	mmcesExec = func(nodename string, ctx context.Context) (string, error) {
+		return "", context.DeadlineExceeded
+	}
+	if val := testutil.CollectAndCount(collector); val != 11 {
+		t.Errorf("Unexpected collection count %d, expected 11", val)
+	}
+	if err := testutil.GatherAndCompare(gatherers, strings.NewReader(expected+timeoutMetrics), "gpfs_ces_state", "gpfs_exporter_collect_timeout"); err != nil {
+		t.Errorf("unexpected collecting result:\n%s", err)
+	}
+
+	mmcesCache = []CESMetric{}
+	mmcesExec = func(nodename string, ctx context.Context) (string, error) {
+		return mmcesStdout, nil
+	}
+	if val := testutil.CollectAndCount(collector); val != 11 {
+		t.Errorf("Unexpected collection count %d, expected 11", val)
+	}
+	if err := testutil.GatherAndCompare(gatherers, strings.NewReader(expected), "gpfs_ces_state"); err != nil {
+		t.Errorf("unexpected collecting result:\n%s", err)
+	}
+	if val := len(mmcesCache); val != 8 {
+		t.Errorf("Unexpected cache size %d, expected 8", val)
 	}
 }

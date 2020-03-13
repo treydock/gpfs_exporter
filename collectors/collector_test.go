@@ -63,6 +63,7 @@ func setupGatherer(collector Collector) prometheus.Gatherer {
 
 func TestParseMmlsfs(t *testing.T) {
 	execCommand = fakeExecCommand
+	mockedExitStatus = 0
 	mockedStdout = `
 fs::HEADER:version:reserved:reserved:deviceName:fieldName:data:remarks:
 mmlsfs::0:1:::project:defaultMountPoint:%2Ffs%2Fproject::

@@ -36,6 +36,8 @@ var (
 		"entitytype": "EntityType",
 		"status":     "Status",
 	}
+	mmhealthCache = []HealthMetric{}
+	mmhealthExec  = mmhealth
 )
 
 type HealthMetric struct {
@@ -46,19 +48,21 @@ type HealthMetric struct {
 }
 
 type MmhealthCollector struct {
-	State  *prometheus.Desc
-	logger log.Logger
+	State    *prometheus.Desc
+	logger   log.Logger
+	useCache bool
 }
 
 func init() {
 	registerCollector("mmhealth", false, NewMmhealthCollector)
 }
 
-func NewMmhealthCollector(logger log.Logger) Collector {
+func NewMmhealthCollector(logger log.Logger, useCache bool) Collector {
 	return &MmhealthCollector{
 		State: prometheus.NewDesc(prometheus.BuildFQName(namespace, "health", "status"),
 			"GPFS health status, 1=healthy 0=not healthy", []string{"component", "entityname", "entitytype", "status"}, nil),
-		logger: logger,
+		logger:   logger,
+		useCache: useCache,
 	}
 }
 
@@ -68,40 +72,56 @@ func (c *MmhealthCollector) Describe(ch chan<- *prometheus.Desc) {
 
 func (c *MmhealthCollector) Collect(ch chan<- prometheus.Metric) {
 	level.Debug(c.logger).Log("msg", "Collecting mmhealth metrics")
-	err := c.collect(ch)
-	if err != nil {
-		ch <- prometheus.MustNewConstMetric(collectError, prometheus.GaugeValue, 1, "mmhealth")
-	} else {
-		ch <- prometheus.MustNewConstMetric(collectError, prometheus.GaugeValue, 0, "mmhealth")
-	}
-}
-
-func (c *MmhealthCollector) collect(ch chan<- prometheus.Metric) error {
 	collectTime := time.Now()
-	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(*mmhealthTimeout)*time.Second)
-	defer cancel()
-	mmhealth_out, err := mmhealth(ctx)
-	if ctx.Err() == context.DeadlineExceeded {
-		ch <- prometheus.MustNewConstMetric(collecTimeout, prometheus.GaugeValue, 1, "mmhealth")
+	timeout := 0
+	errorMetric := 0
+	metrics, err := c.collect()
+	if err == context.DeadlineExceeded {
+		timeout = 1
 		level.Error(c.logger).Log("msg", "Timeout executing mmhealth")
-		return nil
-	}
-	ch <- prometheus.MustNewConstMetric(collecTimeout, prometheus.GaugeValue, 0, "mmhealth")
-	if err != nil {
+	} else if err != nil {
 		level.Error(c.logger).Log("msg", err)
-		return err
-	}
-	metrics, err := mmhealth_parse(mmhealth_out, c.logger)
-	if err != nil {
-		level.Error(c.logger).Log("msg", err)
-		return err
+		errorMetric = 1
 	}
 	for _, m := range metrics {
 		statusValue := parseMmhealthStatus(m.Status)
 		ch <- prometheus.MustNewConstMetric(c.State, prometheus.GaugeValue, statusValue, m.Component, m.EntityName, m.EntityType, m.Status)
 	}
+	ch <- prometheus.MustNewConstMetric(collectError, prometheus.GaugeValue, float64(errorMetric), "mmhealth")
+	ch <- prometheus.MustNewConstMetric(collecTimeout, prometheus.GaugeValue, float64(timeout), "mmhealth")
 	ch <- prometheus.MustNewConstMetric(collectDuration, prometheus.GaugeValue, time.Since(collectTime).Seconds(), "mmhealth")
-	return nil
+}
+
+func (c *MmhealthCollector) collect() ([]HealthMetric, error) {
+	var mmhealth_out string
+	var err error
+	var metrics []HealthMetric
+	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(*mmhealthTimeout)*time.Second)
+	defer cancel()
+	mmhealth_out, err = mmhealthExec(ctx)
+	if ctx.Err() == context.DeadlineExceeded {
+		if c.useCache {
+			metrics = mmhealthCache
+		}
+		return metrics, ctx.Err()
+	}
+	if err != nil {
+		if c.useCache {
+			metrics = mmhealthCache
+		}
+		return metrics, err
+	}
+	metrics, err = mmhealth_parse(mmhealth_out, c.logger)
+	if err != nil {
+		if c.useCache {
+			metrics = mmhealthCache
+		}
+		return metrics, err
+	}
+	if c.useCache {
+		mmhealthCache = metrics
+	}
+	return metrics, nil
 }
 
 func mmhealth(ctx context.Context) (string, error) {
