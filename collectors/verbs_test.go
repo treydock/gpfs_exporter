@@ -19,20 +19,34 @@ import (
 	"os/exec"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/go-kit/kit/log"
 	"github.com/prometheus/client_golang/prometheus/testutil"
 	"gopkg.in/alecthomas/kingpin.v2"
 )
 
-func TestParseVerbsDisabled(t *testing.T) {
+func TestVerbs(t *testing.T) {
 	execCommand = fakeExecCommand
 	mockedExitStatus = 0
-	mockedStdout = `
+	mockedStdout = "foo"
+	defer func() { execCommand = exec.CommandContext }()
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	out, err := verbs(ctx)
+	if err != nil {
+		t.Errorf("Unexpected error: %s", err.Error())
+	}
+	if out != mockedStdout {
+		t.Errorf("Unexpected out: %s", out)
+	}
+}
+
+func TestParseVerbsDisabled(t *testing.T) {
+	stdout := `
 VERBS RDMA status: disabled
 `
-	defer func() { execCommand = exec.CommandContext }()
-	metric, err := verbs_parse(mockedStdout)
+	metric, err := verbs_parse(stdout)
 	if err != nil {
 		t.Errorf("Unexpected error: %s", err.Error())
 		return

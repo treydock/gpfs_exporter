@@ -18,21 +18,35 @@ import (
 	"os/exec"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/go-kit/kit/log"
 	"github.com/prometheus/client_golang/prometheus/testutil"
 	"gopkg.in/alecthomas/kingpin.v2"
 )
 
-func TestParseMmgetstate(t *testing.T) {
+func TestMmgetstate(t *testing.T) {
 	execCommand = fakeExecCommand
 	mockedExitStatus = 0
-	mockedStdout = `
+	mockedStdout = "foo"
+	defer func() { execCommand = exec.CommandContext }()
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	out, err := mmgetstate(ctx)
+	if err != nil {
+		t.Errorf("Unexpected error: %s", err.Error())
+	}
+	if out != mockedStdout {
+		t.Errorf("Unexpected out: %s", out)
+	}
+}
+
+func TestParseMmgetstate(t *testing.T) {
+	stdout := `
 mmgetstate::HEADER:version:reserved:reserved:nodeName:nodeNumber:state:quorum:nodesUp:totalNodes:remarks:cnfsState:
 mmgetstate::0:1:::ib-proj-nsd05.domain:11:active:4:7:1122::(undefined):
 `
-	defer func() { execCommand = exec.CommandContext }()
-	metric, err := mmgetstate_parse(mockedStdout)
+	metric, err := mmgetstate_parse(stdout)
 	if err != nil {
 		t.Errorf("Unexpected error: %s", err.Error())
 	}

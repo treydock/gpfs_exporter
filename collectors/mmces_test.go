@@ -19,20 +19,35 @@ import (
 	"os/exec"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/go-kit/kit/log"
 	"github.com/prometheus/client_golang/prometheus/testutil"
 	"gopkg.in/alecthomas/kingpin.v2"
 )
 
-func TestParseMmcesStateShow(t *testing.T) {
+func TestMmces(t *testing.T) {
 	execCommand = fakeExecCommand
-	mockedStdout = `
+	mockedExitStatus = 0
+	mockedStdout = "foo"
+	defer func() { execCommand = exec.CommandContext }()
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	out, err := mmces("ib-protocol01.domain", ctx)
+	if err != nil {
+		t.Errorf("Unexpected error: %s", err.Error())
+	}
+	if out != mockedStdout {
+		t.Errorf("Unexpected out: %s", out)
+	}
+}
+
+func TestParseMmcesStateShow(t *testing.T) {
+	stdout := `
 mmcesstate::HEADER:version:reserved:reserved:NODE:AUTH:BLOCK:NETWORK:AUTH_OBJ:NFS:OBJ:SMB:CES:
 mmcesstate::0:1:::ib-protocol01.domain:HEALTHY:DISABLED:HEALTHY:DISABLED:HEALTHY:DISABLED:HEALTHY:HEALTHY:
 `
-	defer func() { execCommand = exec.CommandContext }()
-	metrics, err := mmces_state_show_parse(mockedStdout)
+	metrics, err := mmces_state_show_parse(stdout)
 	if err != nil {
 		t.Errorf("Unexpected error: %s", err.Error())
 	}

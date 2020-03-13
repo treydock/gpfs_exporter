@@ -18,21 +18,35 @@ import (
 	"os/exec"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/go-kit/kit/log"
 	"github.com/prometheus/client_golang/prometheus/testutil"
 	"gopkg.in/alecthomas/kingpin.v2"
 )
 
-func TestParsePerf(t *testing.T) {
+func TestMmpmon(t *testing.T) {
 	execCommand = fakeExecCommand
 	mockedExitStatus = 0
-	mockedStdout = `
+	mockedStdout = "foo"
+	defer func() { execCommand = exec.CommandContext }()
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	out, err := mmpmon(ctx)
+	if err != nil {
+		t.Errorf("Unexpected error: %s", err.Error())
+	}
+	if out != mockedStdout {
+		t.Errorf("Unexpected out: %s", out)
+	}
+}
+
+func TestParsePerf(t *testing.T) {
+	stdout := `
 _fs_io_s_ _n_ 10.22.0.106 _nn_ ib-pitzer-rw02.ten _rc_ 0 _t_ 1579358234 _tu_ 53212 _cl_ gpfs.osc.edu _fs_ scratch _d_ 48 _br_ 205607400434 _bw_ 74839282351 _oc_ 2377656 _cc_ 2201576 _rdc_ 59420404 _wc_ 18874626 _dir_ 40971 _iu_ 544768
 _fs_io_s_ _n_ 10.22.0.106 _nn_ ib-pitzer-rw02.ten _rc_ 0 _t_ 1579358234 _tu_ 53212 _cl_ gpfs.osc.edu _fs_ project _d_ 96 _br_ 0 _bw_ 0 _oc_ 513 _cc_ 513 _rdc_ 0 _wc_ 0 _dir_ 0 _iu_ 169
 `
-	defer func() { execCommand = exec.CommandContext }()
-	perfs, err := mmpmon_parse(mockedStdout, log.NewNopLogger())
+	perfs, err := mmpmon_parse(stdout, log.NewNopLogger())
 	if err != nil {
 		t.Errorf("Unexpected error: %s", err.Error())
 	}

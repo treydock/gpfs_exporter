@@ -18,19 +18,34 @@ import (
 	"os/exec"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/go-kit/kit/log"
 	"github.com/prometheus/client_golang/prometheus/testutil"
 	"gopkg.in/alecthomas/kingpin.v2"
 )
 
+func TestMmdiag(t *testing.T) {
+	execCommand = fakeExecCommand
+	mockedExitStatus = 0
+	mockedStdout = "foo"
+	defer func() { execCommand = exec.CommandContext }()
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	out, err := mmdiag("--waiters", ctx)
+	if err != nil {
+		t.Errorf("Unexpected error: %s", err.Error())
+	}
+	if out != mockedStdout {
+		t.Errorf("Unexpected out: %s", out)
+	}
+}
+
 func TestParseMmdiagWaiters(t *testing.T) {
 	threshold := 30
 	configWaiterThreshold = &threshold
 	configWaiterExclude = &defWaiterExclude
-	execCommand = fakeExecCommand
-	mockedExitStatus = 0
-	mockedStdout = `
+	stdout := `
 
 === mmdiag: waiters ===
 Waiting 6861.7395 sec since 11:04:20, ignored, thread 19428 FsckClientReaperThread: on ThCond 0x7F138008EC10 (FsckReaperCondvar), reason 'Waiting to reap fsck pointer'
@@ -57,9 +72,8 @@ Waiting 0.0023 sec since 10:24:00, monitored, thread 22922 NSDThread: for I/O co
 Waiting 0.0022 sec since 10:24:00, monitored, thread 22931 NSDThread: for I/O completion
 Waiting 0.0002 sec since 10:24:00, monitored, thread 22987 NSDThread: for I/O completion
 `
-	defer func() { execCommand = exec.CommandContext }()
 	var metric DiagMetric
-	err := parse_mmdiag_waiters(mockedStdout, &metric, log.NewNopLogger())
+	err := parse_mmdiag_waiters(stdout, &metric, log.NewNopLogger())
 	if err != nil {
 		t.Errorf("Unexpected error: %s", err.Error())
 	}

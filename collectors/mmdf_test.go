@@ -18,16 +18,31 @@ import (
 	"os/exec"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/go-kit/kit/log"
 	"github.com/prometheus/client_golang/prometheus/testutil"
 	"gopkg.in/alecthomas/kingpin.v2"
 )
 
-func TestParseMmdf(t *testing.T) {
+func TestMmdf(t *testing.T) {
 	execCommand = fakeExecCommand
 	mockedExitStatus = 0
-	mockedStdout = `
+	mockedStdout = "foo"
+	defer func() { execCommand = exec.CommandContext }()
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	out, err := mmdf("test", ctx)
+	if err != nil {
+		t.Errorf("Unexpected error: %s", err.Error())
+	}
+	if out != mockedStdout {
+		t.Errorf("Unexpected out: %s", out)
+	}
+}
+
+func TestParseMmdf(t *testing.T) {
+	stdout := `
 mmdf:nsd:HEADER:version:reserved:reserved:nsdName:storagePool:diskSize:failureGroup:metadata:data:freeBlocks:freeBlocksPct:freeFragments:freeFragmentsPct:diskAvailableForAlloc:
 mmdf:poolTotal:HEADER:version:reserved:reserved:poolName:poolSize:freeBlocks:freeBlocksPct:freeFragments:freeFragmentsPct:maxDiskSize:
 mmdf:data:HEADER:version:reserved:reserved:totalData:freeBlocks:freeBlocksPct:freeFragments:freeFragmentsPct:
@@ -42,8 +57,7 @@ mmdf:metadata:0:1:::13891534848:6011299328:43:58139768:0:
 mmdf:fsTotal:0:1:::3661677723648:481202021888:14:12117655064:0:
 mmdf:inode:0:1:::430741822:484301506:915043328:1332164000:
 `
-	defer func() { execCommand = exec.CommandContext }()
-	dfmetrics, err := parse_mmdf(mockedStdout, log.NewNopLogger())
+	dfmetrics, err := parse_mmdf(stdout, log.NewNopLogger())
 	if err != nil {
 		t.Errorf("Unexpected error: %s", err.Error())
 	}

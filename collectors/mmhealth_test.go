@@ -18,16 +18,31 @@ import (
 	"os/exec"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/go-kit/kit/log"
 	"github.com/prometheus/client_golang/prometheus/testutil"
 	"gopkg.in/alecthomas/kingpin.v2"
 )
 
-func TestParseMmhealth(t *testing.T) {
+func TestMmhealth(t *testing.T) {
 	execCommand = fakeExecCommand
 	mockedExitStatus = 0
-	mockedStdout = `
+	mockedStdout = "foo"
+	defer func() { execCommand = exec.CommandContext }()
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	out, err := mmhealth(ctx)
+	if err != nil {
+		t.Errorf("Unexpected error: %s", err.Error())
+	}
+	if out != mockedStdout {
+		t.Errorf("Unexpected out: %s", out)
+	}
+}
+
+func TestParseMmhealth(t *testing.T) {
+	stdout := `
 mmhealth:Event:HEADER:version:reserved:reserved:node:component:entityname:entitytype:event:arguments:activesince:identifier:ishidden:
 mmhealth:State:HEADER:version:reserved:reserved:node:component:entityname:entitytype:status:laststatuschange:
 mmhealth:State:0:1:::ib-cluster-rw02.example.com:NODE:ib-cluster-rw02.example.com:NODE:HEALTHY:2020-01-10 10%3A32%3A17.613885 EST:
@@ -39,8 +54,7 @@ mmhealth:State:0:1:::ib-cluster-rw02.example.com:FILESYSTEM:project:FILESYSTEM:H
 mmhealth:State:0:1:::ib-cluster-rw02.example.com:FILESYSTEM:scratch:FILESYSTEM:HEALTHY:2020-01-07 18%3A03%3A31.842569 EST:
 mmhealth:State:0:1:::ib-cluster-rw02.example.com:FILESYSTEM:ess:FILESYSTEM:HEALTHY:2020-01-14 10%3A37%3A33.657052 EST:
 `
-	defer func() { execCommand = exec.CommandContext }()
-	metrics, err := mmhealth_parse(mockedStdout, log.NewNopLogger())
+	metrics, err := mmhealth_parse(stdout, log.NewNopLogger())
 	if err != nil {
 		t.Errorf("Unexpected error: %s", err.Error())
 	}
