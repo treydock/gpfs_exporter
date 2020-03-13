@@ -80,7 +80,7 @@ func NewMmpmonCollector(logger log.Logger, useCache bool) Collector {
 		operations: prometheus.NewDesc(prometheus.BuildFQName(namespace, "perf", "operations"),
 			"GPFS operationgs reported by mmpmon", []string{"fs", "nodename", "operation"}, nil),
 		logger:   logger,
-		useCache: useCache,
+		useCache: false,
 	}
 }
 
