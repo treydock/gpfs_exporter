@@ -80,3 +80,26 @@ VERBS RDMA status: started
 		t.Errorf("unexpected collecting result:\n%s", err)
 	}
 }
+
+func TestVerbsCollectorError(t *testing.T) {
+	if _, err := kingpin.CommandLine.Parse([]string{}); err != nil {
+		t.Fatal(err)
+	}
+	execCommand = fakeExecCommand
+	mockedExitStatus = 1
+	defer func() { execCommand = exec.CommandContext }()
+	metadata := `
+			# HELP gpfs_exporter_collect_error Indicates if error has occurred during collection
+			# TYPE gpfs_exporter_collect_error gauge`
+	expected := `
+		gpfs_exporter_collect_error{collector="verbs"} 1
+	`
+	collector := NewVerbsCollector(log.NewNopLogger())
+	gatherers := setupGatherer(collector)
+	if val := testutil.CollectAndCount(collector); val != 3 {
+		t.Errorf("Unexpected collection count %d, expected 3", val)
+	}
+	if err := testutil.GatherAndCompare(gatherers, strings.NewReader(metadata+expected), "gpfs_exporter_collect_error"); err != nil {
+		t.Errorf("unexpected collecting result:\n%s", err)
+	}
+}
