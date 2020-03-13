@@ -29,7 +29,7 @@ var (
 	mmgetstateTimeout = kingpin.Flag("collector.mmgetstate.timeout", "Timeout for executing mmgetstate").Default("5").Int()
 	mmgetstateStates  = []string{"active", "arbitrating", "down"}
 	mmgetstateCache   = MmgetstateMetrics{}
-	mmgetstateExec    = mmgetstate
+	MmgetstateExec    = mmgetstate
 )
 
 type MmgetstateMetrics struct {
@@ -95,7 +95,7 @@ func (c *MmgetstateCollector) collect() (MmgetstateMetrics, error) {
 	var err error
 	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(*mmgetstateTimeout)*time.Second)
 	defer cancel()
-	out, err = mmgetstateExec(ctx)
+	out, err = MmgetstateExec(ctx)
 	if ctx.Err() == context.DeadlineExceeded {
 		if c.useCache {
 			metric = mmgetstateCache

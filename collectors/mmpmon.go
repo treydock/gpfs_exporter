@@ -43,7 +43,7 @@ var (
 		"_iu_":  "InodeUpdates",
 	}
 	mmpmonCache = []PerfMetrics{}
-	mmpmonExec  = mmpmon
+	MmpmonExec  = mmpmon
 )
 
 type PerfMetrics struct {
@@ -124,7 +124,7 @@ func (c *MmpmonCollector) collect() ([]PerfMetrics, error) {
 	var err error
 	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(*mmpmonTimeout)*time.Second)
 	defer cancel()
-	mmpmon_out, err = mmpmonExec(ctx)
+	mmpmon_out, err = MmpmonExec(ctx)
 	if ctx.Err() == context.DeadlineExceeded {
 		if c.useCache {
 			perfs = mmpmonCache

@@ -63,7 +63,7 @@ func TestMmgetstateCollector(t *testing.T) {
 	if _, err := kingpin.CommandLine.Parse([]string{}); err != nil {
 		t.Fatal(err)
 	}
-	mmgetstateExec = func(ctx context.Context) (string, error) {
+	MmgetstateExec = func(ctx context.Context) (string, error) {
 		return mmgetstateStdout, nil
 	}
 	expected := `
@@ -88,7 +88,7 @@ func TestMMgetstateCollectorError(t *testing.T) {
 	if _, err := kingpin.CommandLine.Parse([]string{}); err != nil {
 		t.Fatal(err)
 	}
-	mmgetstateExec = func(ctx context.Context) (string, error) {
+	MmgetstateExec = func(ctx context.Context) (string, error) {
 		return "", fmt.Errorf("Error")
 	}
 	expected := `
@@ -110,7 +110,7 @@ func TestMMgetstateCollectorTimeout(t *testing.T) {
 	if _, err := kingpin.CommandLine.Parse([]string{}); err != nil {
 		t.Fatal(err)
 	}
-	mmgetstateExec = func(ctx context.Context) (string, error) {
+	MmgetstateExec = func(ctx context.Context) (string, error) {
 		return "", context.DeadlineExceeded
 	}
 	expected := `
@@ -133,7 +133,7 @@ func TestMMgetstateCollectorCache(t *testing.T) {
 		t.Fatal(err)
 	}
 	// build cache
-	mmgetstateExec = func(ctx context.Context) (string, error) {
+	MmgetstateExec = func(ctx context.Context) (string, error) {
 		return mmgetstateStdout, nil
 	}
 	collector := NewMmgetstateCollector(log.NewNopLogger(), true)
@@ -142,7 +142,7 @@ func TestMMgetstateCollectorCache(t *testing.T) {
 		t.Errorf("Unexpected collection count %d, expected 7", val)
 	}
 
-	mmgetstateExec = func(ctx context.Context) (string, error) {
+	MmgetstateExec = func(ctx context.Context) (string, error) {
 		return "", fmt.Errorf("Error")
 	}
 	expected := `
@@ -170,7 +170,7 @@ func TestMMgetstateCollectorCache(t *testing.T) {
 		# TYPE gpfs_exporter_collect_timeout gauge
 		gpfs_exporter_collect_timeout{collector="mmgetstate"} 1
 	`
-	mmgetstateExec = func(ctx context.Context) (string, error) {
+	MmgetstateExec = func(ctx context.Context) (string, error) {
 		return "", context.DeadlineExceeded
 	}
 	if val := testutil.CollectAndCount(collector); val != 7 {
@@ -181,7 +181,7 @@ func TestMMgetstateCollectorCache(t *testing.T) {
 	}
 
 	mmgetstateCache = MmgetstateMetrics{}
-	mmgetstateExec = func(ctx context.Context) (string, error) {
+	MmgetstateExec = func(ctx context.Context) (string, error) {
 		return mmgetstateStdout, nil
 	}
 	if val := testutil.CollectAndCount(collector); val != 7 {
