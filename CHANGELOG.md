@@ -1,3 +1,10 @@
+## 0.9.0 / 2020-03-16
+
+### Changes
+
+* Allow caching of metrics if errors or timeouts occur
+* Improved testing
+
 ## 0.8.0 / 2020-03-05
 
 ### Changes
