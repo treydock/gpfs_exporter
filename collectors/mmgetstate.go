@@ -102,13 +102,7 @@ func (c *MmgetstateCollector) collect() (MmgetstateMetrics, error) {
 		}
 		return metric, err
 	}
-	metric, err = mmgetstate_parse(out)
-	if err != nil {
-		if c.useCache {
-			metric = mmgetstateCache
-		}
-		return metric, err
-	}
+	metric = mmgetstate_parse(out)
 	if c.useCache {
 		mmgetstateCache = metric
 	}
@@ -128,7 +122,7 @@ func mmgetstate(ctx context.Context) (string, error) {
 	return out.String(), nil
 }
 
-func mmgetstate_parse(out string) (MmgetstateMetrics, error) {
+func mmgetstate_parse(out string) MmgetstateMetrics {
 	metric := MmgetstateMetrics{}
 	lines := strings.Split(out, "\n")
 	var headers []string
@@ -154,5 +148,5 @@ func mmgetstate_parse(out string) (MmgetstateMetrics, error) {
 			}
 		}
 	}
-	return metric, nil
+	return metric
 }

@@ -84,22 +84,14 @@ func TestParseVerbsDisabled(t *testing.T) {
 	stdout := `
 VERBS RDMA status: disabled
 `
-	metric, err := verbs_parse(stdout)
-	if err != nil {
-		t.Errorf("Unexpected error: %s", err.Error())
-		return
-	}
+	metric := verbs_parse(stdout)
 	if metric.Status != "disabled" {
 		t.Errorf("Unexpected value for status, expected disabled, got %s", metric.Status)
 	}
 }
 
 func TestParseVerbsStarted(t *testing.T) {
-	metric, err := verbs_parse(verbsStdout)
-	if err != nil {
-		t.Errorf("Unexpected error: %s", err.Error())
-		return
-	}
+	metric := verbs_parse(verbsStdout)
 	if metric.Status != "started" {
 		t.Errorf("Unexpected value for status, expected started, got %s", metric.Status)
 	}

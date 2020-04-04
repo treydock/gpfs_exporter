@@ -92,10 +92,7 @@ func TestMmhealthTimeout(t *testing.T) {
 }
 
 func TestParseMmhealth(t *testing.T) {
-	metrics, err := mmhealth_parse(mmhealthStdout, log.NewNopLogger())
-	if err != nil {
-		t.Errorf("Unexpected error: %s", err.Error())
-	}
+	metrics := mmhealth_parse(mmhealthStdout, log.NewNopLogger())
 	if len(metrics) != 9 {
 		t.Errorf("Expected 8 metrics returned, got %d", len(metrics))
 		return

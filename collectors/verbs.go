@@ -94,13 +94,7 @@ func (c *VerbsCollector) collect() (VerbsMetrics, error) {
 		}
 		return metric, err
 	}
-	metric, err = verbs_parse(out)
-	if err != nil {
-		if c.useCache {
-			metric = verbsCache
-		}
-		return metric, err
-	}
+	metric = verbs_parse(out)
 	if c.useCache {
 		verbsCache = metric
 	}
@@ -120,7 +114,7 @@ func verbs(ctx context.Context) (string, error) {
 	return out.String(), nil
 }
 
-func verbs_parse(out string) (VerbsMetrics, error) {
+func verbs_parse(out string) VerbsMetrics {
 	metric := VerbsMetrics{}
 	lines := strings.Split(out, "\n")
 	for _, l := range lines {
@@ -133,5 +127,5 @@ func verbs_parse(out string) (VerbsMetrics, error) {
 			break
 		}
 	}
-	return metric, nil
+	return metric
 }

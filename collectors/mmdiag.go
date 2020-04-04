@@ -103,13 +103,7 @@ func (c *MmdiagCollector) collect() (DiagMetric, error) {
 		}
 		return diagMetric, err
 	}
-	err = parse_mmdiag_waiters(out, &diagMetric, c.logger)
-	if err != nil {
-		if c.useCache {
-			diagMetric = mmdiagCache
-		}
-		return diagMetric, err
-	}
+	parse_mmdiag_waiters(out, &diagMetric, c.logger)
 	if c.useCache {
 		mmdiagCache = diagMetric
 	}
@@ -129,7 +123,7 @@ func mmdiag(arg string, ctx context.Context) (string, error) {
 	return out.String(), nil
 }
 
-func parse_mmdiag_waiters(out string, diagMetric *DiagMetric, logger log.Logger) error {
+func parse_mmdiag_waiters(out string, diagMetric *DiagMetric, logger log.Logger) {
 	lines := strings.Split(out, "\n")
 	waitersPattern := regexp.MustCompile(`^Waiting ([0-9.]+) sec.*thread ([0-9]+)`)
 	excludePattern := regexp.MustCompile(*configWaiterExclude)
@@ -152,5 +146,4 @@ func parse_mmdiag_waiters(out string, diagMetric *DiagMetric, logger log.Logger)
 			diagMetric.Waiters = append(diagMetric.Waiters, waiter)
 		}
 	}
-	return nil
 }

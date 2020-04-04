@@ -105,13 +105,7 @@ func (c *MmhealthCollector) collect() ([]HealthMetric, error) {
 		}
 		return metrics, err
 	}
-	metrics, err = mmhealth_parse(mmhealth_out, c.logger)
-	if err != nil {
-		if c.useCache {
-			metrics = mmhealthCache
-		}
-		return metrics, err
-	}
+	metrics = mmhealth_parse(mmhealth_out, c.logger)
 	if c.useCache {
 		mmhealthCache = metrics
 	}
@@ -131,7 +125,7 @@ func mmhealth(ctx context.Context) (string, error) {
 	return out.String(), nil
 }
 
-func mmhealth_parse(out string, logger log.Logger) ([]HealthMetric, error) {
+func mmhealth_parse(out string, logger log.Logger) []HealthMetric {
 	var metrics []HealthMetric
 	lines := strings.Split(out, "\n")
 	var headers []string
@@ -172,7 +166,7 @@ func mmhealth_parse(out string, logger log.Logger) ([]HealthMetric, error) {
 		}
 		metrics = append(metrics, metric)
 	}
-	return metrics, nil
+	return metrics
 }
 
 func parseMmhealthStatus(status string) float64 {

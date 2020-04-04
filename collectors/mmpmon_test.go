@@ -82,10 +82,7 @@ func TestMmpmonTimeout(t *testing.T) {
 }
 
 func TestParsePerf(t *testing.T) {
-	perfs, err := mmpmon_parse(mmpmonStdout, log.NewNopLogger())
-	if err != nil {
-		t.Errorf("Unexpected error: %s", err.Error())
-	}
+	perfs := mmpmon_parse(mmpmonStdout, log.NewNopLogger())
 	if len(perfs) != 2 {
 		t.Errorf("Expected 2 perfs returned, got %d", len(perfs))
 		return

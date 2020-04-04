@@ -93,10 +93,7 @@ func TestMmdfTimeout(t *testing.T) {
 }
 
 func TestParseMmdf(t *testing.T) {
-	dfmetrics, err := parse_mmdf(mmdfStdout, log.NewNopLogger())
-	if err != nil {
-		t.Errorf("Unexpected error: %s", err.Error())
-	}
+	dfmetrics := parse_mmdf(mmdfStdout, log.NewNopLogger())
 	if dfmetrics.InodesFree != 484301506 {
 		t.Errorf("Unexpected value for InodesFree, got %d", dfmetrics.InodesFree)
 	}

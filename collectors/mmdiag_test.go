@@ -108,10 +108,7 @@ func TestParseMmdiagWaiters(t *testing.T) {
 	configWaiterThreshold = &threshold
 	configWaiterExclude = &defWaiterExclude
 	var metric DiagMetric
-	err := parse_mmdiag_waiters(waitersStdout, &metric, log.NewNopLogger())
-	if err != nil {
-		t.Errorf("Unexpected error: %s", err.Error())
-	}
+	parse_mmdiag_waiters(waitersStdout, &metric, log.NewNopLogger())
 	if val := len(metric.Waiters); val != 2 {
 		t.Errorf("Unexpected Waiters len got %v", val)
 		return

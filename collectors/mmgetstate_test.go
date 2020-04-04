@@ -82,10 +82,7 @@ func TestMmgetstateTimeout(t *testing.T) {
 }
 
 func TestParseMmgetstate(t *testing.T) {
-	metric, err := mmgetstate_parse(mmgetstateStdout)
-	if err != nil {
-		t.Errorf("Unexpected error: %s", err.Error())
-	}
+	metric := mmgetstate_parse(mmgetstateStdout)
 	if val := metric.state; val != "active" {
 		t.Errorf("Unexpected state got %s", val)
 	}

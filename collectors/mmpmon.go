@@ -131,13 +131,7 @@ func (c *MmpmonCollector) collect() ([]PerfMetrics, error) {
 		}
 		return perfs, err
 	}
-	perfs, err = mmpmon_parse(mmpmon_out, c.logger)
-	if err != nil {
-		if c.useCache {
-			perfs = mmpmonCache
-		}
-		return perfs, err
-	}
+	perfs = mmpmon_parse(mmpmon_out, c.logger)
 	if c.useCache {
 		mmpmonCache = perfs
 	}
@@ -158,7 +152,7 @@ func mmpmon(ctx context.Context) (string, error) {
 	return out.String(), nil
 }
 
-func mmpmon_parse(out string, logger log.Logger) ([]PerfMetrics, error) {
+func mmpmon_parse(out string, logger log.Logger) []PerfMetrics {
 	var metrics []PerfMetrics
 	lines := strings.Split(out, "\n")
 	for _, l := range lines {
@@ -194,5 +188,5 @@ func mmpmon_parse(out string, logger log.Logger) ([]PerfMetrics, error) {
 		}
 		metrics = append(metrics, perf)
 	}
-	return metrics, nil
+	return metrics
 }
