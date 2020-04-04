@@ -1,3 +1,7 @@
+## 0.11.0 / 2020-04-04
+
+* Improve timeout/error handling around mmlsfs and add tests
+
 ## 0.10.0 / 2020-04-04
 
 * Simplified timeout and error handling
