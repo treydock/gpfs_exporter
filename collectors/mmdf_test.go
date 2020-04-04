@@ -165,6 +165,67 @@ func TestMmdfCollector(t *testing.T) {
 	}
 }
 
+func TestMmdfCollectorMmlsfs(t *testing.T) {
+	if _, err := kingpin.CommandLine.Parse([]string{}); err != nil {
+		t.Fatal(err)
+	}
+	filesystems := ""
+	configFilesystems = &filesystems
+	MmdfExec = func(fs string, ctx context.Context) (string, error) {
+		return mmdfStdout, nil
+	}
+	mmlsfsStdout = `
+fs::HEADER:version:reserved:reserved:deviceName:fieldName:data:remarks:
+mmlsfs::0:1:::project:defaultMountPoint:%2Ffs%2Fproject::
+`
+	MmlsfsExec = func(ctx context.Context) (string, error) {
+		return mmlsfsStdout, nil
+	}
+	expected := `
+		# HELP gpfs_fs_free_bytes GPFS filesystem free size in bytes
+		# TYPE gpfs_fs_free_bytes gauge
+		gpfs_fs_free_bytes{fs="project"} 492750870413312
+		# HELP gpfs_fs_free_percent GPFS filesystem free percent
+		# TYPE gpfs_fs_free_percent gauge
+		gpfs_fs_free_percent{fs="project"} 14
+		# HELP gpfs_fs_inodes_allocated GPFS filesystem inodes allocated
+		# TYPE gpfs_fs_inodes_allocated gauge
+		gpfs_fs_inodes_allocated{fs="project"} 915043328
+		# HELP gpfs_fs_inodes_free GPFS filesystem inodes free
+		# TYPE gpfs_fs_inodes_free gauge
+		gpfs_fs_inodes_free{fs="project"} 484301506
+		# HELP gpfs_fs_inodes_total GPFS filesystem inodes total
+		# TYPE gpfs_fs_inodes_total gauge
+		gpfs_fs_inodes_total{fs="project"} 1332164000
+		# HELP gpfs_fs_inodes_used GPFS filesystem inodes used
+		# TYPE gpfs_fs_inodes_used gauge
+		gpfs_fs_inodes_used{fs="project"} 430741822
+		# HELP gpfs_fs_metadata_free_bytes GPFS metadata free size in bytes
+		# TYPE gpfs_fs_metadata_free_bytes gauge
+		gpfs_fs_metadata_free_bytes{fs="project"} 6155570511872
+		# HELP gpfs_fs_metadata_free_percent GPFS metadata free percent
+		# TYPE gpfs_fs_metadata_free_percent gauge
+		gpfs_fs_metadata_free_percent{fs="project"} 43
+		# HELP gpfs_fs_metadata_total_bytes GPFS total metadata size in bytes
+		# TYPE gpfs_fs_metadata_total_bytes gauge
+		gpfs_fs_metadata_total_bytes{fs="project"} 14224931684352
+		# HELP gpfs_fs_total_bytes GPFS filesystem total size in bytes
+		# TYPE gpfs_fs_total_bytes gauge
+		gpfs_fs_total_bytes{fs="project"} 3749557989015552
+	`
+	collector := NewMmdfCollector(log.NewNopLogger(), false)
+	gatherers := setupGatherer(collector)
+	if val := testutil.CollectAndCount(collector); val != 16 {
+		t.Errorf("Unexpected collection count %d, expected 16", val)
+	}
+	if err := testutil.GatherAndCompare(gatherers, strings.NewReader(expected),
+		"gpfs_fs_inodes_used", "gpfs_fs_inodes_free", "gpfs_fs_inodes_allocated", "gpfs_fs_inodes_total",
+		"gpfs_fs_free_bytes", "gpfs_fs_free_percent", "gpfs_fs_total_bytes",
+		"gpfs_fs_metadata_total_bytes", "gpfs_fs_metadata_free_bytes", "gpfs_fs_metadata_free_percent"); err != nil {
+		t.Errorf("unexpected collecting result:\n%s", err)
+	}
+}
+
 func TestMmdfCollectorError(t *testing.T) {
 	if _, err := kingpin.CommandLine.Parse([]string{}); err != nil {
 		t.Fatal(err)
@@ -207,6 +268,54 @@ func TestMmdfCollectorTimeout(t *testing.T) {
 	gatherers := setupGatherer(collector)
 	if val := testutil.CollectAndCount(collector); val != 3 {
 		t.Errorf("Unexpected collection count %d, expected 3", val)
+	}
+	if err := testutil.GatherAndCompare(gatherers, strings.NewReader(expected), "gpfs_exporter_collect_timeout"); err != nil {
+		t.Errorf("unexpected collecting result:\n%s", err)
+	}
+}
+
+func TestMmdfCollectorMmlsfsError(t *testing.T) {
+	if _, err := kingpin.CommandLine.Parse([]string{}); err != nil {
+		t.Fatal(err)
+	}
+	filesystems := ""
+	configFilesystems = &filesystems
+	MmlsfsExec = func(ctx context.Context) (string, error) {
+		return "", fmt.Errorf("Error")
+	}
+	expected := `
+		# HELP gpfs_exporter_collect_error Indicates if error has occurred during collection
+		# TYPE gpfs_exporter_collect_error gauge
+		gpfs_exporter_collect_error{collector="mmdf-mmlsfs"} 1
+	`
+	collector := NewMmdfCollector(log.NewNopLogger(), false)
+	gatherers := setupGatherer(collector)
+	if val := testutil.CollectAndCount(collector); val != 2 {
+		t.Errorf("Unexpected collection count %d, expected 2", val)
+	}
+	if err := testutil.GatherAndCompare(gatherers, strings.NewReader(expected), "gpfs_exporter_collect_error"); err != nil {
+		t.Errorf("unexpected collecting result:\n%s", err)
+	}
+}
+
+func TestMmdfCollectorMmlsfsTimeout(t *testing.T) {
+	if _, err := kingpin.CommandLine.Parse([]string{}); err != nil {
+		t.Fatal(err)
+	}
+	filesystems := ""
+	configFilesystems = &filesystems
+	MmlsfsExec = func(ctx context.Context) (string, error) {
+		return "", context.DeadlineExceeded
+	}
+	expected := `
+		# HELP gpfs_exporter_collect_timeout Indicates the collector timed out
+		# TYPE gpfs_exporter_collect_timeout gauge
+		gpfs_exporter_collect_timeout{collector="mmdf-mmlsfs"} 1
+	`
+	collector := NewMmdfCollector(log.NewNopLogger(), false)
+	gatherers := setupGatherer(collector)
+	if val := testutil.CollectAndCount(collector); val != 2 {
+		t.Errorf("Unexpected collection count %d, expected 2", val)
 	}
 	if err := testutil.GatherAndCompare(gatherers, strings.NewReader(expected), "gpfs_exporter_collect_timeout"); err != nil {
 		t.Errorf("unexpected collecting result:\n%s", err)

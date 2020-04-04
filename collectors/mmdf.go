@@ -130,19 +130,18 @@ func (c *MmdfCollector) Collect(ch chan<- prometheus.Metric) {
 	if *configFilesystems == "" {
 		ctx, cancel := context.WithTimeout(context.Background(), time.Duration(*mmlsfsTimeout)*time.Second)
 		defer cancel()
+		var mmlsfsTimeout float64
+		var mmlsfsError float64
 		mmlfsfs_filesystems, err := mmlfsfsFilesystems(ctx, c.logger)
-		if ctx.Err() == context.DeadlineExceeded {
-			ch <- prometheus.MustNewConstMetric(collecTimeout, prometheus.GaugeValue, 1, "mmdf-mmlsfs")
+		if err == context.DeadlineExceeded {
+			mmlsfsTimeout = 1
 			level.Error(c.logger).Log("msg", "Timeout executing mmlsfs")
-		} else {
-			ch <- prometheus.MustNewConstMetric(collecTimeout, prometheus.GaugeValue, 0, "mmdf-mmlsfs")
-		}
-		if err != nil {
+		} else if err != nil {
+			mmlsfsError = 1
 			level.Error(c.logger).Log("msg", err)
-			ch <- prometheus.MustNewConstMetric(collectError, prometheus.GaugeValue, 1, "mmdf-mmlsfs")
-		} else {
-			ch <- prometheus.MustNewConstMetric(collectError, prometheus.GaugeValue, 0, "mmdf-mmlsfs")
 		}
+		ch <- prometheus.MustNewConstMetric(collecTimeout, prometheus.GaugeValue, mmlsfsTimeout, "mmdf-mmlsfs")
+		ch <- prometheus.MustNewConstMetric(collectError, prometheus.GaugeValue, mmlsfsError, "mmdf-mmlsfs")
 		filesystems = mmlfsfs_filesystems
 	} else {
 		filesystems = strings.Split(*configFilesystems, ",")
@@ -204,14 +203,11 @@ func (c *MmdfCollector) mmdfCollect(fs string) (DFMetric, error) {
 
 func mmlfsfsFilesystems(ctx context.Context, logger log.Logger) ([]string, error) {
 	var filesystems []string
-	out, err := mmlsfs(ctx)
+	out, err := MmlsfsExec(ctx)
 	if err != nil {
 		return nil, err
 	}
-	mmlsfs_filesystems, err := parse_mmlsfs(out)
-	if err != nil {
-		return nil, err
-	}
+	mmlsfs_filesystems := parse_mmlsfs(out)
 	for _, fs := range mmlsfs_filesystems {
 		filesystems = append(filesystems, fs.Name)
 	}

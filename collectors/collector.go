@@ -37,6 +37,7 @@ var (
 	collectorState   = make(map[string]*bool)
 	factories        = make(map[string]func(logger log.Logger, useCache bool) Collector)
 	execCommand      = exec.CommandContext
+	MmlsfsExec       = mmlsfs
 	collectDuration  = prometheus.NewDesc(
 		prometheus.BuildFQName(namespace, "exporter", "collector_duration_seconds"),
 		"Collector time duration.",
@@ -120,13 +121,15 @@ func mmlsfs(ctx context.Context) (string, error) {
 	var out bytes.Buffer
 	cmd.Stdout = &out
 	err := cmd.Run()
-	if err != nil {
+	if ctx.Err() == context.DeadlineExceeded {
+		return "", ctx.Err()
+	} else if err != nil {
 		return "", err
 	}
 	return out.String(), nil
 }
 
-func parse_mmlsfs(out string) ([]GPFSFilesystem, error) {
+func parse_mmlsfs(out string) []GPFSFilesystem {
 	var filesystems []GPFSFilesystem
 	lines := strings.Split(out, "\n")
 	for _, line := range lines {
@@ -146,5 +149,5 @@ func parse_mmlsfs(out string) ([]GPFSFilesystem, error) {
 		fs.Mountpoint = mountpoint
 		filesystems = append(filesystems, fs)
 	}
-	return filesystems, nil
+	return filesystems
 }

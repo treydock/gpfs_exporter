@@ -29,6 +29,12 @@ var (
 	mockedExitStatus = 0
 	mockedStdout     string
 	_, cancel        = context.WithTimeout(context.Background(), 5*time.Second)
+	mmlsfsStdout     = `
+fs::HEADER:version:reserved:reserved:deviceName:fieldName:data:remarks:
+mmlsfs::0:1:::project:defaultMountPoint:%2Ffs%2Fproject::
+mmlsfs::0:1:::scratch:defaultMountPoint:%2Ffs%2Fscratch::
+mmlsfs::0:1:::ess:defaultMountPoint:%2Ffs%2Fess::
+`
 )
 
 func fakeExecCommand(ctx context.Context, command string, args ...string) *exec.Cmd {
@@ -61,20 +67,59 @@ func setupGatherer(collector Collector) prometheus.Gatherer {
 	return gatherers
 }
 
-func TestParseMmlsfs(t *testing.T) {
+func TestMmlsfs(t *testing.T) {
 	execCommand = fakeExecCommand
 	mockedExitStatus = 0
-	mockedStdout = `
-fs::HEADER:version:reserved:reserved:deviceName:fieldName:data:remarks:
-mmlsfs::0:1:::project:defaultMountPoint:%2Ffs%2Fproject::
-mmlsfs::0:1:::scratch:defaultMountPoint:%2Ffs%2Fscratch::
-mmlsfs::0:1:::ess:defaultMountPoint:%2Ffs%2Fess::
-`
+	mockedStdout = "foo"
 	defer func() { execCommand = exec.CommandContext }()
-	filesystems, err := parse_mmlsfs(mockedStdout)
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	out, err := mmlsfs(ctx)
 	if err != nil {
 		t.Errorf("Unexpected error: %s", err.Error())
 	}
+	if out != mockedStdout {
+		t.Errorf("Unexpected out: %s", out)
+	}
+}
+
+func TestMmlsfsError(t *testing.T) {
+	execCommand = fakeExecCommand
+	mockedExitStatus = 1
+	mockedStdout = "foo"
+	defer func() { execCommand = exec.CommandContext }()
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	out, err := mmlsfs(ctx)
+	if err == nil {
+		t.Errorf("Expected error")
+	}
+	if out != "" {
+		t.Errorf("Unexpected out: %s", out)
+	}
+}
+
+func TestMmlsfsTimeout(t *testing.T) {
+	execCommand = fakeExecCommand
+	mockedExitStatus = 1
+	mockedStdout = "foo"
+	defer func() { execCommand = exec.CommandContext }()
+	ctx, cancel := context.WithTimeout(context.Background(), 0*time.Second)
+	defer cancel()
+	out, err := mmlsfs(ctx)
+	if err != context.DeadlineExceeded {
+		t.Errorf("Expected DeadlineExceeded")
+	}
+	if out != "" {
+		t.Errorf("Unexpected out: %s", out)
+	}
+}
+
+func TestParseMmlsfs(t *testing.T) {
+	execCommand = fakeExecCommand
+	mockedExitStatus = 0
+	defer func() { execCommand = exec.CommandContext }()
+	filesystems := parse_mmlsfs(mmlsfsStdout)
 	if len(filesystems) != 3 {
 		t.Errorf("Expected 3 perfs returned, got %d", len(filesystems))
 		return
