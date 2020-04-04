@@ -30,8 +30,27 @@ var (
 	mmcesStdout = `
 mmcesstate::HEADER:version:reserved:reserved:NODE:AUTH:BLOCK:NETWORK:AUTH_OBJ:NFS:OBJ:SMB:CES:
 mmcesstate::0:1:::ib-protocol01.domain:HEALTHY:DISABLED:HEALTHY:DISABLED:HEALTHY:DISABLED:HEALTHY:HEALTHY:
+
 `
 )
+
+func TestGetFQDN(t *testing.T) {
+	osHostname = func() (string, error) {
+		return "foo", nil
+	}
+	if val := getFQDN(log.NewNopLogger()); val != "foo" {
+		t.Errorf("Unexpected value, got %s", val)
+	}
+}
+
+func TestGetFQDNError(t *testing.T) {
+	osHostname = func() (string, error) {
+		return "", fmt.Errorf("err")
+	}
+	if val := getFQDN(log.NewNopLogger()); val != "" {
+		t.Errorf("Unexpected value, got %s", val)
+	}
+}
 
 func TestMmces(t *testing.T) {
 	execCommand = fakeExecCommand
@@ -110,6 +129,38 @@ func TestParseMmcesState(t *testing.T) {
 func TestMMcesCollector(t *testing.T) {
 	if _, err := kingpin.CommandLine.Parse([]string{"--collector.mmces.nodename=ib-protocol01.domain --exporter.use-cache"}); err != nil {
 		t.Fatal(err)
+	}
+	mmcesExec = func(nodename string, ctx context.Context) (string, error) {
+		return mmcesStdout, nil
+	}
+	expected := `
+		# HELP gpfs_ces_state GPFS CES health status, 1=healthy 0=not healthy
+		# TYPE gpfs_ces_state gauge
+		gpfs_ces_state{service="AUTH",state="HEALTHY"} 1
+		gpfs_ces_state{service="AUTH_OBJ",state="DISABLED"} 0
+		gpfs_ces_state{service="BLOCK",state="DISABLED"} 0
+		gpfs_ces_state{service="CES",state="HEALTHY"} 1
+		gpfs_ces_state{service="NETWORK",state="HEALTHY"} 1
+		gpfs_ces_state{service="NFS",state="HEALTHY"} 1
+		gpfs_ces_state{service="OBJ",state="DISABLED"} 0
+		gpfs_ces_state{service="SMB",state="HEALTHY"} 1
+	`
+	collector := NewMmcesCollector(log.NewNopLogger(), false)
+	gatherers := setupGatherer(collector)
+	if val := testutil.CollectAndCount(collector); val != 11 {
+		t.Errorf("Unexpected collection count %d, expected 11", val)
+	}
+	if err := testutil.GatherAndCompare(gatherers, strings.NewReader(expected), "gpfs_ces_state"); err != nil {
+		t.Errorf("unexpected collecting result:\n%s", err)
+	}
+}
+
+func TestMMcesCollectorHostname(t *testing.T) {
+	if _, err := kingpin.CommandLine.Parse([]string{"--exporter.use-cache"}); err != nil {
+		t.Fatal(err)
+	}
+	osHostname = func() (string, error) {
+		return "foo", nil
 	}
 	mmcesExec = func(nodename string, ctx context.Context) (string, error) {
 		return mmcesStdout, nil
