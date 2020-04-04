@@ -1,3 +1,7 @@
+## 0.10.0 / 2020-04-04
+
+* Simplified timeout and error handling
+
 ## 0.9.0 / 2020-03-16
 
 ### Changes

@@ -3,6 +3,7 @@
 [![Build Status](https://circleci.com/gh/treydock/gpfs_exporter/tree/master.svg?style=shield)](https://circleci.com/gh/treydock/gpfs_exporter)
 [![GitHub release](https://img.shields.io/github/v/release/treydock/gpfs_exporter?include_prereleases&sort=semver)](https://github.com/treydock/gpfs_exporter/releases/latest)
 ![GitHub All Releases](https://img.shields.io/github/downloads/treydock/gpfs_exporter/total)
+[![Go Report Card](https://goreportcard.com/badge/github.com/treydock/gpfs_exporter)](https://goreportcard.com/report/github.com/treydock/gpfs_exporter)
 [![codecov](https://codecov.io/gh/treydock/gpfs_exporter/branch/master/graph/badge.svg)](https://codecov.io/gh/treydock/gpfs_exporter)
 
 # GPFS Prometheus exporter
