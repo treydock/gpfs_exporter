@@ -88,25 +88,13 @@ func (c *VerbsCollector) collect() (VerbsMetrics, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(*verbsTimeout)*time.Second)
 	defer cancel()
 	out, err = verbsExec(ctx)
-	if ctx.Err() == context.DeadlineExceeded {
-		if c.useCache {
-			metric = verbsCache
-		}
-		return metric, ctx.Err()
-	}
 	if err != nil {
 		if c.useCache {
 			metric = verbsCache
 		}
 		return metric, err
 	}
-	metric, err = verbs_parse(out)
-	if err != nil {
-		if c.useCache {
-			metric = verbsCache
-		}
-		return metric, err
-	}
+	metric = verbs_parse(out)
 	if c.useCache {
 		verbsCache = metric
 	}
@@ -118,13 +106,15 @@ func verbs(ctx context.Context) (string, error) {
 	var out bytes.Buffer
 	cmd.Stdout = &out
 	err := cmd.Run()
-	if err != nil {
+	if ctx.Err() == context.DeadlineExceeded {
+		return "", ctx.Err()
+	} else if err != nil {
 		return "", err
 	}
 	return out.String(), nil
 }
 
-func verbs_parse(out string) (VerbsMetrics, error) {
+func verbs_parse(out string) VerbsMetrics {
 	metric := VerbsMetrics{}
 	lines := strings.Split(out, "\n")
 	for _, l := range lines {
@@ -137,5 +127,5 @@ func verbs_parse(out string) (VerbsMetrics, error) {
 			break
 		}
 	}
-	return metric, nil
+	return metric
 }

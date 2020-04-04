@@ -125,25 +125,13 @@ func (c *MmpmonCollector) collect() ([]PerfMetrics, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(*mmpmonTimeout)*time.Second)
 	defer cancel()
 	mmpmon_out, err = MmpmonExec(ctx)
-	if ctx.Err() == context.DeadlineExceeded {
-		if c.useCache {
-			perfs = mmpmonCache
-		}
-		return perfs, ctx.Err()
-	}
 	if err != nil {
 		if c.useCache {
 			perfs = mmpmonCache
 		}
 		return perfs, err
 	}
-	perfs, err = mmpmon_parse(mmpmon_out, c.logger)
-	if err != nil {
-		if c.useCache {
-			perfs = mmpmonCache
-		}
-		return perfs, err
-	}
+	perfs = mmpmon_parse(mmpmon_out, c.logger)
 	if c.useCache {
 		mmpmonCache = perfs
 	}
@@ -156,13 +144,15 @@ func mmpmon(ctx context.Context) (string, error) {
 	var out bytes.Buffer
 	cmd.Stdout = &out
 	err := cmd.Run()
-	if err != nil {
+	if ctx.Err() == context.DeadlineExceeded {
+		return "", ctx.Err()
+	} else if err != nil {
 		return "", err
 	}
 	return out.String(), nil
 }
 
-func mmpmon_parse(out string, logger log.Logger) ([]PerfMetrics, error) {
+func mmpmon_parse(out string, logger log.Logger) []PerfMetrics {
 	var metrics []PerfMetrics
 	lines := strings.Split(out, "\n")
 	for _, l := range lines {
@@ -198,5 +188,5 @@ func mmpmon_parse(out string, logger log.Logger) ([]PerfMetrics, error) {
 		}
 		metrics = append(metrics, perf)
 	}
-	return metrics, nil
+	return metrics
 }

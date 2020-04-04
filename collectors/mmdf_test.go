@@ -60,11 +60,40 @@ func TestMmdf(t *testing.T) {
 	}
 }
 
-func TestParseMmdf(t *testing.T) {
-	dfmetrics, err := parse_mmdf(mmdfStdout, log.NewNopLogger())
-	if err != nil {
-		t.Errorf("Unexpected error: %s", err.Error())
+func TestMmdfError(t *testing.T) {
+	execCommand = fakeExecCommand
+	mockedExitStatus = 1
+	mockedStdout = "foo"
+	defer func() { execCommand = exec.CommandContext }()
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	out, err := mmdf("test", ctx)
+	if err == nil {
+		t.Errorf("Expected error")
 	}
+	if out != "" {
+		t.Errorf("Unexpected out: %s", out)
+	}
+}
+
+func TestMmdfTimeout(t *testing.T) {
+	execCommand = fakeExecCommand
+	mockedExitStatus = 1
+	mockedStdout = "foo"
+	defer func() { execCommand = exec.CommandContext }()
+	ctx, cancel := context.WithTimeout(context.Background(), 0*time.Second)
+	defer cancel()
+	out, err := mmdf("test", ctx)
+	if err != context.DeadlineExceeded {
+		t.Errorf("Expected DeadlineExceeded")
+	}
+	if out != "" {
+		t.Errorf("Unexpected out: %s", out)
+	}
+}
+
+func TestParseMmdf(t *testing.T) {
+	dfmetrics := parse_mmdf(mmdfStdout, log.NewNopLogger())
 	if dfmetrics.InodesFree != 484301506 {
 		t.Errorf("Unexpected value for InodesFree, got %d", dfmetrics.InodesFree)
 	}

@@ -99,25 +99,13 @@ func (c *MmhealthCollector) collect() ([]HealthMetric, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(*mmhealthTimeout)*time.Second)
 	defer cancel()
 	mmhealth_out, err = mmhealthExec(ctx)
-	if ctx.Err() == context.DeadlineExceeded {
-		if c.useCache {
-			metrics = mmhealthCache
-		}
-		return metrics, ctx.Err()
-	}
 	if err != nil {
 		if c.useCache {
 			metrics = mmhealthCache
 		}
 		return metrics, err
 	}
-	metrics, err = mmhealth_parse(mmhealth_out, c.logger)
-	if err != nil {
-		if c.useCache {
-			metrics = mmhealthCache
-		}
-		return metrics, err
-	}
+	metrics = mmhealth_parse(mmhealth_out, c.logger)
 	if c.useCache {
 		mmhealthCache = metrics
 	}
@@ -129,13 +117,15 @@ func mmhealth(ctx context.Context) (string, error) {
 	var out bytes.Buffer
 	cmd.Stdout = &out
 	err := cmd.Run()
-	if err != nil {
+	if ctx.Err() == context.DeadlineExceeded {
+		return "", ctx.Err()
+	} else if err != nil {
 		return "", err
 	}
 	return out.String(), nil
 }
 
-func mmhealth_parse(out string, logger log.Logger) ([]HealthMetric, error) {
+func mmhealth_parse(out string, logger log.Logger) []HealthMetric {
 	var metrics []HealthMetric
 	lines := strings.Split(out, "\n")
 	var headers []string
@@ -176,7 +166,7 @@ func mmhealth_parse(out string, logger log.Logger) ([]HealthMetric, error) {
 		}
 		metrics = append(metrics, metric)
 	}
-	return metrics, nil
+	return metrics
 }
 
 func parseMmhealthStatus(status string) float64 {

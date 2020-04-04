@@ -112,25 +112,13 @@ func (c *MmcesCollector) collect(nodename string) ([]CESMetric, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(*mmcesTimeout)*time.Second)
 	defer cancel()
 	mmces_state_out, err = mmcesExec(nodename, ctx)
-	if ctx.Err() == context.DeadlineExceeded {
-		if c.useCache {
-			metrics = mmcesCache
-		}
-		return metrics, ctx.Err()
-	}
 	if err != nil {
 		if c.useCache {
 			metrics = mmcesCache
 		}
 		return metrics, err
 	}
-	metrics, err = mmces_state_show_parse(mmces_state_out)
-	if err != nil {
-		if c.useCache {
-			metrics = mmcesCache
-		}
-		return metrics, err
-	}
+	metrics = mmces_state_show_parse(mmces_state_out)
 	if c.useCache {
 		mmcesCache = metrics
 	}
@@ -142,13 +130,15 @@ func mmces(nodename string, ctx context.Context) (string, error) {
 	var out bytes.Buffer
 	cmd.Stdout = &out
 	err := cmd.Run()
-	if err != nil {
+	if ctx.Err() == context.DeadlineExceeded {
+		return "", ctx.Err()
+	} else if err != nil {
 		return "", err
 	}
 	return out.String(), nil
 }
 
-func mmces_state_show_parse(out string) ([]CESMetric, error) {
+func mmces_state_show_parse(out string) []CESMetric {
 	var metrics []CESMetric
 	lines := strings.Split(out, "\n")
 	var headers []string
@@ -176,7 +166,7 @@ func mmces_state_show_parse(out string) ([]CESMetric, error) {
 		metric.State = values[i]
 		metrics = append(metrics, metric)
 	}
-	return metrics, nil
+	return metrics
 }
 
 func parseMmcesState(status string) float64 {

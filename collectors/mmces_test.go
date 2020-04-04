@@ -49,11 +49,40 @@ func TestMmces(t *testing.T) {
 	}
 }
 
-func TestParseMmcesStateShow(t *testing.T) {
-	metrics, err := mmces_state_show_parse(mmcesStdout)
-	if err != nil {
-		t.Errorf("Unexpected error: %s", err.Error())
+func TestMmcesError(t *testing.T) {
+	execCommand = fakeExecCommand
+	mockedExitStatus = 1
+	mockedStdout = "foo"
+	defer func() { execCommand = exec.CommandContext }()
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	out, err := mmces("ib-protocol01.domain", ctx)
+	if err == nil {
+		t.Errorf("Expected error")
 	}
+	if out != "" {
+		t.Errorf("Unexpected out: %s", out)
+	}
+}
+
+func TestMmcesTimeout(t *testing.T) {
+	execCommand = fakeExecCommand
+	mockedExitStatus = 1
+	mockedStdout = "foo"
+	defer func() { execCommand = exec.CommandContext }()
+	ctx, cancel := context.WithTimeout(context.Background(), 0*time.Second)
+	defer cancel()
+	out, err := mmces("ib-protocol01.domain", ctx)
+	if err != context.DeadlineExceeded {
+		t.Errorf("Expected DeadlineExceeded")
+	}
+	if out != "" {
+		t.Errorf("Unexpected out: %s", out)
+	}
+}
+
+func TestParseMmcesStateShow(t *testing.T) {
+	metrics := mmces_state_show_parse(mmcesStdout)
 	if len(metrics) != 8 {
 		t.Errorf("Expected 8 metrics returned, got %d", len(metrics))
 		return

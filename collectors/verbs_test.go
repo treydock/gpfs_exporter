@@ -48,26 +48,50 @@ func TestVerbs(t *testing.T) {
 	}
 }
 
+func TestVerbsError(t *testing.T) {
+	execCommand = fakeExecCommand
+	mockedExitStatus = 1
+	mockedStdout = "foo"
+	defer func() { execCommand = exec.CommandContext }()
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	out, err := verbs(ctx)
+	if err == nil {
+		t.Errorf("Expected error")
+	}
+	if out != "" {
+		t.Errorf("Unexpected out: %s", out)
+	}
+}
+
+func TestVerbsTimeout(t *testing.T) {
+	execCommand = fakeExecCommand
+	mockedExitStatus = 1
+	mockedStdout = "foo"
+	defer func() { execCommand = exec.CommandContext }()
+	ctx, cancel := context.WithTimeout(context.Background(), 0*time.Second)
+	defer cancel()
+	out, err := verbs(ctx)
+	if err != context.DeadlineExceeded {
+		t.Errorf("Expected DeadlineExceeded")
+	}
+	if out != "" {
+		t.Errorf("Unexpected out: %s", out)
+	}
+}
+
 func TestParseVerbsDisabled(t *testing.T) {
 	stdout := `
 VERBS RDMA status: disabled
 `
-	metric, err := verbs_parse(stdout)
-	if err != nil {
-		t.Errorf("Unexpected error: %s", err.Error())
-		return
-	}
+	metric := verbs_parse(stdout)
 	if metric.Status != "disabled" {
 		t.Errorf("Unexpected value for status, expected disabled, got %s", metric.Status)
 	}
 }
 
 func TestParseVerbsStarted(t *testing.T) {
-	metric, err := verbs_parse(verbsStdout)
-	if err != nil {
-		t.Errorf("Unexpected error: %s", err.Error())
-		return
-	}
+	metric := verbs_parse(verbsStdout)
 	if metric.Status != "started" {
 		t.Errorf("Unexpected value for status, expected started, got %s", metric.Status)
 	}

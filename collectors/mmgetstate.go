@@ -96,25 +96,13 @@ func (c *MmgetstateCollector) collect() (MmgetstateMetrics, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(*mmgetstateTimeout)*time.Second)
 	defer cancel()
 	out, err = MmgetstateExec(ctx)
-	if ctx.Err() == context.DeadlineExceeded {
-		if c.useCache {
-			metric = mmgetstateCache
-		}
-		return metric, ctx.Err()
-	}
 	if err != nil {
 		if c.useCache {
 			metric = mmgetstateCache
 		}
 		return metric, err
 	}
-	metric, err = mmgetstate_parse(out)
-	if err != nil {
-		if c.useCache {
-			metric = mmgetstateCache
-		}
-		return metric, err
-	}
+	metric = mmgetstate_parse(out)
 	if c.useCache {
 		mmgetstateCache = metric
 	}
@@ -126,13 +114,15 @@ func mmgetstate(ctx context.Context) (string, error) {
 	var out bytes.Buffer
 	cmd.Stdout = &out
 	err := cmd.Run()
-	if err != nil {
+	if ctx.Err() == context.DeadlineExceeded {
+		return "", ctx.Err()
+	} else if err != nil {
 		return "", err
 	}
 	return out.String(), nil
 }
 
-func mmgetstate_parse(out string) (MmgetstateMetrics, error) {
+func mmgetstate_parse(out string) MmgetstateMetrics {
 	metric := MmgetstateMetrics{}
 	lines := strings.Split(out, "\n")
 	var headers []string
@@ -158,5 +148,5 @@ func mmgetstate_parse(out string) (MmgetstateMetrics, error) {
 			}
 		}
 	}
-	return metric, nil
+	return metric
 }
