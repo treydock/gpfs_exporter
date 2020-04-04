@@ -96,12 +96,6 @@ func (c *MmgetstateCollector) collect() (MmgetstateMetrics, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(*mmgetstateTimeout)*time.Second)
 	defer cancel()
 	out, err = MmgetstateExec(ctx)
-	if ctx.Err() == context.DeadlineExceeded {
-		if c.useCache {
-			metric = mmgetstateCache
-		}
-		return metric, ctx.Err()
-	}
 	if err != nil {
 		if c.useCache {
 			metric = mmgetstateCache
@@ -126,7 +120,9 @@ func mmgetstate(ctx context.Context) (string, error) {
 	var out bytes.Buffer
 	cmd.Stdout = &out
 	err := cmd.Run()
-	if err != nil {
+	if ctx.Err() == context.DeadlineExceeded {
+		return "", ctx.Err()
+	} else if err != nil {
 		return "", err
 	}
 	return out.String(), nil

@@ -125,12 +125,6 @@ func (c *MmpmonCollector) collect() ([]PerfMetrics, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(*mmpmonTimeout)*time.Second)
 	defer cancel()
 	mmpmon_out, err = MmpmonExec(ctx)
-	if ctx.Err() == context.DeadlineExceeded {
-		if c.useCache {
-			perfs = mmpmonCache
-		}
-		return perfs, ctx.Err()
-	}
 	if err != nil {
 		if c.useCache {
 			perfs = mmpmonCache
@@ -156,7 +150,9 @@ func mmpmon(ctx context.Context) (string, error) {
 	var out bytes.Buffer
 	cmd.Stdout = &out
 	err := cmd.Run()
-	if err != nil {
+	if ctx.Err() == context.DeadlineExceeded {
+		return "", ctx.Err()
+	} else if err != nil {
 		return "", err
 	}
 	return out.String(), nil

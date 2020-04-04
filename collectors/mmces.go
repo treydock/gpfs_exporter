@@ -112,12 +112,6 @@ func (c *MmcesCollector) collect(nodename string) ([]CESMetric, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(*mmcesTimeout)*time.Second)
 	defer cancel()
 	mmces_state_out, err = mmcesExec(nodename, ctx)
-	if ctx.Err() == context.DeadlineExceeded {
-		if c.useCache {
-			metrics = mmcesCache
-		}
-		return metrics, ctx.Err()
-	}
 	if err != nil {
 		if c.useCache {
 			metrics = mmcesCache
@@ -142,7 +136,9 @@ func mmces(nodename string, ctx context.Context) (string, error) {
 	var out bytes.Buffer
 	cmd.Stdout = &out
 	err := cmd.Run()
-	if err != nil {
+	if ctx.Err() == context.DeadlineExceeded {
+		return "", ctx.Err()
+	} else if err != nil {
 		return "", err
 	}
 	return out.String(), nil

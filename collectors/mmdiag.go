@@ -97,12 +97,6 @@ func (c *MmdiagCollector) collect() (DiagMetric, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(*mmdiagTimeout)*time.Second)
 	defer cancel()
 	out, err = mmdiagExec("--waiters", ctx)
-	if ctx.Err() == context.DeadlineExceeded {
-		if c.useCache {
-			diagMetric = mmdiagCache
-		}
-		return diagMetric, ctx.Err()
-	}
 	if err != nil {
 		if c.useCache {
 			diagMetric = mmdiagCache
@@ -127,7 +121,9 @@ func mmdiag(arg string, ctx context.Context) (string, error) {
 	var out bytes.Buffer
 	cmd.Stdout = &out
 	err := cmd.Run()
-	if err != nil {
+	if ctx.Err() == context.DeadlineExceeded {
+		return "", ctx.Err()
+	} else if err != nil {
 		return "", err
 	}
 	return out.String(), nil

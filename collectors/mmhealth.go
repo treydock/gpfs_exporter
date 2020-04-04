@@ -99,12 +99,6 @@ func (c *MmhealthCollector) collect() ([]HealthMetric, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(*mmhealthTimeout)*time.Second)
 	defer cancel()
 	mmhealth_out, err = mmhealthExec(ctx)
-	if ctx.Err() == context.DeadlineExceeded {
-		if c.useCache {
-			metrics = mmhealthCache
-		}
-		return metrics, ctx.Err()
-	}
 	if err != nil {
 		if c.useCache {
 			metrics = mmhealthCache
@@ -129,7 +123,9 @@ func mmhealth(ctx context.Context) (string, error) {
 	var out bytes.Buffer
 	cmd.Stdout = &out
 	err := cmd.Run()
-	if err != nil {
+	if ctx.Err() == context.DeadlineExceeded {
+		return "", ctx.Err()
+	} else if err != nil {
 		return "", err
 	}
 	return out.String(), nil

@@ -193,10 +193,6 @@ func (c *MmdfCollector) mmdfCollect(fs string) (DFMetric, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(*mmdfTimeout)*time.Second)
 	defer cancel()
 	out, err = MmdfExec(fs, ctx)
-	if ctx.Err() == context.DeadlineExceeded {
-		dfMetric = c.mmdfReadCache(fs)
-		return dfMetric, ctx.Err()
-	}
 	if err != nil {
 		dfMetric = c.mmdfReadCache(fs)
 		return dfMetric, err
@@ -231,7 +227,9 @@ func mmdf(fs string, ctx context.Context) (string, error) {
 	var out bytes.Buffer
 	cmd.Stdout = &out
 	err := cmd.Run()
-	if err != nil {
+	if ctx.Err() == context.DeadlineExceeded {
+		return "", ctx.Err()
+	} else if err != nil {
 		return "", err
 	}
 	return out.String(), nil
