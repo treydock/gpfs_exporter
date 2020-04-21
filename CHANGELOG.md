@@ -1,3 +1,7 @@
+## 0.11.1 / 2020-04-21
+
+* Fix mount collector to avoid false positives
+
 ## 0.11.0 / 2020-04-04
 
 * Improve timeout/error handling around mmlsfs and add tests
