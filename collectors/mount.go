@@ -107,18 +107,19 @@ func (c *MountCollector) collect(ch chan<- prometheus.Metric) error {
 		return err
 	}
 
+	var gpfsFoundMounts []string
 	for _, m := range gpfsMountsFstab {
-		if !SliceContains(gpfsMounts, m) {
-			gpfsMounts = append(gpfsMounts, m)
+		if !SliceContains(gpfsFoundMounts, m) {
+			gpfsFoundMounts = append(gpfsFoundMounts, m)
 		}
 	}
-	var check_mounts []string
+	var checkMounts []string
 	if *configMounts == "" {
-		check_mounts = gpfsMounts
+		checkMounts = gpfsFoundMounts
 	} else {
-		check_mounts = strings.Split(*configMounts, ",")
+		checkMounts = strings.Split(*configMounts, ",")
 	}
-	for _, mount := range check_mounts {
+	for _, mount := range checkMounts {
 		if SliceContains(gpfsMounts, mount) {
 			ch <- prometheus.MustNewConstMetric(c.fs_mount_status, prometheus.GaugeValue, 1, mount)
 		} else {
