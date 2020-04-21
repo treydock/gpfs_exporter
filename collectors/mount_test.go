@@ -31,7 +31,7 @@ func TestGetGPFSMounts(t *testing.T) {
 	}
 	defer os.RemoveAll(tmpDir)
 	procMounts = tmpDir + "/mounts"
-	mockedProcMounts := `pitzer_root.ten.osc.edu:/pitzer_root_rhel76_1 / nfs rw,relatime,vers=3,rsize=65536,wsize=65536,namlen=255,acregmin=240,acregmax=240,acdirmin=240,acdirmax=240,hard,nolock,proto=tcp,timeo=600,retrans=2,sec=sys,mountaddr=10.27.2.2,mountvers=3,mountport=635,mountproto=tcp,fsc,local_lock=all,addr=10.27.2.2 0 0
+	mockedProcMounts := `root.domain:/root_rhel76_1 / nfs rw,relatime,vers=3,rsize=65536,wsize=65536,namlen=255,acregmin=240,acregmax=240,acdirmin=240,acdirmax=240,hard,nolock,proto=tcp,timeo=600,retrans=2,sec=sys,mountaddr=10.27.2.2,mountvers=3,mountport=635,mountproto=tcp,fsc,local_lock=all,addr=10.27.2.2 0 0
 /dev/mapper/vg0-lv_tmp /tmp xfs rw,relatime,attr2,inode64,noquota 0 0
 scratch /fs/scratch gpfs rw,relatime 0 0
 project /fs/project gpfs rw,relatime 0 0
@@ -100,7 +100,7 @@ func TestMountCollector(t *testing.T) {
 	defer os.RemoveAll(tmpDir)
 	procMounts = tmpDir + "/mounts"
 	fstabPath = tmpDir + "/fstab"
-	mockedProcMounts := `pitzer_root.ten.osc.edu:/pitzer_root_rhel76_1 / nfs rw,relatime,vers=3,rsize=65536,wsize=65536,namlen=255,acregmin=240,acregmax=240,acdirmin=240,acdirmax=240,hard,nolock,proto=tcp,timeo=600,retrans=2,sec=sys,mountaddr=10.27.2.2,mountvers=3,mountport=635,mountproto=tcp,fsc,local_lock=all,addr=10.27.2.2 0 0
+	mockedProcMounts := `root.domain:/root_rhel76_1 / nfs rw,relatime,vers=3,rsize=65536,wsize=65536,namlen=255,acregmin=240,acregmax=240,acdirmin=240,acdirmax=240,hard,nolock,proto=tcp,timeo=600,retrans=2,sec=sys,mountaddr=10.27.2.2,mountvers=3,mountport=635,mountproto=tcp,fsc,local_lock=all,addr=10.27.2.2 0 0
 /dev/mapper/vg0-lv_tmp /tmp xfs rw,relatime,attr2,inode64,noquota 0 0
 scratch /fs/scratch gpfs rw,relatime 0 0
 project /fs/project gpfs rw,relatime 0 0
@@ -109,6 +109,7 @@ project /fs/project gpfs rw,relatime 0 0
 	mockedFstab := `
 project              /fs/project          gpfs       rw,mtime,atime,quota=userquota;groupquota;filesetquota;perfileset,dev=project,noauto 0 0
 scratch              /fs/scratch          gpfs       rw,mtime,atime,quota=userquota;groupquota;filesetquota;perfileset,dev=scratch,noauto 0 0
+ess                  /fs/ess              gpfs       rw,mtime,relatime,dev=ess.domain:ess,ldev=ess,noauto 0 0
 	`
 	if err := ioutil.WriteFile(procMounts, []byte(mockedProcMounts), 0644); err != nil {
 		t.Fatal(err)
