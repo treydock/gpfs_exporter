@@ -147,7 +147,9 @@ func TestMMcesCollector(t *testing.T) {
 	`
 	collector := NewMmcesCollector(log.NewNopLogger())
 	gatherers := setupGatherer(collector)
-	if val := testutil.CollectAndCount(collector); val != 11 {
+	if val, err := testutil.GatherAndCount(gatherers); err != nil {
+		t.Errorf("Unexpected error: %v", err)
+	} else if val != 11 {
 		t.Errorf("Unexpected collection count %d, expected 11", val)
 	}
 	if err := testutil.GatherAndCompare(gatherers, strings.NewReader(expected), "gpfs_ces_state"); err != nil {
@@ -176,7 +178,9 @@ func TestMMcesCollectorHostname(t *testing.T) {
 	`
 	collector := NewMmcesCollector(log.NewNopLogger())
 	gatherers := setupGatherer(collector)
-	if val := testutil.CollectAndCount(collector); val != 11 {
+	if val, err := testutil.GatherAndCount(gatherers); err != nil {
+		t.Errorf("Unexpected error: %v", err)
+	} else if val != 11 {
 		t.Errorf("Unexpected collection count %d, expected 11", val)
 	}
 	if err := testutil.GatherAndCompare(gatherers, strings.NewReader(expected), "gpfs_ces_state"); err != nil {
@@ -198,7 +202,9 @@ func TestMMcesCollectorError(t *testing.T) {
 	`
 	collector := NewMmcesCollector(log.NewNopLogger())
 	gatherers := setupGatherer(collector)
-	if val := testutil.CollectAndCount(collector); val != 3 {
+	if val, err := testutil.GatherAndCount(gatherers); err != nil {
+		t.Errorf("Unexpected error: %v", err)
+	} else if val != 3 {
 		t.Errorf("Unexpected collection count %d, expected 3", val)
 	}
 	if err := testutil.GatherAndCompare(gatherers, strings.NewReader(expected), "gpfs_exporter_collect_error"); err != nil {
@@ -220,7 +226,9 @@ func TestMMcesCollectorTimeout(t *testing.T) {
 	`
 	collector := NewMmcesCollector(log.NewNopLogger())
 	gatherers := setupGatherer(collector)
-	if val := testutil.CollectAndCount(collector); val != 3 {
+	if val, err := testutil.GatherAndCount(gatherers); err != nil {
+		t.Errorf("Unexpected error: %v", err)
+	} else if val != 3 {
 		t.Errorf("Unexpected collection count %d, expected 3", val)
 	}
 	if err := testutil.GatherAndCompare(gatherers, strings.NewReader(expected), "gpfs_exporter_collect_timeout"); err != nil {

@@ -111,7 +111,9 @@ func TestVerbsCollector(t *testing.T) {
 	`
 	collector := NewVerbsCollector(log.NewNopLogger())
 	gatherers := setupGatherer(collector)
-	if val := testutil.CollectAndCount(collector); val != 4 {
+	if val, err := testutil.GatherAndCount(gatherers); err != nil {
+		t.Errorf("Unexpected error: %v", err)
+	} else if val != 4 {
 		t.Errorf("Unexpected collection count %d, expected 4", val)
 	}
 	if err := testutil.GatherAndCompare(gatherers, strings.NewReader(expected), "gpfs_verbs_status"); err != nil {
@@ -133,7 +135,9 @@ func TestVerbsCollectorError(t *testing.T) {
 	`
 	collector := NewVerbsCollector(log.NewNopLogger())
 	gatherers := setupGatherer(collector)
-	if val := testutil.CollectAndCount(collector); val != 3 {
+	if val, err := testutil.GatherAndCount(gatherers); err != nil {
+		t.Errorf("Unexpected error: %v", err)
+	} else if val != 3 {
 		t.Errorf("Unexpected collection count %d, expected 3", val)
 	}
 	if err := testutil.GatherAndCompare(gatherers, strings.NewReader(expected), "gpfs_exporter_collect_error"); err != nil {
@@ -155,7 +159,9 @@ func TestVerbsCollectorTimeout(t *testing.T) {
 	`
 	collector := NewVerbsCollector(log.NewNopLogger())
 	gatherers := setupGatherer(collector)
-	if val := testutil.CollectAndCount(collector); val != 3 {
+	if val, err := testutil.GatherAndCount(gatherers); err != nil {
+		t.Errorf("Unexpected error: %v", err)
+	} else if val != 3 {
 		t.Errorf("Unexpected collection count %d, expected 3", val)
 	}
 	if err := testutil.GatherAndCompare(gatherers, strings.NewReader(expected), "gpfs_exporter_collect_timeout"); err != nil {

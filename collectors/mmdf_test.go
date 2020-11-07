@@ -154,7 +154,9 @@ func TestMmdfCollector(t *testing.T) {
 	`
 	collector := NewMmdfCollector(log.NewNopLogger())
 	gatherers := setupGatherer(collector)
-	if val := testutil.CollectAndCount(collector); val != 14 {
+	if val, err := testutil.GatherAndCount(gatherers); err != nil {
+		t.Errorf("Unexpected error: %v", err)
+	} else if val != 14 {
 		t.Errorf("Unexpected collection count %d, expected 14", val)
 	}
 	if err := testutil.GatherAndCompare(gatherers, strings.NewReader(expected),
@@ -215,7 +217,9 @@ mmlsfs::0:1:::project:defaultMountPoint:%2Ffs%2Fproject::
 	`
 	collector := NewMmdfCollector(log.NewNopLogger())
 	gatherers := setupGatherer(collector)
-	if val := testutil.CollectAndCount(collector); val != 16 {
+	if val, err := testutil.GatherAndCount(gatherers); err != nil {
+		t.Errorf("Unexpected error: %v", err)
+	} else if val != 16 {
 		t.Errorf("Unexpected collection count %d, expected 16", val)
 	}
 	if err := testutil.GatherAndCompare(gatherers, strings.NewReader(expected),
@@ -242,7 +246,9 @@ func TestMmdfCollectorError(t *testing.T) {
 	`
 	collector := NewMmdfCollector(log.NewNopLogger())
 	gatherers := setupGatherer(collector)
-	if val := testutil.CollectAndCount(collector); val != 3 {
+	if val, err := testutil.GatherAndCount(gatherers); err != nil {
+		t.Errorf("Unexpected error: %v", err)
+	} else if val != 3 {
 		t.Errorf("Unexpected collection count %d, expected 3", val)
 	}
 	if err := testutil.GatherAndCompare(gatherers, strings.NewReader(expected), "gpfs_exporter_collect_error"); err != nil {
@@ -266,7 +272,9 @@ func TestMmdfCollectorTimeout(t *testing.T) {
 	`
 	collector := NewMmdfCollector(log.NewNopLogger())
 	gatherers := setupGatherer(collector)
-	if val := testutil.CollectAndCount(collector); val != 3 {
+	if val, err := testutil.GatherAndCount(gatherers); err != nil {
+		t.Errorf("Unexpected error: %v", err)
+	} else if val != 3 {
 		t.Errorf("Unexpected collection count %d, expected 3", val)
 	}
 	if err := testutil.GatherAndCompare(gatherers, strings.NewReader(expected), "gpfs_exporter_collect_timeout"); err != nil {
@@ -290,7 +298,9 @@ func TestMmdfCollectorMmlsfsError(t *testing.T) {
 	`
 	collector := NewMmdfCollector(log.NewNopLogger())
 	gatherers := setupGatherer(collector)
-	if val := testutil.CollectAndCount(collector); val != 2 {
+	if val, err := testutil.GatherAndCount(gatherers); err != nil {
+		t.Errorf("Unexpected error: %v", err)
+	} else if val != 2 {
 		t.Errorf("Unexpected collection count %d, expected 2", val)
 	}
 	if err := testutil.GatherAndCompare(gatherers, strings.NewReader(expected), "gpfs_exporter_collect_error"); err != nil {
@@ -314,7 +324,9 @@ func TestMmdfCollectorMmlsfsTimeout(t *testing.T) {
 	`
 	collector := NewMmdfCollector(log.NewNopLogger())
 	gatherers := setupGatherer(collector)
-	if val := testutil.CollectAndCount(collector); val != 2 {
+	if val, err := testutil.GatherAndCount(gatherers); err != nil {
+		t.Errorf("Unexpected error: %v", err)
+	} else if val != 2 {
 		t.Errorf("Unexpected collection count %d, expected 2", val)
 	}
 	if err := testutil.GatherAndCompare(gatherers, strings.NewReader(expected), "gpfs_exporter_collect_timeout"); err != nil {

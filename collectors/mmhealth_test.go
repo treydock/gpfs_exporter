@@ -145,7 +145,9 @@ func TestMmhealthCollector(t *testing.T) {
 	`
 	collector := NewMmhealthCollector(log.NewNopLogger())
 	gatherers := setupGatherer(collector)
-	if val := testutil.CollectAndCount(collector); val != 12 {
+	if val, err := testutil.GatherAndCount(gatherers); err != nil {
+		t.Errorf("Unexpected error: %v", err)
+	} else if val != 12 {
 		t.Errorf("Unexpected collection count %d, expected 12", val)
 	}
 	if err := testutil.GatherAndCompare(gatherers, strings.NewReader(expected), "gpfs_health_status"); err != nil {
@@ -167,7 +169,9 @@ func TestMMhealthCollectorError(t *testing.T) {
 	`
 	collector := NewMmhealthCollector(log.NewNopLogger())
 	gatherers := setupGatherer(collector)
-	if val := testutil.CollectAndCount(collector); val != 3 {
+	if val, err := testutil.GatherAndCount(gatherers); err != nil {
+		t.Errorf("Unexpected error: %v", err)
+	} else if val != 3 {
 		t.Errorf("Unexpected collection count %d, expected 3", val)
 	}
 	if err := testutil.GatherAndCompare(gatherers, strings.NewReader(expected), "gpfs_exporter_collect_error"); err != nil {
@@ -189,7 +193,9 @@ func TestMMhealthCollectorTimeout(t *testing.T) {
 	`
 	collector := NewMmhealthCollector(log.NewNopLogger())
 	gatherers := setupGatherer(collector)
-	if val := testutil.CollectAndCount(collector); val != 3 {
+	if val, err := testutil.GatherAndCount(gatherers); err != nil {
+		t.Errorf("Unexpected error: %v", err)
+	} else if val != 3 {
 		t.Errorf("Unexpected collection count %d, expected 3", val)
 	}
 	if err := testutil.GatherAndCompare(gatherers, strings.NewReader(expected), "gpfs_exporter_collect_timeout"); err != nil {
