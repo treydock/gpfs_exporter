@@ -33,12 +33,11 @@ const (
 )
 
 var (
-	exporterUseCache = kingpin.Flag("exporter.use-cache", "Use cached metrics if commands timeout or produce errors").Default("false").Bool()
-	collectorState   = make(map[string]*bool)
-	factories        = make(map[string]func(logger log.Logger, useCache bool) Collector)
-	execCommand      = exec.CommandContext
-	MmlsfsExec       = mmlsfs
-	collectDuration  = prometheus.NewDesc(
+	collectorState  = make(map[string]*bool)
+	factories       = make(map[string]func(logger log.Logger) Collector)
+	execCommand     = exec.CommandContext
+	MmlsfsExec      = mmlsfs
+	collectDuration = prometheus.NewDesc(
 		prometheus.BuildFQName(namespace, "exporter", "collector_duration_seconds"),
 		"Collector time duration.",
 		[]string{"collector"}, nil)
@@ -72,7 +71,7 @@ type Collector interface {
 	Collect(ch chan<- prometheus.Metric)
 }
 
-func registerCollector(collector string, isDefaultEnabled bool, factory func(logger log.Logger, useCache bool) Collector) {
+func registerCollector(collector string, isDefaultEnabled bool, factory func(logger log.Logger) Collector) {
 	var helpDefaultState string
 	if isDefaultEnabled {
 		helpDefaultState = "enabled"
@@ -92,7 +91,7 @@ func NewGPFSCollector(logger log.Logger) *GPFSCollector {
 	for key, enabled := range collectorState {
 		var collector Collector
 		if *enabled {
-			collector = factories[key](log.With(logger, "collector", key), *exporterUseCache)
+			collector = factories[key](log.With(logger, "collector", key))
 			collectors[key] = collector
 		}
 	}

@@ -135,7 +135,7 @@ func TestMmpmonCollector(t *testing.T) {
 		gpfs_perf_write_bytes{fs="project",nodename="ib-pitzer-rw02.ten"} 0
 		gpfs_perf_write_bytes{fs="scratch",nodename="ib-pitzer-rw02.ten"} 74839282351
 	`
-	collector := NewMmpmonCollector(log.NewNopLogger(), false)
+	collector := NewMmpmonCollector(log.NewNopLogger())
 	gatherers := setupGatherer(collector)
 	if val := testutil.CollectAndCount(collector); val != 19 {
 		t.Errorf("Unexpected collection count %d, expected 19", val)
@@ -157,7 +157,7 @@ func TestMMpmonCollectorError(t *testing.T) {
 		# TYPE gpfs_exporter_collect_error gauge
 		gpfs_exporter_collect_error{collector="mmpmon"} 1
 	`
-	collector := NewMmpmonCollector(log.NewNopLogger(), false)
+	collector := NewMmpmonCollector(log.NewNopLogger())
 	gatherers := setupGatherer(collector)
 	if val := testutil.CollectAndCount(collector); val != 3 {
 		t.Errorf("Unexpected collection count %d, expected 3", val)
@@ -179,97 +179,12 @@ func TestMMpmonCollectorTimeout(t *testing.T) {
 		# TYPE gpfs_exporter_collect_timeout gauge
 		gpfs_exporter_collect_timeout{collector="mmpmon"} 1
 	`
-	collector := NewMmpmonCollector(log.NewNopLogger(), false)
+	collector := NewMmpmonCollector(log.NewNopLogger())
 	gatherers := setupGatherer(collector)
 	if val := testutil.CollectAndCount(collector); val != 3 {
 		t.Errorf("Unexpected collection count %d, expected 3", val)
 	}
 	if err := testutil.GatherAndCompare(gatherers, strings.NewReader(expected), "gpfs_exporter_collect_timeout"); err != nil {
 		t.Errorf("unexpected collecting result:\n%s", err)
-	}
-}
-
-func TestMMpmonCollectorNoCache(t *testing.T) {
-	if _, err := kingpin.CommandLine.Parse([]string{}); err != nil {
-		t.Fatal(err)
-	}
-	expected := `
-		# HELP gpfs_perf_operations GPFS operationgs reported by mmpmon
-		# TYPE gpfs_perf_operations counter
-		gpfs_perf_operations{fs="project",nodename="ib-pitzer-rw02.ten",operation="closes"} 513
-		gpfs_perf_operations{fs="project",nodename="ib-pitzer-rw02.ten",operation="inode_updates"} 169
-		gpfs_perf_operations{fs="project",nodename="ib-pitzer-rw02.ten",operation="opens"} 513
-		gpfs_perf_operations{fs="project",nodename="ib-pitzer-rw02.ten",operation="read_dir"} 0
-		gpfs_perf_operations{fs="project",nodename="ib-pitzer-rw02.ten",operation="reads"} 0
-		gpfs_perf_operations{fs="project",nodename="ib-pitzer-rw02.ten",operation="writes"} 0
-		gpfs_perf_operations{fs="scratch",nodename="ib-pitzer-rw02.ten",operation="closes"} 2201576
-		gpfs_perf_operations{fs="scratch",nodename="ib-pitzer-rw02.ten",operation="inode_updates"} 544768
-		gpfs_perf_operations{fs="scratch",nodename="ib-pitzer-rw02.ten",operation="opens"} 2377656
-		gpfs_perf_operations{fs="scratch",nodename="ib-pitzer-rw02.ten",operation="read_dir"} 40971
-		gpfs_perf_operations{fs="scratch",nodename="ib-pitzer-rw02.ten",operation="reads"} 59420404
-		gpfs_perf_operations{fs="scratch",nodename="ib-pitzer-rw02.ten",operation="writes"} 18874626
-		# HELP gpfs_perf_read_bytes GPFS read bytes
-		# TYPE gpfs_perf_read_bytes counter
-		gpfs_perf_read_bytes{fs="project",nodename="ib-pitzer-rw02.ten"} 0
-		gpfs_perf_read_bytes{fs="scratch",nodename="ib-pitzer-rw02.ten"} 2.05607400434e+11
-		# HELP gpfs_perf_write_bytes GPFS write bytes
-		# TYPE gpfs_perf_write_bytes counter
-		gpfs_perf_write_bytes{fs="project",nodename="ib-pitzer-rw02.ten"} 0
-		gpfs_perf_write_bytes{fs="scratch",nodename="ib-pitzer-rw02.ten"} 74839282351
-	`
-	// build cache
-	MmpmonExec = func(ctx context.Context) (string, error) {
-		return mmpmonStdout, nil
-	}
-	collector := NewMmpmonCollector(log.NewNopLogger(), true)
-	gatherers := setupGatherer(collector)
-	if val := testutil.CollectAndCount(collector); val != 19 {
-		t.Errorf("Unexpected collection count %d, expected 19", val)
-	}
-
-	MmpmonExec = func(ctx context.Context) (string, error) {
-		return "", fmt.Errorf("Error")
-	}
-	errorMetrics := `
-		# HELP gpfs_exporter_collect_error Indicates if error has occurred during collection
-		# TYPE gpfs_exporter_collect_error gauge
-		gpfs_exporter_collect_error{collector="mmpmon"} 1
-	`
-	if val := testutil.CollectAndCount(collector); val != 3 {
-		t.Errorf("Unexpected collection count %d, expected 3", val)
-	}
-	if err := testutil.GatherAndCompare(gatherers, strings.NewReader(errorMetrics),
-		"gpfs_perf_read_bytes", "gpfs_perf_write_bytes", "gpfs_perf_operations", "gpfs_exporter_collect_error"); err != nil {
-		t.Errorf("unexpected collecting result:\n%s", err)
-	}
-
-	timeoutMetrics := `
-		# HELP gpfs_exporter_collect_timeout Indicates the collector timed out
-		# TYPE gpfs_exporter_collect_timeout gauge
-		gpfs_exporter_collect_timeout{collector="mmpmon"} 1
-	`
-	MmpmonExec = func(ctx context.Context) (string, error) {
-		return "", context.DeadlineExceeded
-	}
-	if val := testutil.CollectAndCount(collector); val != 3 {
-		t.Errorf("Unexpected collection count %d, expected 3", val)
-	}
-	if err := testutil.GatherAndCompare(gatherers, strings.NewReader(timeoutMetrics),
-		"gpfs_perf_read_bytes", "gpfs_perf_write_bytes", "gpfs_perf_operations", "gpfs_exporter_collect_timeout"); err != nil {
-		t.Errorf("unexpected collecting result:\n%s", err)
-	}
-
-	mmpmonCache = []PerfMetrics{}
-	MmpmonExec = func(ctx context.Context) (string, error) {
-		return mmpmonStdout, nil
-	}
-	if val := testutil.CollectAndCount(collector); val != 19 {
-		t.Errorf("Unexpected collection count %d, expected 19", val)
-	}
-	if err := testutil.GatherAndCompare(gatherers, strings.NewReader(expected), "gpfs_perf_read_bytes", "gpfs_perf_write_bytes", "gpfs_perf_operations"); err != nil {
-		t.Errorf("unexpected collecting result:\n%s", err)
-	}
-	if val := len(mmpmonCache); val != 0 {
-		t.Errorf("Unexpected cache size %d, expected 0", val)
 	}
 }

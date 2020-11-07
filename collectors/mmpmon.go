@@ -42,8 +42,7 @@ var (
 		"_dir_": "ReadDir",
 		"_iu_":  "InodeUpdates",
 	}
-	mmpmonCache = []PerfMetrics{}
-	MmpmonExec  = mmpmon
+	MmpmonExec = mmpmon
 )
 
 type PerfMetrics struct {
@@ -64,14 +63,13 @@ type MmpmonCollector struct {
 	write_bytes *prometheus.Desc
 	operations  *prometheus.Desc
 	logger      log.Logger
-	useCache    bool
 }
 
 func init() {
 	registerCollector("mmpmon", true, NewMmpmonCollector)
 }
 
-func NewMmpmonCollector(logger log.Logger, useCache bool) Collector {
+func NewMmpmonCollector(logger log.Logger) Collector {
 	return &MmpmonCollector{
 		read_bytes: prometheus.NewDesc(prometheus.BuildFQName(namespace, "perf", "read_bytes"),
 			"GPFS read bytes", []string{"fs", "nodename"}, nil),
@@ -79,8 +77,7 @@ func NewMmpmonCollector(logger log.Logger, useCache bool) Collector {
 			"GPFS write bytes", []string{"fs", "nodename"}, nil),
 		operations: prometheus.NewDesc(prometheus.BuildFQName(namespace, "perf", "operations"),
 			"GPFS operationgs reported by mmpmon", []string{"fs", "nodename", "operation"}, nil),
-		logger:   logger,
-		useCache: false,
+		logger: logger,
 	}
 }
 
@@ -119,22 +116,13 @@ func (c *MmpmonCollector) Collect(ch chan<- prometheus.Metric) {
 }
 
 func (c *MmpmonCollector) collect() ([]PerfMetrics, error) {
-	var perfs []PerfMetrics
-	var mmpmon_out string
-	var err error
 	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(*mmpmonTimeout)*time.Second)
 	defer cancel()
-	mmpmon_out, err = MmpmonExec(ctx)
+	mmpmon_out, err := MmpmonExec(ctx)
 	if err != nil {
-		if c.useCache {
-			perfs = mmpmonCache
-		}
-		return perfs, err
+		return nil, err
 	}
-	perfs = mmpmon_parse(mmpmon_out, c.logger)
-	if c.useCache {
-		mmpmonCache = perfs
-	}
+	perfs := mmpmon_parse(mmpmon_out, c.logger)
 	return perfs, nil
 }
 

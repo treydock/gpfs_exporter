@@ -36,8 +36,7 @@ var (
 		"entitytype": "EntityType",
 		"status":     "Status",
 	}
-	mmhealthCache = []HealthMetric{}
-	mmhealthExec  = mmhealth
+	mmhealthExec = mmhealth
 )
 
 type HealthMetric struct {
@@ -48,21 +47,19 @@ type HealthMetric struct {
 }
 
 type MmhealthCollector struct {
-	State    *prometheus.Desc
-	logger   log.Logger
-	useCache bool
+	State  *prometheus.Desc
+	logger log.Logger
 }
 
 func init() {
 	registerCollector("mmhealth", false, NewMmhealthCollector)
 }
 
-func NewMmhealthCollector(logger log.Logger, useCache bool) Collector {
+func NewMmhealthCollector(logger log.Logger) Collector {
 	return &MmhealthCollector{
 		State: prometheus.NewDesc(prometheus.BuildFQName(namespace, "health", "status"),
 			"GPFS health status, 1=healthy 0=not healthy", []string{"component", "entityname", "entitytype", "status"}, nil),
-		logger:   logger,
-		useCache: useCache,
+		logger: logger,
 	}
 }
 
@@ -93,22 +90,13 @@ func (c *MmhealthCollector) Collect(ch chan<- prometheus.Metric) {
 }
 
 func (c *MmhealthCollector) collect() ([]HealthMetric, error) {
-	var mmhealth_out string
-	var err error
-	var metrics []HealthMetric
 	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(*mmhealthTimeout)*time.Second)
 	defer cancel()
-	mmhealth_out, err = mmhealthExec(ctx)
+	mmhealth_out, err := mmhealthExec(ctx)
 	if err != nil {
-		if c.useCache {
-			metrics = mmhealthCache
-		}
-		return metrics, err
+		return nil, err
 	}
-	metrics = mmhealth_parse(mmhealth_out, c.logger)
-	if c.useCache {
-		mmhealthCache = metrics
-	}
+	metrics := mmhealth_parse(mmhealth_out, c.logger)
 	return metrics, nil
 }
 

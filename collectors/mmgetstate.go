@@ -28,7 +28,6 @@ import (
 var (
 	mmgetstateTimeout = kingpin.Flag("collector.mmgetstate.timeout", "Timeout for executing mmgetstate").Default("5").Int()
 	mmgetstateStates  = []string{"active", "arbitrating", "down"}
-	mmgetstateCache   = MmgetstateMetrics{}
 	MmgetstateExec    = mmgetstate
 )
 
@@ -37,21 +36,19 @@ type MmgetstateMetrics struct {
 }
 
 type MmgetstateCollector struct {
-	state    *prometheus.Desc
-	logger   log.Logger
-	useCache bool
+	state  *prometheus.Desc
+	logger log.Logger
 }
 
 func init() {
 	registerCollector("mmgetstate", true, NewMmgetstateCollector)
 }
 
-func NewMmgetstateCollector(logger log.Logger, useCache bool) Collector {
+func NewMmgetstateCollector(logger log.Logger) Collector {
 	return &MmgetstateCollector{
 		state: prometheus.NewDesc(prometheus.BuildFQName(namespace, "", "state"),
 			"GPFS state", []string{"state"}, nil),
-		logger:   logger,
-		useCache: useCache,
+		logger: logger,
 	}
 }
 
@@ -90,22 +87,13 @@ func (c *MmgetstateCollector) Collect(ch chan<- prometheus.Metric) {
 }
 
 func (c *MmgetstateCollector) collect() (MmgetstateMetrics, error) {
-	var metric MmgetstateMetrics
-	var out string
-	var err error
 	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(*mmgetstateTimeout)*time.Second)
 	defer cancel()
-	out, err = MmgetstateExec(ctx)
+	out, err := MmgetstateExec(ctx)
 	if err != nil {
-		if c.useCache {
-			metric = mmgetstateCache
-		}
-		return metric, err
+		return MmgetstateMetrics{}, err
 	}
-	metric = mmgetstate_parse(out)
-	if c.useCache {
-		mmgetstateCache = metric
-	}
+	metric := mmgetstate_parse(out)
 	return metric, nil
 }
 
