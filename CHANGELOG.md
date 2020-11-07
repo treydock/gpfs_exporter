@@ -1,3 +1,21 @@
+## 0.12.0 / TBD
+
+### BREAKING CHANGES
+
+* Remove --exporter.use-cache flag and all caching logic
+* Rename several metrics to standardize naming conventions
+** gpfs_perf_read_bytes to gpfs_perf_read_bytes_total
+** gpfs_perf_write_bytes to gpfs_perf_write_bytes_total
+** gpfs_perf_operations to gpfs_perf_operations_total
+** gpfs_fs_inodes_allocated to gpfs_fs_allocated_inodes
+** gpfs_fs_inodes_free to gpfs_fs_free_inodes
+** gpfs_fs_inodes_total to gpfs_fs_total_inodes
+** gpfs_fs_inodes_used to gpfs_fs_used_inodes
+
+### Improvements
+
+* Update to Go 1.15 and update all dependencies
+
 ## 0.11.1 / 2020-04-21
 
 * Fix mount collector to avoid false positives
