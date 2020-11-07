@@ -36,19 +36,17 @@ var (
 type MountCollector struct {
 	fs_mount_status *prometheus.Desc
 	logger          log.Logger
-	useCache        bool
 }
 
 func init() {
 	registerCollector("mount", true, NewMountCollector)
 }
 
-func NewMountCollector(logger log.Logger, useCache bool) Collector {
+func NewMountCollector(logger log.Logger) Collector {
 	return &MountCollector{
 		fs_mount_status: prometheus.NewDesc(prometheus.BuildFQName(namespace, "mount", "status"),
 			"Status of GPFS filesystems, 1=mounted 0=not mounted", []string{"mount"}, nil),
-		logger:   logger,
-		useCache: useCache,
+		logger: logger,
 	}
 }
 

@@ -143,7 +143,7 @@ func TestMmdiagCollector(t *testing.T) {
 		gpfs_mmdiag_waiter{thread="120655"} 64.3890
 		gpfs_mmdiag_waiter{thread="120656"} 44.3890
 	`
-	collector := NewMmdiagCollector(log.NewNopLogger(), false)
+	collector := NewMmdiagCollector(log.NewNopLogger())
 	gatherers := setupGatherer(collector)
 	if val := testutil.CollectAndCount(collector); val != 5 {
 		t.Errorf("Unexpected collection count %d, expected 5", val)
@@ -168,7 +168,7 @@ func TestMMdiagCollectorError(t *testing.T) {
 		# TYPE gpfs_exporter_collect_error gauge
 		gpfs_exporter_collect_error{collector="mmdiag"} 1
 	`
-	collector := NewMmdiagCollector(log.NewNopLogger(), false)
+	collector := NewMmdiagCollector(log.NewNopLogger())
 	gatherers := setupGatherer(collector)
 	if val := testutil.CollectAndCount(collector); val != 3 {
 		t.Errorf("Unexpected collection count %d, expected 3", val)
@@ -193,80 +193,12 @@ func TestMMdiagCollectorTimeout(t *testing.T) {
 		# TYPE gpfs_exporter_collect_timeout gauge
 		gpfs_exporter_collect_timeout{collector="mmdiag"} 1
 	`
-	collector := NewMmdiagCollector(log.NewNopLogger(), false)
+	collector := NewMmdiagCollector(log.NewNopLogger())
 	gatherers := setupGatherer(collector)
 	if val := testutil.CollectAndCount(collector); val != 3 {
 		t.Errorf("Unexpected collection count %d, expected 3", val)
 	}
 	if err := testutil.GatherAndCompare(gatherers, strings.NewReader(expected), "gpfs_exporter_collect_timeout"); err != nil {
 		t.Errorf("unexpected collecting result:\n%s", err)
-	}
-}
-
-func TestMMdiagCollectorCache(t *testing.T) {
-	if _, err := kingpin.CommandLine.Parse([]string{}); err != nil {
-		t.Fatal(err)
-	}
-	threshold := 30
-	configWaiterThreshold = &threshold
-	configWaiterExclude = &defWaiterExclude
-	// build cache
-	mmdiagExec = func(arg string, ctx context.Context) (string, error) {
-		return waitersStdout, nil
-	}
-	collector := NewMmdiagCollector(log.NewNopLogger(), true)
-	gatherers := setupGatherer(collector)
-	if val := testutil.CollectAndCount(collector); val != 5 {
-		t.Errorf("Unexpected collection count %d, expected 5", val)
-	}
-
-	mmdiagExec = func(arg string, ctx context.Context) (string, error) {
-		return "", fmt.Errorf("Error")
-	}
-	expected := `
-		# HELP gpfs_mmdiag_waiter GPFS max waiter in seconds
-		# TYPE gpfs_mmdiag_waiter gauge
-		gpfs_mmdiag_waiter{thread="120655"} 64.3890
-		gpfs_mmdiag_waiter{thread="120656"} 44.3890
-	`
-	errorMetrics := `
-		# HELP gpfs_exporter_collect_error Indicates if error has occurred during collection
-		# TYPE gpfs_exporter_collect_error gauge
-		gpfs_exporter_collect_error{collector="mmdiag"} 1
-	`
-	if val := testutil.CollectAndCount(collector); val != 5 {
-		t.Errorf("Unexpected collection count %d, expected 5", val)
-	}
-	if err := testutil.GatherAndCompare(gatherers, strings.NewReader(expected+errorMetrics), "gpfs_mmdiag_waiter", "gpfs_exporter_collect_error"); err != nil {
-		t.Errorf("unexpected collecting result:\n%s", err)
-	}
-
-	timeoutMetrics := `
-		# HELP gpfs_exporter_collect_timeout Indicates the collector timed out
-		# TYPE gpfs_exporter_collect_timeout gauge
-		gpfs_exporter_collect_timeout{collector="mmdiag"} 1
-	`
-	mmdiagExec = func(arg string, ctx context.Context) (string, error) {
-		return "", context.DeadlineExceeded
-	}
-	if val := testutil.CollectAndCount(collector); val != 5 {
-		t.Errorf("Unexpected collection count %d, expected 5", val)
-	}
-	if err := testutil.GatherAndCompare(gatherers, strings.NewReader(expected+timeoutMetrics), "gpfs_mmdiag_waiter", "gpfs_exporter_collect_timeout"); err != nil {
-		t.Errorf("unexpected collecting result:\n%s", err)
-	}
-
-	mmdiagCache = DiagMetric{}
-	mmdiagExec = func(arg string, ctx context.Context) (string, error) {
-		return waitersStdout, nil
-	}
-	if val := testutil.CollectAndCount(collector); val != 5 {
-		t.Errorf("Unexpected collection count %d, expected 5", val)
-	}
-	if err := testutil.GatherAndCompare(gatherers, strings.NewReader(expected), "gpfs_mmdiag_waiter"); err != nil {
-		t.Errorf("unexpected collecting result:\n%s", err)
-	}
-	if val := len(mmdiagCache.Waiters); val != 2 {
-		t.Errorf("Unexpected cache size %d, expected 2", val)
 	}
 }

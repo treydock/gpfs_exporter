@@ -46,9 +46,7 @@ var (
 		"metadata:freeBlocks":    "MetadataFree",
 		"metadata:freeBlocksPct": "MetadataFreePercent",
 	}
-	mmdfCacheMutex = sync.RWMutex{}
-	mmdfCache      = make(map[string]DFMetric)
-	MmdfExec       = mmdf
+	MmdfExec = mmdf
 )
 
 type DFMetric struct {
@@ -77,14 +75,13 @@ type MmdfCollector struct {
 	MetadataFree        *prometheus.Desc
 	MetadataFreePercent *prometheus.Desc
 	logger              log.Logger
-	useCache            bool
 }
 
 func init() {
 	registerCollector("mmdf", false, NewMmdfCollector)
 }
 
-func NewMmdfCollector(logger log.Logger, useCache bool) Collector {
+func NewMmdfCollector(logger log.Logger) Collector {
 	return &MmdfCollector{
 		InodesUsed: prometheus.NewDesc(prometheus.BuildFQName(namespace, "fs", "inodes_used"),
 			"GPFS filesystem inodes used", []string{"fs"}, nil),
@@ -106,8 +103,7 @@ func NewMmdfCollector(logger log.Logger, useCache bool) Collector {
 			"GPFS metadata free size in bytes", []string{"fs"}, nil),
 		MetadataFreePercent: prometheus.NewDesc(prometheus.BuildFQName(namespace, "fs", "metadata_free_percent"),
 			"GPFS metadata free percent", []string{"fs"}, nil),
-		logger:   logger,
-		useCache: useCache,
+		logger: logger,
 	}
 }
 
@@ -166,7 +162,7 @@ func (c *MmdfCollector) Collect(ch chan<- prometheus.Metric) {
 			ch <- prometheus.MustNewConstMetric(collectError, prometheus.GaugeValue, float64(errorMetric), label)
 			ch <- prometheus.MustNewConstMetric(collecTimeout, prometheus.GaugeValue, float64(timeout), label)
 			ch <- prometheus.MustNewConstMetric(collectDuration, prometheus.GaugeValue, time.Since(collectTime).Seconds(), label)
-			if err != nil && !c.useCache {
+			if err != nil {
 				return
 			}
 			ch <- prometheus.MustNewConstMetric(c.InodesUsed, prometheus.GaugeValue, float64(metric.InodesUsed), fs)
@@ -186,18 +182,13 @@ func (c *MmdfCollector) Collect(ch chan<- prometheus.Metric) {
 }
 
 func (c *MmdfCollector) mmdfCollect(fs string) (DFMetric, error) {
-	var dfMetric DFMetric
-	var out string
-	var err error
 	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(*mmdfTimeout)*time.Second)
 	defer cancel()
-	out, err = MmdfExec(fs, ctx)
+	out, err := MmdfExec(fs, ctx)
 	if err != nil {
-		dfMetric = c.mmdfReadCache(fs)
-		return dfMetric, err
+		return DFMetric{}, err
 	}
-	dfMetric = parse_mmdf(out, c.logger)
-	c.mmdfWriteCache(fs, dfMetric)
+	dfMetric := parse_mmdf(out, c.logger)
 	return dfMetric, nil
 }
 
@@ -273,24 +264,4 @@ func parse_mmdf(out string, logger log.Logger) DFMetric {
 		}
 	}
 	return dfMetrics
-}
-
-func (c *MmdfCollector) mmdfReadCache(fs string) DFMetric {
-	var dfMetric DFMetric
-	if c.useCache {
-		mmdfCacheMutex.RLock()
-		if cache, ok := mmdfCache[fs]; ok {
-			dfMetric = cache
-		}
-		mmdfCacheMutex.RUnlock()
-	}
-	return dfMetric
-}
-
-func (c *MmdfCollector) mmdfWriteCache(fs string, dfMetric DFMetric) {
-	if c.useCache {
-		mmdfCacheMutex.Lock()
-		mmdfCache[fs] = dfMetric
-		mmdfCacheMutex.Unlock()
-	}
 }

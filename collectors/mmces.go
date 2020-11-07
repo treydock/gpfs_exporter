@@ -32,7 +32,6 @@ var (
 	configNodeName = kingpin.Flag("collector.mmces.nodename", "CES node name to check, defaults to FQDN").Default("").String()
 	mmcesTimeout   = kingpin.Flag("collector.mmces.timeout", "Timeout for mmces execution").Default("5").Int()
 	cesServices    = []string{"AUTH", "BLOCK", "NETWORK", "AUTH_OBJ", "NFS", "OBJ", "SMB", "CES"}
-	mmcesCache     = []CESMetric{}
 	mmcesExec      = mmces
 )
 
@@ -51,21 +50,19 @@ type CESMetric struct {
 }
 
 type MmcesCollector struct {
-	State    *prometheus.Desc
-	logger   log.Logger
-	useCache bool
+	State  *prometheus.Desc
+	logger log.Logger
 }
 
 func init() {
 	registerCollector("mmces", false, NewMmcesCollector)
 }
 
-func NewMmcesCollector(logger log.Logger, useCache bool) Collector {
+func NewMmcesCollector(logger log.Logger) Collector {
 	return &MmcesCollector{
 		State: prometheus.NewDesc(prometheus.BuildFQName(namespace, "ces", "state"),
 			"GPFS CES health status, 1=healthy 0=not healthy", []string{"service", "state"}, nil),
-		logger:   logger,
-		useCache: useCache,
+		logger: logger,
 	}
 }
 
@@ -106,22 +103,13 @@ func (c *MmcesCollector) Collect(ch chan<- prometheus.Metric) {
 }
 
 func (c *MmcesCollector) collect(nodename string) ([]CESMetric, error) {
-	var err error
-	var mmces_state_out string
-	var metrics []CESMetric
 	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(*mmcesTimeout)*time.Second)
 	defer cancel()
-	mmces_state_out, err = mmcesExec(nodename, ctx)
+	mmces_state_out, err := mmcesExec(nodename, ctx)
 	if err != nil {
-		if c.useCache {
-			metrics = mmcesCache
-		}
-		return metrics, err
+		return nil, err
 	}
-	metrics = mmces_state_show_parse(mmces_state_out)
-	if c.useCache {
-		mmcesCache = metrics
-	}
+	metrics := mmces_state_show_parse(mmces_state_out)
 	return metrics, nil
 }
 

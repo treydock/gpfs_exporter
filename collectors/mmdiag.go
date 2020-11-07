@@ -33,7 +33,6 @@ var (
 	configWaiterThreshold = kingpin.Flag("collector.mmdiag.waiter-threshold", "Threshold for collected waiters").Default("30").Int()
 	configWaiterExclude   = kingpin.Flag("collector.mmdiag.waiter-exclude", "Pattern to exclude for waiters").Default(defWaiterExclude).String()
 	mmdiagTimeout         = kingpin.Flag("collector.mmdiag.timeout", "Timeout for mmdiag execution").Default("5").Int()
-	mmdiagCache           = DiagMetric{}
 	mmdiagExec            = mmdiag
 )
 
@@ -47,21 +46,19 @@ type DiagWaiter struct {
 }
 
 type MmdiagCollector struct {
-	Waiter   *prometheus.Desc
-	logger   log.Logger
-	useCache bool
+	Waiter *prometheus.Desc
+	logger log.Logger
 }
 
 func init() {
 	registerCollector("mmdiag", false, NewMmdiagCollector)
 }
 
-func NewMmdiagCollector(logger log.Logger, useCache bool) Collector {
+func NewMmdiagCollector(logger log.Logger) Collector {
 	return &MmdiagCollector{
 		Waiter: prometheus.NewDesc(prometheus.BuildFQName(namespace, "mmdiag", "waiter"),
 			"GPFS max waiter in seconds", []string{"thread"}, nil),
-		logger:   logger,
-		useCache: useCache,
+		logger: logger,
 	}
 }
 
@@ -92,21 +89,13 @@ func (c *MmdiagCollector) Collect(ch chan<- prometheus.Metric) {
 
 func (c *MmdiagCollector) collect() (DiagMetric, error) {
 	var diagMetric DiagMetric
-	var out string
-	var err error
 	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(*mmdiagTimeout)*time.Second)
 	defer cancel()
-	out, err = mmdiagExec("--waiters", ctx)
+	out, err := mmdiagExec("--waiters", ctx)
 	if err != nil {
-		if c.useCache {
-			diagMetric = mmdiagCache
-		}
 		return diagMetric, err
 	}
 	parse_mmdiag_waiters(out, &diagMetric, c.logger)
-	if c.useCache {
-		mmdiagCache = diagMetric
-	}
 	return diagMetric, nil
 }
 
