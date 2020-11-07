@@ -112,28 +112,28 @@ func TestMmpmonCollector(t *testing.T) {
 		return mmpmonStdout, nil
 	}
 	expected := `
-		# HELP gpfs_perf_operations GPFS operationgs reported by mmpmon
-		# TYPE gpfs_perf_operations counter
-		gpfs_perf_operations{fs="project",nodename="ib-pitzer-rw02.ten",operation="closes"} 513
-		gpfs_perf_operations{fs="project",nodename="ib-pitzer-rw02.ten",operation="inode_updates"} 169
-		gpfs_perf_operations{fs="project",nodename="ib-pitzer-rw02.ten",operation="opens"} 513
-		gpfs_perf_operations{fs="project",nodename="ib-pitzer-rw02.ten",operation="read_dir"} 0
-		gpfs_perf_operations{fs="project",nodename="ib-pitzer-rw02.ten",operation="reads"} 0
-		gpfs_perf_operations{fs="project",nodename="ib-pitzer-rw02.ten",operation="writes"} 0
-		gpfs_perf_operations{fs="scratch",nodename="ib-pitzer-rw02.ten",operation="closes"} 2201576
-		gpfs_perf_operations{fs="scratch",nodename="ib-pitzer-rw02.ten",operation="inode_updates"} 544768
-		gpfs_perf_operations{fs="scratch",nodename="ib-pitzer-rw02.ten",operation="opens"} 2377656
-		gpfs_perf_operations{fs="scratch",nodename="ib-pitzer-rw02.ten",operation="read_dir"} 40971
-		gpfs_perf_operations{fs="scratch",nodename="ib-pitzer-rw02.ten",operation="reads"} 59420404
-		gpfs_perf_operations{fs="scratch",nodename="ib-pitzer-rw02.ten",operation="writes"} 18874626
-		# HELP gpfs_perf_read_bytes GPFS read bytes
-		# TYPE gpfs_perf_read_bytes counter
-		gpfs_perf_read_bytes{fs="project",nodename="ib-pitzer-rw02.ten"} 0
-		gpfs_perf_read_bytes{fs="scratch",nodename="ib-pitzer-rw02.ten"} 2.05607400434e+11
-		# HELP gpfs_perf_write_bytes GPFS write bytes
-		# TYPE gpfs_perf_write_bytes counter
-		gpfs_perf_write_bytes{fs="project",nodename="ib-pitzer-rw02.ten"} 0
-		gpfs_perf_write_bytes{fs="scratch",nodename="ib-pitzer-rw02.ten"} 74839282351
+		# HELP gpfs_perf_operations_total GPFS operationgs reported by mmpmon
+		# TYPE gpfs_perf_operations_total counter
+		gpfs_perf_operations_total{fs="project",nodename="ib-pitzer-rw02.ten",operation="closes"} 513
+		gpfs_perf_operations_total{fs="project",nodename="ib-pitzer-rw02.ten",operation="inode_updates"} 169
+		gpfs_perf_operations_total{fs="project",nodename="ib-pitzer-rw02.ten",operation="opens"} 513
+		gpfs_perf_operations_total{fs="project",nodename="ib-pitzer-rw02.ten",operation="read_dir"} 0
+		gpfs_perf_operations_total{fs="project",nodename="ib-pitzer-rw02.ten",operation="reads"} 0
+		gpfs_perf_operations_total{fs="project",nodename="ib-pitzer-rw02.ten",operation="writes"} 0
+		gpfs_perf_operations_total{fs="scratch",nodename="ib-pitzer-rw02.ten",operation="closes"} 2201576
+		gpfs_perf_operations_total{fs="scratch",nodename="ib-pitzer-rw02.ten",operation="inode_updates"} 544768
+		gpfs_perf_operations_total{fs="scratch",nodename="ib-pitzer-rw02.ten",operation="opens"} 2377656
+		gpfs_perf_operations_total{fs="scratch",nodename="ib-pitzer-rw02.ten",operation="read_dir"} 40971
+		gpfs_perf_operations_total{fs="scratch",nodename="ib-pitzer-rw02.ten",operation="reads"} 59420404
+		gpfs_perf_operations_total{fs="scratch",nodename="ib-pitzer-rw02.ten",operation="writes"} 18874626
+		# HELP gpfs_perf_read_bytes_total GPFS read bytes
+		# TYPE gpfs_perf_read_bytes_total counter
+		gpfs_perf_read_bytes_total{fs="project",nodename="ib-pitzer-rw02.ten"} 0
+		gpfs_perf_read_bytes_total{fs="scratch",nodename="ib-pitzer-rw02.ten"} 2.05607400434e+11
+		# HELP gpfs_perf_write_bytes_total GPFS write bytes
+		# TYPE gpfs_perf_write_bytes_total counter
+		gpfs_perf_write_bytes_total{fs="project",nodename="ib-pitzer-rw02.ten"} 0
+		gpfs_perf_write_bytes_total{fs="scratch",nodename="ib-pitzer-rw02.ten"} 74839282351
 	`
 	collector := NewMmpmonCollector(log.NewNopLogger())
 	gatherers := setupGatherer(collector)
@@ -142,7 +142,8 @@ func TestMmpmonCollector(t *testing.T) {
 	} else if val != 19 {
 		t.Errorf("Unexpected collection count %d, expected 19", val)
 	}
-	if err := testutil.GatherAndCompare(gatherers, strings.NewReader(expected), "gpfs_perf_read_bytes", "gpfs_perf_write_bytes", "gpfs_perf_operations"); err != nil {
+	if err := testutil.GatherAndCompare(gatherers, strings.NewReader(expected),
+		"gpfs_perf_read_bytes_total", "gpfs_perf_write_bytes_total", "gpfs_perf_operations_total"); err != nil {
 		t.Errorf("unexpected collecting result:\n%s", err)
 	}
 }

@@ -83,13 +83,13 @@ func init() {
 
 func NewMmdfCollector(logger log.Logger) Collector {
 	return &MmdfCollector{
-		InodesUsed: prometheus.NewDesc(prometheus.BuildFQName(namespace, "fs", "inodes_used"),
+		InodesUsed: prometheus.NewDesc(prometheus.BuildFQName(namespace, "fs", "used_inodes"),
 			"GPFS filesystem inodes used", []string{"fs"}, nil),
-		InodesFree: prometheus.NewDesc(prometheus.BuildFQName(namespace, "fs", "inodes_free"),
+		InodesFree: prometheus.NewDesc(prometheus.BuildFQName(namespace, "fs", "free_inodes"),
 			"GPFS filesystem inodes free", []string{"fs"}, nil),
-		InodesAllocated: prometheus.NewDesc(prometheus.BuildFQName(namespace, "fs", "inodes_allocated"),
+		InodesAllocated: prometheus.NewDesc(prometheus.BuildFQName(namespace, "fs", "allocated_inodes"),
 			"GPFS filesystem inodes allocated", []string{"fs"}, nil),
-		InodesTotal: prometheus.NewDesc(prometheus.BuildFQName(namespace, "fs", "inodes_total"),
+		InodesTotal: prometheus.NewDesc(prometheus.BuildFQName(namespace, "fs", "total_inodes"),
 			"GPFS filesystem inodes total", []string{"fs"}, nil),
 		FSTotal: prometheus.NewDesc(prometheus.BuildFQName(namespace, "fs", "total_bytes"),
 			"GPFS filesystem total size in bytes", []string{"fs"}, nil),

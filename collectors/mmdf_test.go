@@ -121,24 +121,18 @@ func TestMmdfCollector(t *testing.T) {
 		return mmdfStdout, nil
 	}
 	expected := `
+		# HELP gpfs_fs_allocated_inodes GPFS filesystem inodes allocated
+		# TYPE gpfs_fs_allocated_inodes gauge
+		gpfs_fs_allocated_inodes{fs="project"} 915043328
 		# HELP gpfs_fs_free_bytes GPFS filesystem free size in bytes
 		# TYPE gpfs_fs_free_bytes gauge
 		gpfs_fs_free_bytes{fs="project"} 492750870413312
+		# HELP gpfs_fs_free_inodes GPFS filesystem inodes free
+		# TYPE gpfs_fs_free_inodes gauge
+		gpfs_fs_free_inodes{fs="project"} 484301506
 		# HELP gpfs_fs_free_percent GPFS filesystem free percent
 		# TYPE gpfs_fs_free_percent gauge
 		gpfs_fs_free_percent{fs="project"} 14
-		# HELP gpfs_fs_inodes_allocated GPFS filesystem inodes allocated
-		# TYPE gpfs_fs_inodes_allocated gauge
-		gpfs_fs_inodes_allocated{fs="project"} 915043328
-		# HELP gpfs_fs_inodes_free GPFS filesystem inodes free
-		# TYPE gpfs_fs_inodes_free gauge
-		gpfs_fs_inodes_free{fs="project"} 484301506
-		# HELP gpfs_fs_inodes_total GPFS filesystem inodes total
-		# TYPE gpfs_fs_inodes_total gauge
-		gpfs_fs_inodes_total{fs="project"} 1332164000
-		# HELP gpfs_fs_inodes_used GPFS filesystem inodes used
-		# TYPE gpfs_fs_inodes_used gauge
-		gpfs_fs_inodes_used{fs="project"} 430741822
 		# HELP gpfs_fs_metadata_free_bytes GPFS metadata free size in bytes
 		# TYPE gpfs_fs_metadata_free_bytes gauge
 		gpfs_fs_metadata_free_bytes{fs="project"} 6155570511872
@@ -151,6 +145,12 @@ func TestMmdfCollector(t *testing.T) {
 		# HELP gpfs_fs_total_bytes GPFS filesystem total size in bytes
 		# TYPE gpfs_fs_total_bytes gauge
 		gpfs_fs_total_bytes{fs="project"} 3749557989015552
+		# HELP gpfs_fs_total_inodes GPFS filesystem inodes total
+		# TYPE gpfs_fs_total_inodes gauge
+		gpfs_fs_total_inodes{fs="project"} 1332164000
+		# HELP gpfs_fs_used_inodes GPFS filesystem inodes used
+		# TYPE gpfs_fs_used_inodes gauge
+		gpfs_fs_used_inodes{fs="project"} 430741822
 	`
 	collector := NewMmdfCollector(log.NewNopLogger())
 	gatherers := setupGatherer(collector)
@@ -160,7 +160,7 @@ func TestMmdfCollector(t *testing.T) {
 		t.Errorf("Unexpected collection count %d, expected 14", val)
 	}
 	if err := testutil.GatherAndCompare(gatherers, strings.NewReader(expected),
-		"gpfs_fs_inodes_used", "gpfs_fs_inodes_free", "gpfs_fs_inodes_allocated", "gpfs_fs_inodes_total",
+		"gpfs_fs_used_inodes", "gpfs_fs_free_inodes", "gpfs_fs_allocated_inodes", "gpfs_fs_total_inodes",
 		"gpfs_fs_free_bytes", "gpfs_fs_free_percent", "gpfs_fs_total_bytes",
 		"gpfs_fs_metadata_total_bytes", "gpfs_fs_metadata_free_bytes", "gpfs_fs_metadata_free_percent"); err != nil {
 		t.Errorf("unexpected collecting result:\n%s", err)
@@ -190,18 +190,18 @@ mmlsfs::0:1:::project:defaultMountPoint:%2Ffs%2Fproject::
 		# HELP gpfs_fs_free_percent GPFS filesystem free percent
 		# TYPE gpfs_fs_free_percent gauge
 		gpfs_fs_free_percent{fs="project"} 14
-		# HELP gpfs_fs_inodes_allocated GPFS filesystem inodes allocated
-		# TYPE gpfs_fs_inodes_allocated gauge
-		gpfs_fs_inodes_allocated{fs="project"} 915043328
-		# HELP gpfs_fs_inodes_free GPFS filesystem inodes free
-		# TYPE gpfs_fs_inodes_free gauge
-		gpfs_fs_inodes_free{fs="project"} 484301506
-		# HELP gpfs_fs_inodes_total GPFS filesystem inodes total
-		# TYPE gpfs_fs_inodes_total gauge
-		gpfs_fs_inodes_total{fs="project"} 1332164000
-		# HELP gpfs_fs_inodes_used GPFS filesystem inodes used
-		# TYPE gpfs_fs_inodes_used gauge
-		gpfs_fs_inodes_used{fs="project"} 430741822
+		# HELP gpfs_fs_allocated_inodes GPFS filesystem inodes allocated
+		# TYPE gpfs_fs_allocated_inodes gauge
+		gpfs_fs_allocated_inodes{fs="project"} 915043328
+		# HELP gpfs_fs_free_inodes GPFS filesystem inodes free
+		# TYPE gpfs_fs_free_inodes gauge
+		gpfs_fs_free_inodes{fs="project"} 484301506
+		# HELP gpfs_fs_total_inodes GPFS filesystem inodes total
+		# TYPE gpfs_fs_total_inodes gauge
+		gpfs_fs_total_inodes{fs="project"} 1332164000
+		# HELP gpfs_fs_used_inodes GPFS filesystem inodes used
+		# TYPE gpfs_fs_used_inodes gauge
+		gpfs_fs_used_inodes{fs="project"} 430741822
 		# HELP gpfs_fs_metadata_free_bytes GPFS metadata free size in bytes
 		# TYPE gpfs_fs_metadata_free_bytes gauge
 		gpfs_fs_metadata_free_bytes{fs="project"} 6155570511872
@@ -223,7 +223,7 @@ mmlsfs::0:1:::project:defaultMountPoint:%2Ffs%2Fproject::
 		t.Errorf("Unexpected collection count %d, expected 16", val)
 	}
 	if err := testutil.GatherAndCompare(gatherers, strings.NewReader(expected),
-		"gpfs_fs_inodes_used", "gpfs_fs_inodes_free", "gpfs_fs_inodes_allocated", "gpfs_fs_inodes_total",
+		"gpfs_fs_used_inodes", "gpfs_fs_free_inodes", "gpfs_fs_allocated_inodes", "gpfs_fs_total_inodes",
 		"gpfs_fs_free_bytes", "gpfs_fs_free_percent", "gpfs_fs_total_bytes",
 		"gpfs_fs_metadata_total_bytes", "gpfs_fs_metadata_free_bytes", "gpfs_fs_metadata_free_percent"); err != nil {
 		t.Errorf("unexpected collecting result:\n%s", err)
