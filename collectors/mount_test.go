@@ -127,7 +127,9 @@ ess                  /fs/ess              gpfs       rw,mtime,relatime,dev=ess.d
 	`
 	collector := NewMountCollector(log.NewNopLogger())
 	gatherers := setupGatherer(collector)
-	if val := testutil.CollectAndCount(collector); val != 6 {
+	if val, err := testutil.GatherAndCount(gatherers); err != nil {
+		t.Errorf("Unexpected error: %v", err)
+	} else if val != 6 {
 		t.Errorf("Unexpected collection count %d, expected 6", val)
 	}
 	if err := testutil.GatherAndCompare(gatherers, strings.NewReader(metadata+expected), "gpfs_mount_status"); err != nil {
