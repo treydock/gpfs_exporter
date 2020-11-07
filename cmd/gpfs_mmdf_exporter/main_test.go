@@ -61,24 +61,18 @@ mmdf:fsTotal:0:1:::3661677723648:481202021888:14:12117655064:0:
 mmdf:inode:0:1:::430741822:484301506:915043328:1332164000:
 `
 	expected := `
+# HELP gpfs_fs_allocated_inodes GPFS filesystem inodes allocated
+# TYPE gpfs_fs_allocated_inodes gauge
+gpfs_fs_allocated_inodes{fs="project"} 9.15043328e+08
 # HELP gpfs_fs_free_bytes GPFS filesystem free size in bytes
 # TYPE gpfs_fs_free_bytes gauge
 gpfs_fs_free_bytes{fs="project"} 4.92750870413312e+14
+# HELP gpfs_fs_free_inodes GPFS filesystem inodes free
+# TYPE gpfs_fs_free_inodes gauge
+gpfs_fs_free_inodes{fs="project"} 4.84301506e+08
 # HELP gpfs_fs_free_percent GPFS filesystem free percent
 # TYPE gpfs_fs_free_percent gauge
 gpfs_fs_free_percent{fs="project"} 14
-# HELP gpfs_fs_inodes_allocated GPFS filesystem inodes allocated
-# TYPE gpfs_fs_inodes_allocated gauge
-gpfs_fs_inodes_allocated{fs="project"} 9.15043328e+08
-# HELP gpfs_fs_inodes_free GPFS filesystem inodes free
-# TYPE gpfs_fs_inodes_free gauge
-gpfs_fs_inodes_free{fs="project"} 4.84301506e+08
-# HELP gpfs_fs_inodes_total GPFS filesystem inodes total
-# TYPE gpfs_fs_inodes_total gauge
-gpfs_fs_inodes_total{fs="project"} 1.332164e+09
-# HELP gpfs_fs_inodes_used GPFS filesystem inodes used
-# TYPE gpfs_fs_inodes_used gauge
-gpfs_fs_inodes_used{fs="project"} 4.30741822e+08
 # HELP gpfs_fs_metadata_free_bytes GPFS metadata free size in bytes
 # TYPE gpfs_fs_metadata_free_bytes gauge
 gpfs_fs_metadata_free_bytes{fs="project"} 6.155570511872e+12
@@ -90,7 +84,13 @@ gpfs_fs_metadata_free_percent{fs="project"} 43
 gpfs_fs_metadata_total_bytes{fs="project"} 1.4224931684352e+13
 # HELP gpfs_fs_total_bytes GPFS filesystem total size in bytes
 # TYPE gpfs_fs_total_bytes gauge
-gpfs_fs_total_bytes{fs="project"} 3.749557989015552e+15`
+gpfs_fs_total_bytes{fs="project"} 3.749557989015552e+15
+# HELP gpfs_fs_total_inodes GPFS filesystem inodes total
+# TYPE gpfs_fs_total_inodes gauge
+gpfs_fs_total_inodes{fs="project"} 1.332164e+09
+# HELP gpfs_fs_used_inodes GPFS filesystem inodes used
+# TYPE gpfs_fs_used_inodes gauge
+gpfs_fs_used_inodes{fs="project"} 4.30741822e+08`
 	collectors.MmdfExec = func(fs string, ctx context.Context) (string, error) {
 		return mmdfStdout, nil
 	}

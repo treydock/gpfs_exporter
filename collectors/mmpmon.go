@@ -71,11 +71,11 @@ func init() {
 
 func NewMmpmonCollector(logger log.Logger) Collector {
 	return &MmpmonCollector{
-		read_bytes: prometheus.NewDesc(prometheus.BuildFQName(namespace, "perf", "read_bytes"),
+		read_bytes: prometheus.NewDesc(prometheus.BuildFQName(namespace, "perf", "read_bytes_total"),
 			"GPFS read bytes", []string{"fs", "nodename"}, nil),
-		write_bytes: prometheus.NewDesc(prometheus.BuildFQName(namespace, "perf", "write_bytes"),
+		write_bytes: prometheus.NewDesc(prometheus.BuildFQName(namespace, "perf", "write_bytes_total"),
 			"GPFS write bytes", []string{"fs", "nodename"}, nil),
-		operations: prometheus.NewDesc(prometheus.BuildFQName(namespace, "perf", "operations"),
+		operations: prometheus.NewDesc(prometheus.BuildFQName(namespace, "perf", "operations_total"),
 			"GPFS operationgs reported by mmpmon", []string{"fs", "nodename", "operation"}, nil),
 		logger: logger,
 	}
