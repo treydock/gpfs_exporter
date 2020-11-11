@@ -61,7 +61,7 @@ func init() {
 func NewMmcesCollector(logger log.Logger) Collector {
 	return &MmcesCollector{
 		State: prometheus.NewDesc(prometheus.BuildFQName(namespace, "ces", "state"),
-			"GPFS CES health status, 1=healthy 0=not healthy", []string{"service", "state"}, nil),
+			"GPFS CES health status", []string{"service", "state"}, nil),
 		logger: logger,
 	}
 }
@@ -94,8 +94,7 @@ func (c *MmcesCollector) Collect(ch chan<- prometheus.Metric) {
 		errorMetric = 1
 	}
 	for _, m := range metrics {
-		statusValue := parseMmcesState(m.State)
-		ch <- prometheus.MustNewConstMetric(c.State, prometheus.GaugeValue, statusValue, m.Service, m.State)
+		ch <- prometheus.MustNewConstMetric(c.State, prometheus.GaugeValue, 1, m.Service, m.State)
 	}
 	ch <- prometheus.MustNewConstMetric(collectError, prometheus.GaugeValue, float64(errorMetric), "mmces")
 	ch <- prometheus.MustNewConstMetric(collecTimeout, prometheus.GaugeValue, float64(timeout), "mmces")
@@ -155,12 +154,4 @@ func mmces_state_show_parse(out string) []CESMetric {
 		metrics = append(metrics, metric)
 	}
 	return metrics
-}
-
-func parseMmcesState(status string) float64 {
-	if bytes.Equal([]byte(status), []byte("HEALTHY")) {
-		return 1
-	} else {
-		return 0
-	}
 }
