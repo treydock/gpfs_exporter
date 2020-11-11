@@ -62,6 +62,7 @@ type MmpmonCollector struct {
 	read_bytes  *prometheus.Desc
 	write_bytes *prometheus.Desc
 	operations  *prometheus.Desc
+	info        *prometheus.Desc
 	logger      log.Logger
 }
 
@@ -72,11 +73,13 @@ func init() {
 func NewMmpmonCollector(logger log.Logger) Collector {
 	return &MmpmonCollector{
 		read_bytes: prometheus.NewDesc(prometheus.BuildFQName(namespace, "perf", "read_bytes_total"),
-			"GPFS read bytes", []string{"fs", "nodename"}, nil),
+			"GPFS read bytes", []string{"fs"}, nil),
 		write_bytes: prometheus.NewDesc(prometheus.BuildFQName(namespace, "perf", "write_bytes_total"),
-			"GPFS write bytes", []string{"fs", "nodename"}, nil),
+			"GPFS write bytes", []string{"fs"}, nil),
 		operations: prometheus.NewDesc(prometheus.BuildFQName(namespace, "perf", "operations_total"),
-			"GPFS operationgs reported by mmpmon", []string{"fs", "nodename", "operation"}, nil),
+			"GPFS operationgs reported by mmpmon", []string{"fs", "operation"}, nil),
+		info: prometheus.NewDesc(prometheus.BuildFQName(namespace, "perf", "info"),
+			"GPFS client information", []string{"fs", "nodename"}, nil),
 		logger: logger,
 	}
 }
@@ -85,6 +88,7 @@ func (c *MmpmonCollector) Describe(ch chan<- *prometheus.Desc) {
 	ch <- c.read_bytes
 	ch <- c.write_bytes
 	ch <- c.operations
+	ch <- c.info
 }
 
 func (c *MmpmonCollector) Collect(ch chan<- prometheus.Metric) {
@@ -101,14 +105,15 @@ func (c *MmpmonCollector) Collect(ch chan<- prometheus.Metric) {
 		errorMetric = 1
 	}
 	for _, perf := range perfs {
-		ch <- prometheus.MustNewConstMetric(c.read_bytes, prometheus.CounterValue, float64(perf.ReadBytes), perf.FS, perf.NodeName)
-		ch <- prometheus.MustNewConstMetric(c.write_bytes, prometheus.CounterValue, float64(perf.WriteBytes), perf.FS, perf.NodeName)
-		ch <- prometheus.MustNewConstMetric(c.operations, prometheus.CounterValue, float64(perf.Reads), perf.FS, perf.NodeName, "reads")
-		ch <- prometheus.MustNewConstMetric(c.operations, prometheus.CounterValue, float64(perf.Writes), perf.FS, perf.NodeName, "writes")
-		ch <- prometheus.MustNewConstMetric(c.operations, prometheus.CounterValue, float64(perf.Opens), perf.FS, perf.NodeName, "opens")
-		ch <- prometheus.MustNewConstMetric(c.operations, prometheus.CounterValue, float64(perf.Closes), perf.FS, perf.NodeName, "closes")
-		ch <- prometheus.MustNewConstMetric(c.operations, prometheus.CounterValue, float64(perf.ReadDir), perf.FS, perf.NodeName, "read_dir")
-		ch <- prometheus.MustNewConstMetric(c.operations, prometheus.CounterValue, float64(perf.InodeUpdates), perf.FS, perf.NodeName, "inode_updates")
+		ch <- prometheus.MustNewConstMetric(c.read_bytes, prometheus.CounterValue, float64(perf.ReadBytes), perf.FS)
+		ch <- prometheus.MustNewConstMetric(c.write_bytes, prometheus.CounterValue, float64(perf.WriteBytes), perf.FS)
+		ch <- prometheus.MustNewConstMetric(c.operations, prometheus.CounterValue, float64(perf.Reads), perf.FS, "reads")
+		ch <- prometheus.MustNewConstMetric(c.operations, prometheus.CounterValue, float64(perf.Writes), perf.FS, "writes")
+		ch <- prometheus.MustNewConstMetric(c.operations, prometheus.CounterValue, float64(perf.Opens), perf.FS, "opens")
+		ch <- prometheus.MustNewConstMetric(c.operations, prometheus.CounterValue, float64(perf.Closes), perf.FS, "closes")
+		ch <- prometheus.MustNewConstMetric(c.operations, prometheus.CounterValue, float64(perf.ReadDir), perf.FS, "read_dir")
+		ch <- prometheus.MustNewConstMetric(c.operations, prometheus.CounterValue, float64(perf.InodeUpdates), perf.FS, "inode_updates")
+		ch <- prometheus.MustNewConstMetric(c.info, prometheus.GaugeValue, 1, perf.FS, perf.NodeName)
 	}
 	ch <- prometheus.MustNewConstMetric(collectError, prometheus.GaugeValue, float64(errorMetric), "mmpmon")
 	ch <- prometheus.MustNewConstMetric(collecTimeout, prometheus.GaugeValue, float64(timeout), "mmpmon")
