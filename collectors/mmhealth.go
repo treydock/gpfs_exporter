@@ -58,7 +58,7 @@ func init() {
 func NewMmhealthCollector(logger log.Logger) Collector {
 	return &MmhealthCollector{
 		State: prometheus.NewDesc(prometheus.BuildFQName(namespace, "health", "status"),
-			"GPFS health status, 1=healthy 0=not healthy", []string{"component", "entityname", "entitytype", "status"}, nil),
+			"GPFS health status", []string{"component", "entityname", "entitytype", "status"}, nil),
 		logger: logger,
 	}
 }
@@ -81,8 +81,7 @@ func (c *MmhealthCollector) Collect(ch chan<- prometheus.Metric) {
 		errorMetric = 1
 	}
 	for _, m := range metrics {
-		statusValue := parseMmhealthStatus(m.Status)
-		ch <- prometheus.MustNewConstMetric(c.State, prometheus.GaugeValue, statusValue, m.Component, m.EntityName, m.EntityType, m.Status)
+		ch <- prometheus.MustNewConstMetric(c.State, prometheus.GaugeValue, 1, m.Component, m.EntityName, m.EntityType, m.Status)
 	}
 	ch <- prometheus.MustNewConstMetric(collectError, prometheus.GaugeValue, float64(errorMetric), "mmhealth")
 	ch <- prometheus.MustNewConstMetric(collecTimeout, prometheus.GaugeValue, float64(timeout), "mmhealth")
@@ -155,12 +154,4 @@ func mmhealth_parse(out string, logger log.Logger) []HealthMetric {
 		metrics = append(metrics, metric)
 	}
 	return metrics
-}
-
-func parseMmhealthStatus(status string) float64 {
-	if bytes.Equal([]byte(status), []byte("HEALTHY")) {
-		return 1
-	} else {
-		return 0
-	}
 }

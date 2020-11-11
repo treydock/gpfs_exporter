@@ -111,18 +111,6 @@ func TestParseMmhealth(t *testing.T) {
 	}
 }
 
-func TestParseMmhealthStatus(t *testing.T) {
-	if val := parseMmhealthStatus("HEALTHY"); val != 1 {
-		t.Errorf("Expected 1 for HEALTHY, got %v", val)
-	}
-	if val := parseMmhealthStatus("TIPS"); val != 0 {
-		t.Errorf("Expected 0 for TIPS, got %v", val)
-	}
-	if val := parseMmhealthStatus("DEGRADED"); val != 0 {
-		t.Errorf("Expected 0 for DEGRADED, got %v", val)
-	}
-}
-
 func TestMmhealthCollector(t *testing.T) {
 	if _, err := kingpin.CommandLine.Parse([]string{}); err != nil {
 		t.Fatal(err)
@@ -131,17 +119,17 @@ func TestMmhealthCollector(t *testing.T) {
 		return mmhealthStdout, nil
 	}
 	expected := `
-		# HELP gpfs_health_status GPFS health status, 1=healthy 0=not healthy
+		# HELP gpfs_health_status GPFS health status
 		# TYPE gpfs_health_status gauge
 		gpfs_health_status{component="FILESYSTEM",entityname="ib-haswell1.example.com",entitytype="NODE",status="HEALTHY"} 1
 		gpfs_health_status{component="FILESYSTEM",entityname="project",entitytype="FILESYSTEM",status="HEALTHY"} 1
 		gpfs_health_status{component="FILESYSTEM",entityname="scratch",entitytype="FILESYSTEM",status="HEALTHY"} 1
 		gpfs_health_status{component="FILESYSTEM",entityname="ess",entitytype="FILESYSTEM",status="HEALTHY"} 1
-		gpfs_health_status{component="GPFS",entityname="ib-haswell1.example.com",entitytype="NODE",status="TIPS"} 0
+		gpfs_health_status{component="GPFS",entityname="ib-haswell1.example.com",entitytype="NODE",status="TIPS"} 1
 		gpfs_health_status{component="NETWORK",entityname="ib-haswell1.example.com",entitytype="NODE",status="HEALTHY"} 1
 		gpfs_health_status{component="NETWORK",entityname="ib0",entitytype="NIC",status="HEALTHY"} 1
 		gpfs_health_status{component="NETWORK",entityname="mlx5_0/1",entitytype="IB_RDMA",status="HEALTHY"} 1
-		gpfs_health_status{component="NODE",entityname="ib-haswell1.example.com",entitytype="NODE",status="TIPS"} 0
+		gpfs_health_status{component="NODE",entityname="ib-haswell1.example.com",entitytype="NODE",status="TIPS"} 1
 	`
 	collector := NewMmhealthCollector(log.NewNopLogger())
 	gatherers := setupGatherer(collector)

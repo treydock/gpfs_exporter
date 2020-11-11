@@ -114,18 +114,6 @@ func TestParseMmcesStateShow(t *testing.T) {
 	}
 }
 
-func TestParseMmcesState(t *testing.T) {
-	if val := parseMmcesState("HEALTHY"); val != 1 {
-		t.Errorf("Expected 1 for HEALTHY, got %v", val)
-	}
-	if val := parseMmcesState("DISABLED"); val != 0 {
-		t.Errorf("Expected 0 for DISABLED, got %v", val)
-	}
-	if val := parseMmcesState("DEGRADED"); val != 0 {
-		t.Errorf("Expected 0 for DEGRADED, got %v", val)
-	}
-}
-
 func TestMMcesCollector(t *testing.T) {
 	if _, err := kingpin.CommandLine.Parse([]string{"--collector.mmces.nodename=ib-protocol01.domain"}); err != nil {
 		t.Fatal(err)
@@ -134,15 +122,15 @@ func TestMMcesCollector(t *testing.T) {
 		return mmcesStdout, nil
 	}
 	expected := `
-		# HELP gpfs_ces_state GPFS CES health status, 1=healthy 0=not healthy
+		# HELP gpfs_ces_state GPFS CES health status
 		# TYPE gpfs_ces_state gauge
 		gpfs_ces_state{service="AUTH",state="HEALTHY"} 1
-		gpfs_ces_state{service="AUTH_OBJ",state="DISABLED"} 0
-		gpfs_ces_state{service="BLOCK",state="DISABLED"} 0
+		gpfs_ces_state{service="AUTH_OBJ",state="DISABLED"} 1
+		gpfs_ces_state{service="BLOCK",state="DISABLED"} 1
 		gpfs_ces_state{service="CES",state="HEALTHY"} 1
 		gpfs_ces_state{service="NETWORK",state="HEALTHY"} 1
 		gpfs_ces_state{service="NFS",state="HEALTHY"} 1
-		gpfs_ces_state{service="OBJ",state="DISABLED"} 0
+		gpfs_ces_state{service="OBJ",state="DISABLED"} 1
 		gpfs_ces_state{service="SMB",state="HEALTHY"} 1
 	`
 	collector := NewMmcesCollector(log.NewNopLogger())
@@ -165,15 +153,15 @@ func TestMMcesCollectorHostname(t *testing.T) {
 		return mmcesStdout, nil
 	}
 	expected := `
-		# HELP gpfs_ces_state GPFS CES health status, 1=healthy 0=not healthy
+		# HELP gpfs_ces_state GPFS CES health status
 		# TYPE gpfs_ces_state gauge
 		gpfs_ces_state{service="AUTH",state="HEALTHY"} 1
-		gpfs_ces_state{service="AUTH_OBJ",state="DISABLED"} 0
-		gpfs_ces_state{service="BLOCK",state="DISABLED"} 0
+		gpfs_ces_state{service="AUTH_OBJ",state="DISABLED"} 1
+		gpfs_ces_state{service="BLOCK",state="DISABLED"} 1
 		gpfs_ces_state{service="CES",state="HEALTHY"} 1
 		gpfs_ces_state{service="NETWORK",state="HEALTHY"} 1
 		gpfs_ces_state{service="NFS",state="HEALTHY"} 1
-		gpfs_ces_state{service="OBJ",state="DISABLED"} 0
+		gpfs_ces_state{service="OBJ",state="DISABLED"} 1
 		gpfs_ces_state{service="SMB",state="HEALTHY"} 1
 	`
 	collector := NewMmcesCollector(log.NewNopLogger())
