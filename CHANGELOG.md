@@ -14,7 +14,9 @@
 ** gpfs_fs_total_inodes to gpfs_fs_inodes
 ** gpfs_fs_total_bytes to gpfs_fs_size_bytes
 ** gpfs_fs_metadata_total_bytes to gpfs_fs_metadata_size_bytes
-* Change gpfs_fs_metadata_free_percent and gpfs_fs_free_percent metrics to ratio of 0.0-1.0
+* Removed metrics that can be calculated using other metrics
+** gpfs_fs_metadata_free_percent
+** gpfs_fs_free_percent metrics
 * Remove nodename label from gpfs_perf_* metrics, replace with gpfs_perf_info metric
 
 ### Improvements

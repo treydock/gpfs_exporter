@@ -41,40 +41,34 @@ var (
 		"inode:maxInodes":        "InodesTotal",
 		"fsTotal:fsSize":         "FSTotal",
 		"fsTotal:freeBlocks":     "FSFree",
-		"fsTotal:freeBlocksPct":  "FSFreePercent",
 		"metadata:totalMetadata": "MetadataTotal",
 		"metadata:freeBlocks":    "MetadataFree",
-		"metadata:freeBlocksPct": "MetadataFreePercent",
 	}
 	MmdfExec = mmdf
 )
 
 type DFMetric struct {
-	FS                  string
-	InodesUsed          float64
-	InodesFree          float64
-	InodesAllocated     float64
-	InodesTotal         float64
-	FSTotal             float64
-	FSFree              float64
-	FSFreePercent       float64
-	MetadataTotal       float64
-	MetadataFree        float64
-	MetadataFreePercent float64
+	FS              string
+	InodesUsed      float64
+	InodesFree      float64
+	InodesAllocated float64
+	InodesTotal     float64
+	FSTotal         float64
+	FSFree          float64
+	MetadataTotal   float64
+	MetadataFree    float64
 }
 
 type MmdfCollector struct {
-	InodesUsed          *prometheus.Desc
-	InodesFree          *prometheus.Desc
-	InodesAllocated     *prometheus.Desc
-	InodesTotal         *prometheus.Desc
-	FSTotal             *prometheus.Desc
-	FSFree              *prometheus.Desc
-	FSFreePercent       *prometheus.Desc
-	MetadataTotal       *prometheus.Desc
-	MetadataFree        *prometheus.Desc
-	MetadataFreePercent *prometheus.Desc
-	logger              log.Logger
+	InodesUsed      *prometheus.Desc
+	InodesFree      *prometheus.Desc
+	InodesAllocated *prometheus.Desc
+	InodesTotal     *prometheus.Desc
+	FSTotal         *prometheus.Desc
+	FSFree          *prometheus.Desc
+	MetadataTotal   *prometheus.Desc
+	MetadataFree    *prometheus.Desc
+	logger          log.Logger
 }
 
 func init() {
@@ -95,14 +89,10 @@ func NewMmdfCollector(logger log.Logger) Collector {
 			"GPFS filesystem total size in bytes", []string{"fs"}, nil),
 		FSFree: prometheus.NewDesc(prometheus.BuildFQName(namespace, "fs", "free_bytes"),
 			"GPFS filesystem free size in bytes", []string{"fs"}, nil),
-		FSFreePercent: prometheus.NewDesc(prometheus.BuildFQName(namespace, "fs", "free_percent"),
-			"GPFS filesystem free percent (ratio 0.0-1.0)", []string{"fs"}, nil),
 		MetadataTotal: prometheus.NewDesc(prometheus.BuildFQName(namespace, "fs", "metadata_size_bytes"),
 			"GPFS total metadata size in bytes", []string{"fs"}, nil),
 		MetadataFree: prometheus.NewDesc(prometheus.BuildFQName(namespace, "fs", "metadata_free_bytes"),
 			"GPFS metadata free size in bytes", []string{"fs"}, nil),
-		MetadataFreePercent: prometheus.NewDesc(prometheus.BuildFQName(namespace, "fs", "metadata_free_percent"),
-			"GPFS metadata free percent (ratio 0.0-1.0)", []string{"fs"}, nil),
 		logger: logger,
 	}
 }
@@ -114,10 +104,8 @@ func (c *MmdfCollector) Describe(ch chan<- *prometheus.Desc) {
 	ch <- c.InodesTotal
 	ch <- c.FSTotal
 	ch <- c.FSFree
-	ch <- c.FSFreePercent
 	ch <- c.MetadataTotal
 	ch <- c.MetadataFree
-	ch <- c.MetadataFreePercent
 }
 
 func (c *MmdfCollector) Collect(ch chan<- prometheus.Metric) {
@@ -171,10 +159,8 @@ func (c *MmdfCollector) Collect(ch chan<- prometheus.Metric) {
 			ch <- prometheus.MustNewConstMetric(c.InodesTotal, prometheus.GaugeValue, metric.InodesTotal, fs)
 			ch <- prometheus.MustNewConstMetric(c.FSTotal, prometheus.GaugeValue, metric.FSTotal, fs)
 			ch <- prometheus.MustNewConstMetric(c.FSFree, prometheus.GaugeValue, metric.FSFree, fs)
-			ch <- prometheus.MustNewConstMetric(c.FSFreePercent, prometheus.GaugeValue, metric.FSFreePercent, fs)
 			ch <- prometheus.MustNewConstMetric(c.MetadataTotal, prometheus.GaugeValue, metric.MetadataTotal, fs)
 			ch <- prometheus.MustNewConstMetric(c.MetadataFree, prometheus.GaugeValue, metric.MetadataFree, fs)
-			ch <- prometheus.MustNewConstMetric(c.MetadataFreePercent, prometheus.GaugeValue, metric.MetadataFreePercent, fs)
 			ch <- prometheus.MustNewConstMetric(lastExecution, prometheus.GaugeValue, float64(time.Now().Unix()), label)
 		}(fs)
 	}
@@ -254,9 +240,6 @@ func parse_mmdf(out string, logger log.Logger) DFMetric {
 					if val, err := strconv.ParseFloat(value, 64); err == nil {
 						if SliceContains(KbToBytes, v) {
 							val = val * 1024
-						}
-						if strings.HasSuffix(field, "Percent") {
-							val = val / 100
 						}
 						f.SetFloat(val)
 					} else {
