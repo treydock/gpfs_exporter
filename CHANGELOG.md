@@ -11,6 +11,10 @@
 ** gpfs_fs_inodes_free to gpfs_fs_free_inodes
 ** gpfs_fs_inodes_total to gpfs_fs_total_inodes
 ** gpfs_fs_inodes_used to gpfs_fs_used_inodes
+** gpfs_fs_total_inodes to gpfs_fs_inodes
+** gpfs_fs_total_bytes to gpfs_fs_size_bytes
+** gpfs_fs_metadata_total_bytes to gpfs_fs_metadata_size_bytes
+* Change gpfs_fs_metadata_free_percent and gpfs_fs_free_percent metrics to ratio of 0.0-1.0
 
 ### Improvements
 

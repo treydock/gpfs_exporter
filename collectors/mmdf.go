@@ -51,16 +51,16 @@ var (
 
 type DFMetric struct {
 	FS                  string
-	InodesUsed          int64
-	InodesFree          int64
-	InodesAllocated     int64
-	InodesTotal         int64
-	FSTotal             int64
-	FSFree              int64
-	FSFreePercent       int64
-	MetadataTotal       int64
-	MetadataFree        int64
-	MetadataFreePercent int64
+	InodesUsed          float64
+	InodesFree          float64
+	InodesAllocated     float64
+	InodesTotal         float64
+	FSTotal             float64
+	FSFree              float64
+	FSFreePercent       float64
+	MetadataTotal       float64
+	MetadataFree        float64
+	MetadataFreePercent float64
 }
 
 type MmdfCollector struct {
@@ -89,20 +89,20 @@ func NewMmdfCollector(logger log.Logger) Collector {
 			"GPFS filesystem inodes free", []string{"fs"}, nil),
 		InodesAllocated: prometheus.NewDesc(prometheus.BuildFQName(namespace, "fs", "allocated_inodes"),
 			"GPFS filesystem inodes allocated", []string{"fs"}, nil),
-		InodesTotal: prometheus.NewDesc(prometheus.BuildFQName(namespace, "fs", "total_inodes"),
+		InodesTotal: prometheus.NewDesc(prometheus.BuildFQName(namespace, "fs", "inodes"),
 			"GPFS filesystem inodes total", []string{"fs"}, nil),
-		FSTotal: prometheus.NewDesc(prometheus.BuildFQName(namespace, "fs", "total_bytes"),
+		FSTotal: prometheus.NewDesc(prometheus.BuildFQName(namespace, "fs", "size_bytes"),
 			"GPFS filesystem total size in bytes", []string{"fs"}, nil),
 		FSFree: prometheus.NewDesc(prometheus.BuildFQName(namespace, "fs", "free_bytes"),
 			"GPFS filesystem free size in bytes", []string{"fs"}, nil),
 		FSFreePercent: prometheus.NewDesc(prometheus.BuildFQName(namespace, "fs", "free_percent"),
-			"GPFS filesystem free percent", []string{"fs"}, nil),
-		MetadataTotal: prometheus.NewDesc(prometheus.BuildFQName(namespace, "fs", "metadata_total_bytes"),
+			"GPFS filesystem free percent (ratio 0.0-1.0)", []string{"fs"}, nil),
+		MetadataTotal: prometheus.NewDesc(prometheus.BuildFQName(namespace, "fs", "metadata_size_bytes"),
 			"GPFS total metadata size in bytes", []string{"fs"}, nil),
 		MetadataFree: prometheus.NewDesc(prometheus.BuildFQName(namespace, "fs", "metadata_free_bytes"),
 			"GPFS metadata free size in bytes", []string{"fs"}, nil),
 		MetadataFreePercent: prometheus.NewDesc(prometheus.BuildFQName(namespace, "fs", "metadata_free_percent"),
-			"GPFS metadata free percent", []string{"fs"}, nil),
+			"GPFS metadata free percent (ratio 0.0-1.0)", []string{"fs"}, nil),
 		logger: logger,
 	}
 }
@@ -165,16 +165,16 @@ func (c *MmdfCollector) Collect(ch chan<- prometheus.Metric) {
 			if err != nil {
 				return
 			}
-			ch <- prometheus.MustNewConstMetric(c.InodesUsed, prometheus.GaugeValue, float64(metric.InodesUsed), fs)
-			ch <- prometheus.MustNewConstMetric(c.InodesFree, prometheus.GaugeValue, float64(metric.InodesFree), fs)
-			ch <- prometheus.MustNewConstMetric(c.InodesAllocated, prometheus.GaugeValue, float64(metric.InodesAllocated), fs)
-			ch <- prometheus.MustNewConstMetric(c.InodesTotal, prometheus.GaugeValue, float64(metric.InodesTotal), fs)
-			ch <- prometheus.MustNewConstMetric(c.FSTotal, prometheus.GaugeValue, float64(metric.FSTotal), fs)
-			ch <- prometheus.MustNewConstMetric(c.FSFree, prometheus.GaugeValue, float64(metric.FSFree), fs)
-			ch <- prometheus.MustNewConstMetric(c.FSFreePercent, prometheus.GaugeValue, float64(metric.FSFreePercent), fs)
-			ch <- prometheus.MustNewConstMetric(c.MetadataTotal, prometheus.GaugeValue, float64(metric.MetadataTotal), fs)
-			ch <- prometheus.MustNewConstMetric(c.MetadataFree, prometheus.GaugeValue, float64(metric.MetadataFree), fs)
-			ch <- prometheus.MustNewConstMetric(c.MetadataFreePercent, prometheus.GaugeValue, float64(metric.MetadataFreePercent), fs)
+			ch <- prometheus.MustNewConstMetric(c.InodesUsed, prometheus.GaugeValue, metric.InodesUsed, fs)
+			ch <- prometheus.MustNewConstMetric(c.InodesFree, prometheus.GaugeValue, metric.InodesFree, fs)
+			ch <- prometheus.MustNewConstMetric(c.InodesAllocated, prometheus.GaugeValue, metric.InodesAllocated, fs)
+			ch <- prometheus.MustNewConstMetric(c.InodesTotal, prometheus.GaugeValue, metric.InodesTotal, fs)
+			ch <- prometheus.MustNewConstMetric(c.FSTotal, prometheus.GaugeValue, metric.FSTotal, fs)
+			ch <- prometheus.MustNewConstMetric(c.FSFree, prometheus.GaugeValue, metric.FSFree, fs)
+			ch <- prometheus.MustNewConstMetric(c.FSFreePercent, prometheus.GaugeValue, metric.FSFreePercent, fs)
+			ch <- prometheus.MustNewConstMetric(c.MetadataTotal, prometheus.GaugeValue, metric.MetadataTotal, fs)
+			ch <- prometheus.MustNewConstMetric(c.MetadataFree, prometheus.GaugeValue, metric.MetadataFree, fs)
+			ch <- prometheus.MustNewConstMetric(c.MetadataFreePercent, prometheus.GaugeValue, metric.MetadataFreePercent, fs)
 			ch <- prometheus.MustNewConstMetric(lastExecution, prometheus.GaugeValue, float64(time.Now().Unix()), label)
 		}(fs)
 	}
@@ -250,12 +250,15 @@ func parse_mmdf(out string, logger log.Logger) DFMetric {
 				f := s.FieldByName(field)
 				if f.Kind() == reflect.String {
 					f.SetString(value)
-				} else if f.Kind() == reflect.Int64 {
-					if val, err := strconv.ParseInt(value, 10, 64); err == nil {
+				} else if f.Kind() == reflect.Float64 {
+					if val, err := strconv.ParseFloat(value, 64); err == nil {
 						if SliceContains(KbToBytes, v) {
 							val = val * 1024
 						}
-						f.SetInt(val)
+						if strings.HasSuffix(field, "Percent") {
+							val = val / 100
+						}
+						f.SetFloat(val)
 					} else {
 						level.Error(logger).Log("msg", fmt.Sprintf("Error parsing %s value %s: %s", mapKey, value, err.Error()))
 					}

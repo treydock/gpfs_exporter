@@ -70,24 +70,24 @@ gpfs_fs_free_bytes{fs="project"} 4.92750870413312e+14
 # HELP gpfs_fs_free_inodes GPFS filesystem inodes free
 # TYPE gpfs_fs_free_inodes gauge
 gpfs_fs_free_inodes{fs="project"} 4.84301506e+08
-# HELP gpfs_fs_free_percent GPFS filesystem free percent
+# HELP gpfs_fs_free_percent GPFS filesystem free percent (ratio 0.0-1.0)
 # TYPE gpfs_fs_free_percent gauge
-gpfs_fs_free_percent{fs="project"} 14
+gpfs_fs_free_percent{fs="project"} 0.14
+# HELP gpfs_fs_inodes GPFS filesystem inodes total
+# TYPE gpfs_fs_inodes gauge
+gpfs_fs_inodes{fs="project"} 1.332164e+09
 # HELP gpfs_fs_metadata_free_bytes GPFS metadata free size in bytes
 # TYPE gpfs_fs_metadata_free_bytes gauge
 gpfs_fs_metadata_free_bytes{fs="project"} 6.155570511872e+12
-# HELP gpfs_fs_metadata_free_percent GPFS metadata free percent
+# HELP gpfs_fs_metadata_free_percent GPFS metadata free percent (ratio 0.0-1.0)
 # TYPE gpfs_fs_metadata_free_percent gauge
-gpfs_fs_metadata_free_percent{fs="project"} 43
-# HELP gpfs_fs_metadata_total_bytes GPFS total metadata size in bytes
-# TYPE gpfs_fs_metadata_total_bytes gauge
-gpfs_fs_metadata_total_bytes{fs="project"} 1.4224931684352e+13
-# HELP gpfs_fs_total_bytes GPFS filesystem total size in bytes
-# TYPE gpfs_fs_total_bytes gauge
-gpfs_fs_total_bytes{fs="project"} 3.749557989015552e+15
-# HELP gpfs_fs_total_inodes GPFS filesystem inodes total
-# TYPE gpfs_fs_total_inodes gauge
-gpfs_fs_total_inodes{fs="project"} 1.332164e+09
+gpfs_fs_metadata_free_percent{fs="project"} 0.43
+# HELP gpfs_fs_metadata_size_bytes GPFS total metadata size in bytes
+# TYPE gpfs_fs_metadata_size_bytes gauge
+gpfs_fs_metadata_size_bytes{fs="project"} 1.4224931684352e+13
+# HELP gpfs_fs_size_bytes GPFS filesystem total size in bytes
+# TYPE gpfs_fs_size_bytes gauge
+gpfs_fs_size_bytes{fs="project"} 3.749557989015552e+15
 # HELP gpfs_fs_used_inodes GPFS filesystem inodes used
 # TYPE gpfs_fs_used_inodes gauge
 gpfs_fs_used_inodes{fs="project"} 4.30741822e+08`
