@@ -1,6 +1,6 @@
-## 0.12.0 / TBD
+## 1.0.0-rc.0 / 2020-11-12
 
-### BREAKING CHANGES
+### **Breaking Changes**
 
 * Remove --exporter.use-cache flag and all caching logic
 * Rename several metrics to standardize naming conventions
@@ -20,7 +20,7 @@
 * Remove nodename label from gpfs_perf_* metrics, replace with gpfs_perf_info metric
 * mmces and mmhealth status metrics will always have value 1, only the `status` label will change
 
-### Improvements
+### Changes
 
 * Update to Go 1.15 and update all dependencies
 
