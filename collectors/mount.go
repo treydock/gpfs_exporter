@@ -146,7 +146,7 @@ func getGPFSMounts() ([]string, error) {
 
 func getGPFSMountsFSTab() ([]string, error) {
 	var gpfsMounts []string
-	if exists := fileExists(fstabPath); !exists {
+	if exists := FileExists(fstabPath); !exists {
 		return nil, fmt.Errorf("%s does not exist", fstabPath)
 	}
 	mounts, err := fstab.ParseFile(fstabPath)

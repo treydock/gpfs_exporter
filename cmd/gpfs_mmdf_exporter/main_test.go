@@ -85,10 +85,17 @@ gpfs_fs_size_bytes{fs="project"} 3.749557989015552e+15
 # HELP gpfs_fs_used_inodes GPFS filesystem inodes used
 # TYPE gpfs_fs_used_inodes gauge
 gpfs_fs_used_inodes{fs="project"} 4.30741822e+08`
+	expectedError := `# HELP gpfs_exporter_collect_error Indicates if error has occurred during collection
+# TYPE gpfs_exporter_collect_error gauge
+gpfs_exporter_collect_error{collector="mmdf-project"} 0`
 	collectors.MmdfExec = func(fs string, ctx context.Context) (string, error) {
 		return mmdfStdout, nil
 	}
-	collect(log.NewNopLogger())
+	err := collect(log.NewNopLogger())
+	if err != nil {
+		t.Errorf("Unexpected error: %s", err.Error())
+		return
+	}
 	content, err := ioutil.ReadFile(outputPath)
 	if err != nil {
 		t.Errorf("Unexpected error: %s", err.Error())
@@ -96,5 +103,32 @@ gpfs_fs_used_inodes{fs="project"} 4.30741822e+08`
 	}
 	if !strings.Contains(string(content), expected) {
 		t.Errorf("Unexpected content:\n%s\nExpected:\n%s", string(content), expected)
+	}
+	if !strings.Contains(string(content), expectedError) {
+		t.Errorf("Unexpected error metrics:\n%s\nExpected:\n%s", string(content), expectedError)
+	}
+	expectedError = `# HELP gpfs_exporter_collect_error Indicates if error has occurred during collection
+# TYPE gpfs_exporter_collect_error gauge
+gpfs_exporter_collect_error{collector="mmdf-project"} 1`
+	collectors.MmdfExec = func(fs string, ctx context.Context) (string, error) {
+		return "", fmt.Errorf("Error")
+	}
+	w := log.NewSyncWriter(os.Stderr)
+	logger := log.NewLogfmtLogger(w)
+	err = collect(logger)
+	if err == nil {
+		t.Errorf("Expected error")
+		return
+	}
+	content, err = ioutil.ReadFile(outputPath)
+	if err != nil {
+		t.Errorf("Unexpected error: %s", err.Error())
+		return
+	}
+	if !strings.Contains(string(content), expected) {
+		t.Errorf("Unexpected content:\n%s\nExpected:\n%s", string(content), expected)
+	}
+	if !strings.Contains(string(content), expectedError) {
+		t.Errorf("Unexpected error metrics:\n%s\nExpected:\n%s", string(content), expectedError)
 	}
 }
