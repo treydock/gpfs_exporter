@@ -4,19 +4,19 @@
 
 * Remove --exporter.use-cache flag and all caching logic
 * Rename several metrics to standardize naming conventions
-** gpfs_perf_read_bytes to gpfs_perf_read_bytes_total
-** gpfs_perf_write_bytes to gpfs_perf_write_bytes_total
-** gpfs_perf_operations to gpfs_perf_operations_total
-** gpfs_fs_inodes_allocated to gpfs_fs_allocated_inodes
-** gpfs_fs_inodes_free to gpfs_fs_free_inodes
-** gpfs_fs_inodes_total to gpfs_fs_total_inodes
-** gpfs_fs_inodes_used to gpfs_fs_used_inodes
-** gpfs_fs_total_inodes to gpfs_fs_inodes
-** gpfs_fs_total_bytes to gpfs_fs_size_bytes
-** gpfs_fs_metadata_total_bytes to gpfs_fs_metadata_size_bytes
+  * gpfs_perf_read_bytes to gpfs_perf_read_bytes_total
+  * gpfs_perf_write_bytes to gpfs_perf_write_bytes_total
+  * gpfs_perf_operations to gpfs_perf_operations_total
+  * gpfs_fs_inodes_allocated to gpfs_fs_allocated_inodes
+  * gpfs_fs_inodes_free to gpfs_fs_free_inodes
+  * gpfs_fs_inodes_total to gpfs_fs_total_inodes
+  * gpfs_fs_inodes_used to gpfs_fs_used_inodes
+  * gpfs_fs_total_inodes to gpfs_fs_inodes
+  * gpfs_fs_total_bytes to gpfs_fs_size_bytes
+  * gpfs_fs_metadata_total_bytes to gpfs_fs_metadata_size_bytes
 * Removed metrics that can be calculated using other metrics
-** gpfs_fs_metadata_free_percent
-** gpfs_fs_free_percent metrics
+  * gpfs_fs_metadata_free_percent
+  * gpfs_fs_free_percent metrics
 * Remove nodename label from gpfs_perf_* metrics, replace with gpfs_perf_info metric
 * mmces and mmhealth status metrics will always have value 1, only the `status` label will change
 
