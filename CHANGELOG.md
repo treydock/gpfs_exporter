@@ -23,6 +23,7 @@
 ### Changes
 
 * Update to Go 1.15 and update all dependencies
+* Improved error handling for cron gpfs_mmdf_exporter
 
 ## 0.11.1 / 2020-04-21
 

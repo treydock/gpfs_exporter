@@ -107,7 +107,7 @@ func SliceContains(slice []string, str string) bool {
 	return false
 }
 
-func fileExists(filename string) bool {
+func FileExists(filename string) bool {
 	info, err := os.Stat(filename)
 	if os.IsNotExist(err) {
 		return false

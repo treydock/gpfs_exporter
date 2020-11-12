@@ -2,3 +2,5 @@
 (net/http.ResponseWriter).Write
 // Never check for logger errors.
 (github.com/go-kit/kit/log.Logger).Log
+// Do not check for rename errors
+os.Rename
