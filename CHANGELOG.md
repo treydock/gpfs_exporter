@@ -24,6 +24,7 @@
 
 * Update to Go 1.15 and update all dependencies
 * Improved error handling for cron gpfs_mmdf_exporter
+* Add mmrepquota collector to collect quota information for filesets
 
 ## 0.11.1 / 2020-04-21
 

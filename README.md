@@ -25,6 +25,7 @@ mmhealth | Test node health through `mmhealth` | Disabled
 mmdiag | Test mmdiag waiters | Disabled
 mmdf | Collect filesystem space for inodes, block and metadata. | Disabled
 mmces | Collect state of CES | Disabled
+mmrepquota | Collect fileset quota information | Disabled
 
 ### mount
 
@@ -48,6 +49,10 @@ Flags:
 The command used to collect CES states needs a specific node name.
 The `--collector.mmces.nodename` flag can be used to specify which CES node to check.
 The default is FQDN of those running the exporter.
+
+### mmrepquota
+
+* `--collector.mmrepquota.filesystems` - A comma separated list of filesystems to collect. Default is to collect all filesystems.
 
 ## Sudo
 
@@ -74,6 +79,10 @@ gpfs_exporter ALL=(ALL) NOPASSWD:/usr/lpp/mmfs/bin/mmces state show *
 # mmdf collector, each filesystem must be listed
 gpfs_exporter ALL=(ALL) NOPASSWD:/usr/lpp/mmfs/bin/mmdf project -Y
 gpfs_exporter ALL=(ALL) NOPASSWD:/usr/lpp/mmfs/bin/mmdf scratch -Y
+# mmrepquota collector, filesystems not specified
+gpfs_exporter ALL=(ALL) NOPASSWD:/usr/lpp/mmfs/bin/mmrepquota -j -Y -a
+# mmrepquota collector, filesystems specified
+gpfs_exporter ALL=(ALL) NOPASSWD:/usr/lpp/mmfs/bin/mmrepquota -j -Y project scratch
 ```
 
 ## Install
