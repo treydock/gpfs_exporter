@@ -35,7 +35,7 @@ mmhealth:State:0:1:::ib-haswell1.example.com:GPFS:ib-haswell1.example.com:NODE:T
 mmhealth:Event:0:1:::ib-haswell1.example.com:GPFS:ib-haswell1.example.com:NODE:gpfs_pagepool_small::2020-01-07 16%3A47%3A43.892296 EST::no:
 mmhealth:State:0:1:::ib-haswell1.example.com:NETWORK:ib-haswell1.example.com:NODE:HEALTHY:2020-01-07 17%3A02%3A40.131272 EST:
 mmhealth:State:0:1:::ib-haswell1.example.com:NETWORK:ib0:NIC:HEALTHY:2020-01-07 16%3A47%3A39.397852 EST:
-mmhealth:State:0:1:::ib-haswell1.example.com:NETWORK:mlx5_0/1:IB_RDMA:HEALTHY:2020-01-07 17%3A02%3A40.205075 EST:
+mmhealth:State:0:1:::ib-haswell1.example.com:NETWORK:mlx5_0/1:IB_RDMA:FOO:2020-01-07 17%3A02%3A40.205075 EST:
 mmhealth:State:0:1:::ib-haswell1.example.com:FILESYSTEM:ib-haswell1.example.com:NODE:HEALTHY:2020-01-27 09%3A35%3A21.499264 EST:
 mmhealth:State:0:1:::ib-haswell1.example.com:FILESYSTEM:project:FILESYSTEM:HEALTHY:2020-01-27 09%3A35%3A21.573978 EST:
 mmhealth:State:0:1:::ib-haswell1.example.com:FILESYSTEM:scratch:FILESYSTEM:HEALTHY:2020-01-27 09%3A35%3A21.657798 EST:
@@ -121,22 +121,112 @@ func TestMmhealthCollector(t *testing.T) {
 	expected := `
 		# HELP gpfs_health_status GPFS health status
 		# TYPE gpfs_health_status gauge
+		gpfs_health_status{component="FILESYSTEM",entityname="ib-haswell1.example.com",entitytype="NODE",status="CHECKING"} 0
+		gpfs_health_status{component="FILESYSTEM",entityname="ib-haswell1.example.com",entitytype="NODE",status="DEGRADED"} 0
+		gpfs_health_status{component="FILESYSTEM",entityname="ib-haswell1.example.com",entitytype="NODE",status="DEPEND"} 0
+		gpfs_health_status{component="FILESYSTEM",entityname="ib-haswell1.example.com",entitytype="NODE",status="DISABLED"} 0
+		gpfs_health_status{component="FILESYSTEM",entityname="ib-haswell1.example.com",entitytype="NODE",status="FAILED"} 0
 		gpfs_health_status{component="FILESYSTEM",entityname="ib-haswell1.example.com",entitytype="NODE",status="HEALTHY"} 1
+		gpfs_health_status{component="FILESYSTEM",entityname="ib-haswell1.example.com",entitytype="NODE",status="STARTING"} 0
+		gpfs_health_status{component="FILESYSTEM",entityname="ib-haswell1.example.com",entitytype="NODE",status="STOPPED"} 0
+		gpfs_health_status{component="FILESYSTEM",entityname="ib-haswell1.example.com",entitytype="NODE",status="SUSPENDED"} 0
+		gpfs_health_status{component="FILESYSTEM",entityname="ib-haswell1.example.com",entitytype="NODE",status="TIPS"} 0
+		gpfs_health_status{component="FILESYSTEM",entityname="ib-haswell1.example.com",entitytype="NODE",status="UNKNOWN"} 0
+		gpfs_health_status{component="FILESYSTEM",entityname="project",entitytype="FILESYSTEM",status="CHECKING"} 0
+		gpfs_health_status{component="FILESYSTEM",entityname="project",entitytype="FILESYSTEM",status="DEGRADED"} 0
+		gpfs_health_status{component="FILESYSTEM",entityname="project",entitytype="FILESYSTEM",status="DEPEND"} 0
+		gpfs_health_status{component="FILESYSTEM",entityname="project",entitytype="FILESYSTEM",status="DISABLED"} 0
+		gpfs_health_status{component="FILESYSTEM",entityname="project",entitytype="FILESYSTEM",status="FAILED"} 0
 		gpfs_health_status{component="FILESYSTEM",entityname="project",entitytype="FILESYSTEM",status="HEALTHY"} 1
+		gpfs_health_status{component="FILESYSTEM",entityname="project",entitytype="FILESYSTEM",status="STARTING"} 0
+		gpfs_health_status{component="FILESYSTEM",entityname="project",entitytype="FILESYSTEM",status="STOPPED"} 0
+		gpfs_health_status{component="FILESYSTEM",entityname="project",entitytype="FILESYSTEM",status="SUSPENDED"} 0
+		gpfs_health_status{component="FILESYSTEM",entityname="project",entitytype="FILESYSTEM",status="TIPS"} 0
+		gpfs_health_status{component="FILESYSTEM",entityname="project",entitytype="FILESYSTEM",status="UNKNOWN"} 0
+		gpfs_health_status{component="FILESYSTEM",entityname="scratch",entitytype="FILESYSTEM",status="CHECKING"} 0
+		gpfs_health_status{component="FILESYSTEM",entityname="scratch",entitytype="FILESYSTEM",status="DEGRADED"} 0
+		gpfs_health_status{component="FILESYSTEM",entityname="scratch",entitytype="FILESYSTEM",status="DEPEND"} 0
+		gpfs_health_status{component="FILESYSTEM",entityname="scratch",entitytype="FILESYSTEM",status="DISABLED"} 0
+		gpfs_health_status{component="FILESYSTEM",entityname="scratch",entitytype="FILESYSTEM",status="FAILED"} 0
 		gpfs_health_status{component="FILESYSTEM",entityname="scratch",entitytype="FILESYSTEM",status="HEALTHY"} 1
+		gpfs_health_status{component="FILESYSTEM",entityname="scratch",entitytype="FILESYSTEM",status="STARTING"} 0
+		gpfs_health_status{component="FILESYSTEM",entityname="scratch",entitytype="FILESYSTEM",status="STOPPED"} 0
+		gpfs_health_status{component="FILESYSTEM",entityname="scratch",entitytype="FILESYSTEM",status="SUSPENDED"} 0
+		gpfs_health_status{component="FILESYSTEM",entityname="scratch",entitytype="FILESYSTEM",status="TIPS"} 0
+		gpfs_health_status{component="FILESYSTEM",entityname="scratch",entitytype="FILESYSTEM",status="UNKNOWN"} 0
+		gpfs_health_status{component="FILESYSTEM",entityname="ess",entitytype="FILESYSTEM",status="CHECKING"} 0
+		gpfs_health_status{component="FILESYSTEM",entityname="ess",entitytype="FILESYSTEM",status="DEGRADED"} 0
+		gpfs_health_status{component="FILESYSTEM",entityname="ess",entitytype="FILESYSTEM",status="DEPEND"} 0
+		gpfs_health_status{component="FILESYSTEM",entityname="ess",entitytype="FILESYSTEM",status="DISABLED"} 0
+		gpfs_health_status{component="FILESYSTEM",entityname="ess",entitytype="FILESYSTEM",status="FAILED"} 0
 		gpfs_health_status{component="FILESYSTEM",entityname="ess",entitytype="FILESYSTEM",status="HEALTHY"} 1
+		gpfs_health_status{component="FILESYSTEM",entityname="ess",entitytype="FILESYSTEM",status="STARTING"} 0
+		gpfs_health_status{component="FILESYSTEM",entityname="ess",entitytype="FILESYSTEM",status="STOPPED"} 0
+		gpfs_health_status{component="FILESYSTEM",entityname="ess",entitytype="FILESYSTEM",status="SUSPENDED"} 0
+		gpfs_health_status{component="FILESYSTEM",entityname="ess",entitytype="FILESYSTEM",status="TIPS"} 0
+		gpfs_health_status{component="FILESYSTEM",entityname="ess",entitytype="FILESYSTEM",status="UNKNOWN"} 0
+		gpfs_health_status{component="GPFS",entityname="ib-haswell1.example.com",entitytype="NODE",status="CHECKING"} 0
+		gpfs_health_status{component="GPFS",entityname="ib-haswell1.example.com",entitytype="NODE",status="DEGRADED"} 0
+		gpfs_health_status{component="GPFS",entityname="ib-haswell1.example.com",entitytype="NODE",status="DEPEND"} 0
+		gpfs_health_status{component="GPFS",entityname="ib-haswell1.example.com",entitytype="NODE",status="DISABLED"} 0
+		gpfs_health_status{component="GPFS",entityname="ib-haswell1.example.com",entitytype="NODE",status="FAILED"} 0
+		gpfs_health_status{component="GPFS",entityname="ib-haswell1.example.com",entitytype="NODE",status="HEALTHY"} 0
+		gpfs_health_status{component="GPFS",entityname="ib-haswell1.example.com",entitytype="NODE",status="STARTING"} 0
+		gpfs_health_status{component="GPFS",entityname="ib-haswell1.example.com",entitytype="NODE",status="STOPPED"} 0
+		gpfs_health_status{component="GPFS",entityname="ib-haswell1.example.com",entitytype="NODE",status="SUSPENDED"} 0
 		gpfs_health_status{component="GPFS",entityname="ib-haswell1.example.com",entitytype="NODE",status="TIPS"} 1
+		gpfs_health_status{component="GPFS",entityname="ib-haswell1.example.com",entitytype="NODE",status="UNKNOWN"} 0
+		gpfs_health_status{component="NETWORK",entityname="ib-haswell1.example.com",entitytype="NODE",status="CHECKING"} 0
+		gpfs_health_status{component="NETWORK",entityname="ib-haswell1.example.com",entitytype="NODE",status="DEGRADED"} 0
+		gpfs_health_status{component="NETWORK",entityname="ib-haswell1.example.com",entitytype="NODE",status="DEPEND"} 0
+		gpfs_health_status{component="NETWORK",entityname="ib-haswell1.example.com",entitytype="NODE",status="DISABLED"} 0
+		gpfs_health_status{component="NETWORK",entityname="ib-haswell1.example.com",entitytype="NODE",status="FAILED"} 0
 		gpfs_health_status{component="NETWORK",entityname="ib-haswell1.example.com",entitytype="NODE",status="HEALTHY"} 1
+		gpfs_health_status{component="NETWORK",entityname="ib-haswell1.example.com",entitytype="NODE",status="STARTING"} 0
+		gpfs_health_status{component="NETWORK",entityname="ib-haswell1.example.com",entitytype="NODE",status="STOPPED"} 0
+		gpfs_health_status{component="NETWORK",entityname="ib-haswell1.example.com",entitytype="NODE",status="SUSPENDED"} 0
+		gpfs_health_status{component="NETWORK",entityname="ib-haswell1.example.com",entitytype="NODE",status="TIPS"} 0
+		gpfs_health_status{component="NETWORK",entityname="ib-haswell1.example.com",entitytype="NODE",status="UNKNOWN"} 0
+		gpfs_health_status{component="NETWORK",entityname="ib0",entitytype="NIC",status="CHECKING"} 0
+		gpfs_health_status{component="NETWORK",entityname="ib0",entitytype="NIC",status="DEGRADED"} 0
+		gpfs_health_status{component="NETWORK",entityname="ib0",entitytype="NIC",status="DEPEND"} 0
+		gpfs_health_status{component="NETWORK",entityname="ib0",entitytype="NIC",status="DISABLED"} 0
+		gpfs_health_status{component="NETWORK",entityname="ib0",entitytype="NIC",status="FAILED"} 0
 		gpfs_health_status{component="NETWORK",entityname="ib0",entitytype="NIC",status="HEALTHY"} 1
-		gpfs_health_status{component="NETWORK",entityname="mlx5_0/1",entitytype="IB_RDMA",status="HEALTHY"} 1
+		gpfs_health_status{component="NETWORK",entityname="ib0",entitytype="NIC",status="STARTING"} 0
+		gpfs_health_status{component="NETWORK",entityname="ib0",entitytype="NIC",status="STOPPED"} 0
+		gpfs_health_status{component="NETWORK",entityname="ib0",entitytype="NIC",status="SUSPENDED"} 0
+		gpfs_health_status{component="NETWORK",entityname="ib0",entitytype="NIC",status="TIPS"} 0
+		gpfs_health_status{component="NETWORK",entityname="ib0",entitytype="NIC",status="UNKNOWN"} 0
+		gpfs_health_status{component="NETWORK",entityname="mlx5_0/1",entitytype="IB_RDMA",status="CHECKING"} 0
+		gpfs_health_status{component="NETWORK",entityname="mlx5_0/1",entitytype="IB_RDMA",status="DEGRADED"} 0
+		gpfs_health_status{component="NETWORK",entityname="mlx5_0/1",entitytype="IB_RDMA",status="DEPEND"} 0
+		gpfs_health_status{component="NETWORK",entityname="mlx5_0/1",entitytype="IB_RDMA",status="DISABLED"} 0
+		gpfs_health_status{component="NETWORK",entityname="mlx5_0/1",entitytype="IB_RDMA",status="FAILED"} 0
+		gpfs_health_status{component="NETWORK",entityname="mlx5_0/1",entitytype="IB_RDMA",status="HEALTHY"} 0
+		gpfs_health_status{component="NETWORK",entityname="mlx5_0/1",entitytype="IB_RDMA",status="STARTING"} 0
+		gpfs_health_status{component="NETWORK",entityname="mlx5_0/1",entitytype="IB_RDMA",status="STOPPED"} 0
+		gpfs_health_status{component="NETWORK",entityname="mlx5_0/1",entitytype="IB_RDMA",status="SUSPENDED"} 0
+		gpfs_health_status{component="NETWORK",entityname="mlx5_0/1",entitytype="IB_RDMA",status="TIPS"} 0
+		gpfs_health_status{component="NETWORK",entityname="mlx5_0/1",entitytype="IB_RDMA",status="UNKNOWN"} 1
+		gpfs_health_status{component="NODE",entityname="ib-haswell1.example.com",entitytype="NODE",status="CHECKING"} 0
+		gpfs_health_status{component="NODE",entityname="ib-haswell1.example.com",entitytype="NODE",status="DEGRADED"} 0
+		gpfs_health_status{component="NODE",entityname="ib-haswell1.example.com",entitytype="NODE",status="DEPEND"} 0
+		gpfs_health_status{component="NODE",entityname="ib-haswell1.example.com",entitytype="NODE",status="DISABLED"} 0
+		gpfs_health_status{component="NODE",entityname="ib-haswell1.example.com",entitytype="NODE",status="FAILED"} 0
+		gpfs_health_status{component="NODE",entityname="ib-haswell1.example.com",entitytype="NODE",status="HEALTHY"} 0
+		gpfs_health_status{component="NODE",entityname="ib-haswell1.example.com",entitytype="NODE",status="STARTING"} 0
+		gpfs_health_status{component="NODE",entityname="ib-haswell1.example.com",entitytype="NODE",status="STOPPED"} 0
+		gpfs_health_status{component="NODE",entityname="ib-haswell1.example.com",entitytype="NODE",status="SUSPENDED"} 0
 		gpfs_health_status{component="NODE",entityname="ib-haswell1.example.com",entitytype="NODE",status="TIPS"} 1
+		gpfs_health_status{component="NODE",entityname="ib-haswell1.example.com",entitytype="NODE",status="UNKNOWN"} 0
 	`
 	collector := NewMmhealthCollector(log.NewNopLogger())
 	gatherers := setupGatherer(collector)
 	if val, err := testutil.GatherAndCount(gatherers); err != nil {
 		t.Errorf("Unexpected error: %v", err)
-	} else if val != 12 {
-		t.Errorf("Unexpected collection count %d, expected 12", val)
+	} else if val != 102 {
+		t.Errorf("Unexpected collection count %d, expected 102", val)
 	}
 	if err := testutil.GatherAndCompare(gatherers, strings.NewReader(expected), "gpfs_health_status"); err != nil {
 		t.Errorf("unexpected collecting result:\n%s", err)
