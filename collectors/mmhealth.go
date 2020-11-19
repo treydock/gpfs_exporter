@@ -36,7 +36,8 @@ var (
 		"entitytype": "EntityType",
 		"status":     "Status",
 	}
-	mmhealthExec = mmhealth
+	mmhealthStatuses = []string{"CHECKING", "DEGRADED", "DEPEND", "DISABLED", "FAILED", "HEALTHY", "STARTING", "STOPPED", "SUSPENDED", "TIPS"}
+	mmhealthExec     = mmhealth
 )
 
 type HealthMetric struct {
@@ -81,7 +82,20 @@ func (c *MmhealthCollector) Collect(ch chan<- prometheus.Metric) {
 		errorMetric = 1
 	}
 	for _, m := range metrics {
-		ch <- prometheus.MustNewConstMetric(c.State, prometheus.GaugeValue, 1, m.Component, m.EntityName, m.EntityType, m.Status)
+		for _, s := range mmhealthStatuses {
+			var value float64
+			if s == m.Status {
+				value = 1
+			}
+			ch <- prometheus.MustNewConstMetric(c.State, prometheus.GaugeValue, value, m.Component, m.EntityName, m.EntityType, s)
+		}
+		var unknown float64
+		if !SliceContains(mmhealthStatuses, m.Status) {
+			unknown = 1
+			level.Warn(c.logger).Log("msg", "Unknown status encountered", "status", m.Status,
+				"component", m.Component, "entityname", m.EntityName, "entitytype", m.EntityType)
+		}
+		ch <- prometheus.MustNewConstMetric(c.State, prometheus.GaugeValue, unknown, m.Component, m.EntityName, m.EntityType, "UNKNOWN")
 	}
 	ch <- prometheus.MustNewConstMetric(collectError, prometheus.GaugeValue, float64(errorMetric), "mmhealth")
 	ch <- prometheus.MustNewConstMetric(collecTimeout, prometheus.GaugeValue, float64(timeout), "mmhealth")

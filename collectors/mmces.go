@@ -32,6 +32,7 @@ var (
 	configNodeName = kingpin.Flag("collector.mmces.nodename", "CES node name to check, defaults to FQDN").Default("").String()
 	mmcesTimeout   = kingpin.Flag("collector.mmces.timeout", "Timeout for mmces execution").Default("5").Int()
 	cesServices    = []string{"AUTH", "BLOCK", "NETWORK", "AUTH_OBJ", "NFS", "OBJ", "SMB", "CES"}
+	cesStates      = []string{"DEGRADED", "DEPEND", "DISABLED", "FAILED", "HEALTHY", "STARTING", "STOPPED", "SUSPENDED"}
 	mmcesExec      = mmces
 )
 
@@ -94,7 +95,19 @@ func (c *MmcesCollector) Collect(ch chan<- prometheus.Metric) {
 		errorMetric = 1
 	}
 	for _, m := range metrics {
-		ch <- prometheus.MustNewConstMetric(c.State, prometheus.GaugeValue, 1, m.Service, m.State)
+		for _, s := range cesStates {
+			var value float64
+			if s == m.State {
+				value = 1
+			}
+			ch <- prometheus.MustNewConstMetric(c.State, prometheus.GaugeValue, value, m.Service, s)
+		}
+		var unknown float64
+		if !SliceContains(cesStates, m.State) {
+			unknown = 1
+			level.Warn(c.logger).Log("msg", "Unknown state encountered", "state", m.State, "service", m.Service)
+		}
+		ch <- prometheus.MustNewConstMetric(c.State, prometheus.GaugeValue, unknown, m.Service, "UNKNOWN")
 	}
 	ch <- prometheus.MustNewConstMetric(collectError, prometheus.GaugeValue, float64(errorMetric), "mmces")
 	ch <- prometheus.MustNewConstMetric(collecTimeout, prometheus.GaugeValue, float64(timeout), "mmces")

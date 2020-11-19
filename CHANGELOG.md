@@ -18,7 +18,8 @@
   * gpfs_fs_metadata_free_percent
   * gpfs_fs_free_percent
 * Remove nodename label from gpfs_perf_* metrics, replace with gpfs_perf_info metric
-* mmces and mmhealth status metrics will always have value 1, only the `status` label will change
+* mmces state metrics will have one metric per possible state, with active state having value 1
+* mmhealth status metrics will have one metric per possible status with active status having value 1
 
 ### Changes
 
