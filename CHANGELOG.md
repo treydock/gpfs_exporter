@@ -1,3 +1,9 @@
+## Unreleased
+
+### Changes
+
+* Allow mmhealth items to be filtered out via CLI flags
+
 ## 1.0.0 / 2020-11-24
 
 ### **Breaking Changes**

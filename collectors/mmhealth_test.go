@@ -111,6 +111,40 @@ func TestParseMmhealth(t *testing.T) {
 	}
 }
 
+func TestParseMmhealthIgnores(t *testing.T) {
+	if _, err := kingpin.CommandLine.Parse([]string{}); err != nil {
+		t.Fatal(err)
+	}
+	noignore := "^$"
+	ignore := "FILESYSTEM"
+	mmhealthIgnoredComponent = &ignore
+	mmhealthIgnoredEntityName = &noignore
+	mmhealthIgnoredEntityType = &noignore
+	metrics := mmhealth_parse(mmhealthStdout, log.NewNopLogger())
+	if len(metrics) != 5 {
+		t.Errorf("Expected 5 metrics returned, got %d", len(metrics))
+		return
+	}
+	ignore = "ess"
+	mmhealthIgnoredComponent = &noignore
+	mmhealthIgnoredEntityName = &ignore
+	mmhealthIgnoredEntityType = &noignore
+	metrics = mmhealth_parse(mmhealthStdout, log.NewNopLogger())
+	if len(metrics) != 8 {
+		t.Errorf("Expected 8 metrics returned, got %d", len(metrics))
+		return
+	}
+	ignore = "FILESYSTEM"
+	mmhealthIgnoredComponent = &noignore
+	mmhealthIgnoredEntityName = &noignore
+	mmhealthIgnoredEntityType = &ignore
+	metrics = mmhealth_parse(mmhealthStdout, log.NewNopLogger())
+	if len(metrics) != 6 {
+		t.Errorf("Expected 6 metrics returned, got %d", len(metrics))
+		return
+	}
+}
+
 func TestMmhealthCollector(t *testing.T) {
 	if _, err := kingpin.CommandLine.Parse([]string{}); err != nil {
 		t.Fatal(err)
@@ -118,6 +152,10 @@ func TestMmhealthCollector(t *testing.T) {
 	mmhealthExec = func(ctx context.Context) (string, error) {
 		return mmhealthStdout, nil
 	}
+	ignore := "^$"
+	mmhealthIgnoredComponent = &ignore
+	mmhealthIgnoredEntityName = &ignore
+	mmhealthIgnoredEntityType = &ignore
 	expected := `
 		# HELP gpfs_health_status GPFS health status
 		# TYPE gpfs_health_status gauge
