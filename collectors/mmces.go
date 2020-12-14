@@ -18,6 +18,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"regexp"
 	"strings"
 	"time"
 
@@ -28,12 +29,13 @@ import (
 )
 
 var (
-	osHostname     = os.Hostname
-	configNodeName = kingpin.Flag("collector.mmces.nodename", "CES node name to check, defaults to FQDN").Default("").String()
-	mmcesTimeout   = kingpin.Flag("collector.mmces.timeout", "Timeout for mmces execution").Default("5").Int()
-	cesServices    = []string{"AUTH", "BLOCK", "NETWORK", "AUTH_OBJ", "NFS", "OBJ", "SMB", "CES"}
-	cesStates      = []string{"DEGRADED", "DEPEND", "DISABLED", "FAILED", "HEALTHY", "STARTING", "STOPPED", "SUSPENDED"}
-	mmcesExec      = mmces
+	osHostname           = os.Hostname
+	configNodeName       = kingpin.Flag("collector.mmces.nodename", "CES node name to check, defaults to FQDN").Default("").String()
+	mmcesTimeout         = kingpin.Flag("collector.mmces.timeout", "Timeout for mmces execution").Default("5").Int()
+	mmcesIgnoredServices = kingpin.Flag("collector.mmces.ignored-services", "Regex of services to ignore").Default("^$").String()
+	cesServices          = []string{"AUTH", "BLOCK", "NETWORK", "AUTH_OBJ", "NFS", "OBJ", "SMB", "CES"}
+	cesStates            = []string{"DEGRADED", "DEPEND", "DISABLED", "FAILED", "HEALTHY", "STARTING", "STOPPED", "SUSPENDED"}
+	mmcesExec            = mmces
 )
 
 func getFQDN(logger log.Logger) string {
@@ -139,6 +141,7 @@ func mmces(nodename string, ctx context.Context) (string, error) {
 }
 
 func mmces_state_show_parse(out string) []CESMetric {
+	mmcesIgnoredServicesPattern := regexp.MustCompile(*mmcesIgnoredServices)
 	var metrics []CESMetric
 	lines := strings.Split(out, "\n")
 	var headers []string
@@ -159,6 +162,9 @@ func mmces_state_show_parse(out string) []CESMetric {
 	}
 	for i, h := range headers {
 		if !SliceContains(cesServices, h) {
+			continue
+		}
+		if mmcesIgnoredServicesPattern.MatchString(h) {
 			continue
 		}
 		var metric CESMetric
