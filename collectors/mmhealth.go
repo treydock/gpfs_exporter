@@ -18,6 +18,7 @@ import (
 	"context"
 	"fmt"
 	"reflect"
+	"regexp"
 	"strconv"
 	"strings"
 	"time"
@@ -29,8 +30,11 @@ import (
 )
 
 var (
-	mmhealthTimeout = kingpin.Flag("collector.mmhealth.timeout", "Timeout for mmhealth execution").Default("5").Int()
-	mmhealthMap     = map[string]string{
+	mmhealthTimeout           = kingpin.Flag("collector.mmhealth.timeout", "Timeout for mmhealth execution").Default("5").Int()
+	mmhealthIgnoredComponent  = kingpin.Flag("collector.mmhealth.ignored-component", "Regex of components to ignore").Default("^$").String()
+	mmhealthIgnoredEntityName = kingpin.Flag("collector.mmhealth.ignored-entityname", "Regex of entity names to ignore").Default("^$").String()
+	mmhealthIgnoredEntityType = kingpin.Flag("collector.mmhealth.ignored-entitytype", "Regex of entity types to ignore").Default("^$").String()
+	mmhealthMap               = map[string]string{
 		"component":  "Component",
 		"entityname": "EntityName",
 		"entitytype": "EntityType",
@@ -127,6 +131,9 @@ func mmhealth(ctx context.Context) (string, error) {
 }
 
 func mmhealth_parse(out string, logger log.Logger) []HealthMetric {
+	mmhealthIgnoredComponentPattern := regexp.MustCompile(*mmhealthIgnoredComponent)
+	mmhealthIgnoredEntityNamePattern := regexp.MustCompile(*mmhealthIgnoredEntityName)
+	mmhealthIgnoredEntityTypePattern := regexp.MustCompile(*mmhealthIgnoredEntityType)
 	var metrics []HealthMetric
 	lines := strings.Split(out, "\n")
 	var headers []string
@@ -164,6 +171,15 @@ func mmhealth_parse(out string, logger log.Logger) []HealthMetric {
 					}
 				}
 			}
+		}
+		if mmhealthIgnoredComponentPattern.MatchString(metric.Component) {
+			continue
+		}
+		if mmhealthIgnoredEntityNamePattern.MatchString(metric.EntityName) {
+			continue
+		}
+		if mmhealthIgnoredEntityTypePattern.MatchString(metric.EntityType) {
+			continue
 		}
 		metrics = append(metrics, metric)
 	}
