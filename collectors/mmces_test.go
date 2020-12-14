@@ -101,6 +101,11 @@ func TestMmcesTimeout(t *testing.T) {
 }
 
 func TestParseMmcesStateShow(t *testing.T) {
+	if _, err := kingpin.CommandLine.Parse([]string{"--collector.mmces.nodename=ib-protocol01.domain"}); err != nil {
+		t.Fatal(err)
+	}
+	ignored := "^$"
+	mmcesIgnoredServices = &ignored
 	metrics := mmces_state_show_parse(mmcesStdout)
 	if len(metrics) != 8 {
 		t.Errorf("Expected 8 metrics returned, got %d", len(metrics))
@@ -114,6 +119,19 @@ func TestParseMmcesStateShow(t *testing.T) {
 	}
 }
 
+func TestParseMmcesStateShowIgnore(t *testing.T) {
+	if _, err := kingpin.CommandLine.Parse([]string{"--collector.mmces.nodename=ib-protocol01.domain"}); err != nil {
+		t.Fatal(err)
+	}
+	ignored := "^(BLOCK|OBJ)$"
+	mmcesIgnoredServices = &ignored
+	metrics := mmces_state_show_parse(mmcesStdout)
+	if len(metrics) != 6 {
+		t.Errorf("Expected 6 metrics returned, got %d", len(metrics))
+		return
+	}
+}
+
 func TestMMcesCollector(t *testing.T) {
 	if _, err := kingpin.CommandLine.Parse([]string{"--collector.mmces.nodename=ib-protocol01.domain"}); err != nil {
 		t.Fatal(err)
@@ -121,7 +139,8 @@ func TestMMcesCollector(t *testing.T) {
 	mmcesExec = func(nodename string, ctx context.Context) (string, error) {
 		return mmcesStdout, nil
 	}
-
+	ignored := "^$"
+	mmcesIgnoredServices = &ignored
 	expected := `
 		# HELP gpfs_ces_state GPFS CES health status
 		# TYPE gpfs_ces_state gauge
