@@ -3,6 +3,7 @@
 ### Changes
 
 * Allow mmhealth items to be filtered out via CLI flags
+* Allow mmces services to be filtered out via CLI flags
 
 ## 1.0.0 / 2020-11-24
 
