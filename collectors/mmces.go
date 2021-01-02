@@ -123,7 +123,7 @@ func (c *MmcesCollector) collect(nodename string) ([]CESMetric, error) {
 	if err != nil {
 		return nil, err
 	}
-	metrics := mmces_state_show_parse(mmces_state_out)
+	metrics := mmces_state_show_parse(mmces_state_out, c.logger)
 	return metrics, nil
 }
 
@@ -140,7 +140,7 @@ func mmces(nodename string, ctx context.Context) (string, error) {
 	return out.String(), nil
 }
 
-func mmces_state_show_parse(out string) []CESMetric {
+func mmces_state_show_parse(out string, logger log.Logger) []CESMetric {
 	mmcesIgnoredServicesPattern := regexp.MustCompile(*mmcesIgnoredServices)
 	var metrics []CESMetric
 	lines := strings.Split(out, "\n")
@@ -165,6 +165,7 @@ func mmces_state_show_parse(out string) []CESMetric {
 			continue
 		}
 		if mmcesIgnoredServicesPattern.MatchString(h) {
+			level.Debug(logger).Log("msg", "Skipping service due to ignored pattern", "service", h)
 			continue
 		}
 		var metric CESMetric

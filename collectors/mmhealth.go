@@ -173,12 +173,15 @@ func mmhealth_parse(out string, logger log.Logger) []HealthMetric {
 			}
 		}
 		if mmhealthIgnoredComponentPattern.MatchString(metric.Component) {
+			level.Debug(logger).Log("msg", "Skipping component due to ignored pattern", "component", metric.Component)
 			continue
 		}
 		if mmhealthIgnoredEntityNamePattern.MatchString(metric.EntityName) {
+			level.Debug(logger).Log("msg", "Skipping entity name due to ignored pattern", "entityname", metric.EntityName)
 			continue
 		}
 		if mmhealthIgnoredEntityTypePattern.MatchString(metric.EntityType) {
+			level.Debug(logger).Log("msg", "Skipping entity type due to ignored pattern", "entitytype", metric.EntityType)
 			continue
 		}
 		metrics = append(metrics, metric)
