@@ -1,4 +1,4 @@
-## Unreleased
+## 1.1.0 / 2021-01-02
 
 ### Changes
 
