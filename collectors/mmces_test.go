@@ -106,7 +106,7 @@ func TestParseMmcesStateShow(t *testing.T) {
 	}
 	ignored := "^$"
 	mmcesIgnoredServices = &ignored
-	metrics := mmces_state_show_parse(mmcesStdout)
+	metrics := mmces_state_show_parse(mmcesStdout, log.NewNopLogger())
 	if len(metrics) != 8 {
 		t.Errorf("Expected 8 metrics returned, got %d", len(metrics))
 		return
@@ -125,7 +125,7 @@ func TestParseMmcesStateShowIgnore(t *testing.T) {
 	}
 	ignored := "^(BLOCK|OBJ)$"
 	mmcesIgnoredServices = &ignored
-	metrics := mmces_state_show_parse(mmcesStdout)
+	metrics := mmces_state_show_parse(mmcesStdout, log.NewNopLogger())
 	if len(metrics) != 6 {
 		t.Errorf("Expected 6 metrics returned, got %d", len(metrics))
 		return
