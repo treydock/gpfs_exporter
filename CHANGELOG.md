@@ -1,3 +1,9 @@
+## 1.1.1 / 2021-03-31
+
+### Bug fixes
+
+* Fix possible index out of range parsing errors with mmdf collector
+
 ## 1.1.0 / 2021-01-02
 
 ### Changes
