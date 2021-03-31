@@ -229,6 +229,14 @@ func parse_mmdf(out string, logger log.Logger) DFMetric {
 	ps := reflect.ValueOf(&dfMetrics) // pointer to struct - addressable
 	s := ps.Elem()                    // struct
 	for k, vals := range headers {
+		if _, ok := values[k]; !ok {
+			level.Error(logger).Log("msg", "Header section missing from values", "header", k)
+			continue
+		}
+		if len(vals) != len(values[k]) {
+			level.Error(logger).Log("msg", "Length of headers does not equal length of values", "header", k, "values", len(values[k]), "headers", len(vals))
+			continue
+		}
 		for i, v := range vals {
 			mapKey := fmt.Sprintf("%s:%s", k, v)
 			value := values[k][i]
