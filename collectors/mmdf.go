@@ -174,8 +174,8 @@ func (c *MmdfCollector) mmdfCollect(fs string) (DFMetric, error) {
 	if err != nil {
 		return DFMetric{}, err
 	}
-	dfMetric := parse_mmdf(out, c.logger)
-	return dfMetric, nil
+	dfMetric, err := parse_mmdf(out, c.logger)
+	return dfMetric, err
 }
 
 func mmlfsfsFilesystems(ctx context.Context, logger log.Logger) ([]string, error) {
@@ -204,7 +204,7 @@ func mmdf(fs string, ctx context.Context) (string, error) {
 	return out.String(), nil
 }
 
-func parse_mmdf(out string, logger log.Logger) DFMetric {
+func parse_mmdf(out string, logger log.Logger) (DFMetric, error) {
 	var dfMetrics DFMetric
 	headers := make(map[string][]string)
 	values := make(map[string][]string)
@@ -229,6 +229,14 @@ func parse_mmdf(out string, logger log.Logger) DFMetric {
 	ps := reflect.ValueOf(&dfMetrics) // pointer to struct - addressable
 	s := ps.Elem()                    // struct
 	for k, vals := range headers {
+		if _, ok := values[k]; !ok {
+			level.Error(logger).Log("msg", "Header section missing from values", "header", k)
+			return dfMetrics, fmt.Errorf("Header section missing from values: %s", k)
+		}
+		if len(vals) != len(values[k]) {
+			level.Error(logger).Log("msg", "Length of headers does not equal length of values", "header", k, "values", len(values[k]), "headers", len(vals))
+			return dfMetrics, fmt.Errorf("Length of headers does not equal length of values: %s", k)
+		}
 		for i, v := range vals {
 			mapKey := fmt.Sprintf("%s:%s", k, v)
 			value := values[k][i]
@@ -249,5 +257,5 @@ func parse_mmdf(out string, logger log.Logger) DFMetric {
 			}
 		}
 	}
-	return dfMetrics
+	return dfMetrics, nil
 }
