@@ -2,6 +2,7 @@
 /.build
 /gpfs_exporter
 /gpfs_mmdf_exporter
+/gpfs_mmlssnapshot_exporter
 /c.out
 /coverage.html
 /coverage.txt

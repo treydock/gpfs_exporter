@@ -181,19 +181,6 @@ func (c *MmdfCollector) mmdfCollect(fs string) (DFMetric, error) {
 	return dfMetric, err
 }
 
-func mmlfsfsFilesystems(ctx context.Context, logger log.Logger) ([]string, error) {
-	var filesystems []string
-	out, err := MmlsfsExec(ctx)
-	if err != nil {
-		return nil, err
-	}
-	mmlsfs_filesystems := parse_mmlsfs(out)
-	for _, fs := range mmlsfs_filesystems {
-		filesystems = append(filesystems, fs.Name)
-	}
-	return filesystems, nil
-}
-
 func mmdf(fs string, ctx context.Context) (string, error) {
 	cmd := execCommand(ctx, "sudo", "/usr/lpp/mmfs/bin/mmdf", fs, "-Y")
 	var out bytes.Buffer

@@ -9,6 +9,8 @@ build:
           path: ./cmd/gpfs_exporter
         - name: gpfs_mmdf_exporter
           path: ./cmd/gpfs_mmdf_exporter
+        - name: gpfs_mmlssnapshot_exporter
+          path: ./cmd/gpfs_mmlssnapshot_exporter
     flags: -a -tags netgo
     ldflags: |
         -extldflags "-static"

@@ -26,6 +26,7 @@ mmdiag | Test mmdiag waiters | Disabled
 mmdf | Collect filesystem space for inodes, block and metadata. | Disabled
 mmces | Collect state of CES | Disabled
 mmrepquota | Collect fileset quota information | Disabled
+mmlssnapshot | Collect GPFS snapshot information | Disabled
 
 ### mount
 
@@ -54,6 +55,13 @@ The default is FQDN of those running the exporter.
 
 * `--collector.mmrepquota.filesystems` - A comma separated list of filesystems to collect. Default is to collect all filesystems.
 
+### mmlssnapshot
+
+* `--collector.mmlssnapshot.filesystems` - A comma separated list of filesystems to collect. Default is to collect all filesystems listed by `mmlsfs`.
+* `--collector.mmlssnapshot.get-size` - Pass this flag to collect snapshot sizes. This operation could take a long time depending on filesystem size, consider using `gpfs_mmlssnapshot_exporter` instead.
+
+The exporter `gpfs_mmlssnapshot_exporter` is provided to allow snapshot collection, including size (with `--collector.mmlssnapshot.get-size`) to be collected with cron rather than a Prometheus scrape through the normal exporter.
+
 ## Sudo
 
 Ensure the user running `gpfs_exporter` can execute GPFS commands necessary to collect metrics.
@@ -70,7 +78,7 @@ gpfs_exporter ALL=(ALL) NOPASSWD:/usr/lpp/mmfs/bin/mmpmon -s -p
 gpfs_exporter ALL=(ALL) NOPASSWD:/usr/lpp/mmfs/bin/mmhealth node show -Y
 # verbs collector
 gpfs_exporter ALL=(ALL) NOPASSWD:/usr/lpp/mmfs/bin/mmfsadm test verbs status
-# mmdf collector if filesystems not specified
+# mmdf/mmlssnapshot collector if filesystems not specified
 gpfs_exporter ALL=(ALL) NOPASSWD:/usr/lpp/mmfs/bin/mmlsfs all -Y -T
 # mmdiag collector
 gpfs_exporter ALL=(ALL) NOPASSWD:/usr/lpp/mmfs/bin/mmdiag --waiters -Y
@@ -83,6 +91,9 @@ gpfs_exporter ALL=(ALL) NOPASSWD:/usr/lpp/mmfs/bin/mmdf scratch -Y
 gpfs_exporter ALL=(ALL) NOPASSWD:/usr/lpp/mmfs/bin/mmrepquota -j -Y -a
 # mmrepquota collector, filesystems specified
 gpfs_exporter ALL=(ALL) NOPASSWD:/usr/lpp/mmfs/bin/mmrepquota -j -Y project scratch
+# mmlssnapshot collector, each filesystem must be listed
+gpfs_exporter ALL=(ALL) NOPASSWD:/usr/lpp/mmfs/bin/mmlssnapshot project -s all -Y
+gpfs_exporter ALL=(ALL) NOPASSWD:/usr/lpp/mmfs/bin/mmlssnapshot ess -s all -Y
 ```
 
 ## Install
@@ -114,7 +125,7 @@ systemctl start gpfs_exporter
 
 ## Build from source
 
-To produce the `gpfs_exporter` and `gpfs_mmdf_exporter` binaries:
+To produce the `gpfs_exporter`, `gpfs_mmdf_exporter`, and `gpfs_mmlssnapshot_exporter` binaries:
 
 ```
 make build
@@ -125,4 +136,5 @@ Or
 ```
 go get github.com/treydock/gpfs_exporter/cmd/gpfs_exporter
 go get github.com/treydock/gpfs_exporter/cmd/gpfs_mmdf_exporter
+go get github.com/treydock/gpfs_exporter/cmd/gpfs_mmlssnapshot_exporter
 ```
