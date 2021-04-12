@@ -1,3 +1,9 @@
+## Unreleased
+
+### Bug fixes
+
+* Do not produce errors if no metadata is reported by mmdf
+
 ## 1.1.1 / 2021-03-31
 
 ### Bug fixes

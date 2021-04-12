@@ -55,6 +55,7 @@ type DFMetric struct {
 	InodesTotal     float64
 	FSTotal         float64
 	FSFree          float64
+	Metadata        bool
 	MetadataTotal   float64
 	MetadataFree    float64
 }
@@ -159,8 +160,10 @@ func (c *MmdfCollector) Collect(ch chan<- prometheus.Metric) {
 			ch <- prometheus.MustNewConstMetric(c.InodesTotal, prometheus.GaugeValue, metric.InodesTotal, fs)
 			ch <- prometheus.MustNewConstMetric(c.FSTotal, prometheus.GaugeValue, metric.FSTotal, fs)
 			ch <- prometheus.MustNewConstMetric(c.FSFree, prometheus.GaugeValue, metric.FSFree, fs)
-			ch <- prometheus.MustNewConstMetric(c.MetadataTotal, prometheus.GaugeValue, metric.MetadataTotal, fs)
-			ch <- prometheus.MustNewConstMetric(c.MetadataFree, prometheus.GaugeValue, metric.MetadataFree, fs)
+			if metric.Metadata {
+				ch <- prometheus.MustNewConstMetric(c.MetadataTotal, prometheus.GaugeValue, metric.MetadataTotal, fs)
+				ch <- prometheus.MustNewConstMetric(c.MetadataFree, prometheus.GaugeValue, metric.MetadataFree, fs)
+			}
 			ch <- prometheus.MustNewConstMetric(lastExecution, prometheus.GaugeValue, float64(time.Now().Unix()), label)
 		}(fs)
 	}
@@ -205,7 +208,7 @@ func mmdf(fs string, ctx context.Context) (string, error) {
 }
 
 func parse_mmdf(out string, logger log.Logger) (DFMetric, error) {
-	var dfMetrics DFMetric
+	dfMetrics := DFMetric{Metadata: true}
 	headers := make(map[string][]string)
 	values := make(map[string][]string)
 	lines := strings.Split(out, "\n")
@@ -230,8 +233,13 @@ func parse_mmdf(out string, logger log.Logger) (DFMetric, error) {
 	s := ps.Elem()                    // struct
 	for k, vals := range headers {
 		if _, ok := values[k]; !ok {
-			level.Error(logger).Log("msg", "Header section missing from values", "header", k)
-			return dfMetrics, fmt.Errorf("Header section missing from values: %s", k)
+			if k == "metadata" {
+				dfMetrics.Metadata = false
+				continue
+			} else {
+				level.Error(logger).Log("msg", "Header section missing from values", "header", k)
+				return dfMetrics, fmt.Errorf("Header section missing from values: %s", k)
+			}
 		}
 		if len(vals) != len(values[k]) {
 			level.Error(logger).Log("msg", "Length of headers does not equal length of values", "header", k, "values", len(values[k]), "headers", len(vals))
