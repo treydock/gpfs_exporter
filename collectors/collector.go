@@ -22,6 +22,7 @@ import (
 	"os/exec"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/go-kit/kit/log"
 	"github.com/prometheus/client_golang/prometheus"
@@ -33,10 +34,13 @@ const (
 )
 
 var (
-	collectorState  = make(map[string]*bool)
-	factories       = make(map[string]func(logger log.Logger) Collector)
-	execCommand     = exec.CommandContext
-	MmlsfsExec      = mmlsfs
+	collectorState = make(map[string]*bool)
+	factories      = make(map[string]func(logger log.Logger) Collector)
+	execCommand    = exec.CommandContext
+	MmlsfsExec     = mmlsfs
+	NowLocation    = func() *time.Location {
+		return time.Now().Location()
+	}
 	collectDuration = prometheus.NewDesc(
 		prometheus.BuildFQName(namespace, "exporter", "collector_duration_seconds"),
 		"Collector time duration.",
@@ -113,6 +117,19 @@ func FileExists(filename string) bool {
 		return false
 	}
 	return !info.IsDir()
+}
+
+func mmlfsfsFilesystems(ctx context.Context, logger log.Logger) ([]string, error) {
+	var filesystems []string
+	out, err := MmlsfsExec(ctx)
+	if err != nil {
+		return nil, err
+	}
+	mmlsfs_filesystems := parse_mmlsfs(out)
+	for _, fs := range mmlsfs_filesystems {
+		filesystems = append(filesystems, fs.Name)
+	}
+	return filesystems, nil
 }
 
 func mmlsfs(ctx context.Context) (string, error) {

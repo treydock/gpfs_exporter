@@ -1,3 +1,9 @@
+## Unreleased
+
+### Changes
+
+* Add mmlssnapshot collector
+
 ## 1.1.2 / 2021-04-12
 
 ### Bug fixes
