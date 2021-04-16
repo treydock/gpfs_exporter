@@ -16,7 +16,6 @@ package main
 import (
 	"context"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"strings"
 	"testing"
@@ -72,7 +71,7 @@ gpfs_exporter_collect_timeout{collector="mmlssnapshot-ess"} 1`
 )
 
 func TestMain(m *testing.M) {
-	tmpDir, err := ioutil.TempDir(os.TempDir(), "output")
+	tmpDir, err := os.MkdirTemp(os.TempDir(), "output")
 	if err != nil {
 		os.Exit(1)
 	}
@@ -97,7 +96,7 @@ func TestCollect(t *testing.T) {
 		t.Errorf("Unexpected error: %s", err.Error())
 		return
 	}
-	content, err := ioutil.ReadFile(outputPath)
+	content, err := os.ReadFile(outputPath)
 	if err != nil {
 		t.Errorf("Unexpected error: %s", err.Error())
 		return
@@ -121,7 +120,7 @@ func TestCollectError(t *testing.T) {
 		t.Errorf("Expected error")
 		return
 	}
-	content, err := ioutil.ReadFile(outputPath)
+	content, err := os.ReadFile(outputPath)
 	if err != nil {
 		t.Errorf("Unexpected error: %s", err.Error())
 		return
@@ -145,7 +144,7 @@ func TestCollectTimeout(t *testing.T) {
 		t.Errorf("Expected error")
 		return
 	}
-	content, err := ioutil.ReadFile(outputPath)
+	content, err := os.ReadFile(outputPath)
 	if err != nil {
 		t.Errorf("Unexpected error: %s", err.Error())
 		return
