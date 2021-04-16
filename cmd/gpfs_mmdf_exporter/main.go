@@ -15,7 +15,6 @@ package main
 
 import (
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"sort"
@@ -40,7 +39,7 @@ var (
 )
 
 func writeMetrics(mfs []*dto.MetricFamily, logger log.Logger) error {
-	tmp, err := ioutil.TempFile(filepath.Dir(*output), filepath.Base(*output))
+	tmp, err := os.CreateTemp(filepath.Dir(*output), filepath.Base(*output))
 	if err != nil {
 		level.Error(logger).Log("msg", "Unable to create temp file", "err", err)
 		return err

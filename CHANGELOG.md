@@ -1,3 +1,9 @@
+## Unreleased
+
+### Changes
+
+* Update to Go 1.16
+
 ## 1.2.0 / 2021-04-15
 
 ### Changes

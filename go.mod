@@ -1,6 +1,6 @@
 module github.com/treydock/gpfs_exporter
 
-go 1.13
+go 1.16
 
 require (
 	github.com/c9s/goprocinfo v0.0.0-20200311234719-5750cbd54a3b
