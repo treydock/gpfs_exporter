@@ -9,7 +9,7 @@
 # GPFS Prometheus exporter
 
 The GPFS exporter collects metrics from the GPFS filesystem.
-The exporter supports the `/metrics` endpoint to gather GPFS metrics an metrics about the exporter.
+The exporter supports the `/metrics` endpoint to gather GPFS metrics and metrics about the exporter.
 
 ## Collectors
 
@@ -27,6 +27,7 @@ mmdf | Collect filesystem space for inodes, block and metadata. | Disabled
 mmces | Collect state of CES | Disabled
 mmrepquota | Collect fileset quota information | Disabled
 mmlssnapshot | Collect GPFS snapshot information | Disabled
+mmlsfileset | Collect GPFS fileset information | Disabled
 
 ### mount
 
@@ -61,6 +62,12 @@ The default is FQDN of those running the exporter.
 * `--collector.mmlssnapshot.get-size` - Pass this flag to collect snapshot sizes. This operation could take a long time depending on filesystem size, consider using `gpfs_mmlssnapshot_exporter` instead.
 
 The exporter `gpfs_mmlssnapshot_exporter` is provided to allow snapshot collection, including size (with `--collector.mmlssnapshot.get-size`) to be collected with cron rather than a Prometheus scrape through the normal exporter.
+
+### mmlsfileset
+
+* `--collector.mmlssnapshot.filesystems` - A comma separated list of filesystems to collect. Default is to collect all filesystems listed by `mmlsfs`.
+
+**NOTE**: This collector does not collect used inodes. To get used inodes look at using the [mmrepquota](#mmrepquota) collector.
 
 ## Sudo
 
