@@ -16,7 +16,6 @@ package collectors
 import (
 	"context"
 	"fmt"
-	"os"
 	"os/exec"
 	"strings"
 	"testing"
@@ -47,14 +46,6 @@ mmlssnapshot::HEADER:version:reserved:reserved:filesystemName:directory:snapID:s
 mmlssnapshot::0:1:::ess:20201115_PAS1736:16337:Valid:Sun Nov 15 02%3A47%3A48 2020::0:foo:PAS1736::
 `
 )
-
-func TestMain(m *testing.M) {
-	NowLocation = func() *time.Location {
-		return time.FixedZone("EST", -5*60*60)
-	}
-	exitVal := m.Run()
-	os.Exit(exitVal)
-}
 
 func TestMmlssnapshot(t *testing.T) {
 	execCommand = fakeExecCommand

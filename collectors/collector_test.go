@@ -37,6 +37,14 @@ mmlsfs::0:1:::ess:defaultMountPoint:%2Ffs%2Fess::
 `
 )
 
+func TestMain(m *testing.M) {
+	NowLocation = func() *time.Location {
+		return time.FixedZone("EST", -5*60*60)
+	}
+	exitVal := m.Run()
+	os.Exit(exitVal)
+}
+
 func fakeExecCommand(ctx context.Context, command string, args ...string) *exec.Cmd {
 	cs := []string{"-test.run=TestExecCommandHelper", "--", command}
 	cs = append(cs, args...)
