@@ -1,3 +1,7 @@
+## Unreleased
+
+* Add config collector, enabled by default
+
 ## 1.3.0 / 2021-04-23
 
 ### Changes

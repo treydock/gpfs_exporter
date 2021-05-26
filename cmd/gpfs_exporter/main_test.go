@@ -41,6 +41,14 @@ _fs_io_s_ _n_ 10.22.0.106 _nn_ ib-pitzer-rw02.ten _rc_ 0 _t_ 1579358234 _tu_ 532
 mmgetstate::HEADER:version:reserved:reserved:nodeName:nodeNumber:state:quorum:nodesUp:totalNodes:remarks:cnfsState:
 mmgetstate::0:1:::ib-proj-nsd05.domain:11:active:4:7:1122::(undefined):
 `
+	configStdout = `
+mmdiag:config:HEADER:version:reserved:reserved:name:value:changed:
+mmdiag:config:0:1:::opensslLibName:/usr/lib64/libssl.so.10%3A/usr/lib64/libssl.so.6%3A/usr/lib64/libssl.so.0.9.8%3A/lib64/libssl.so.6%3Alibssl.so%3Alibss
+l.so.0%3Alibssl.so.4%3A/lib64/libssl.so.1.0.0::
+mmdiag:config:0:1:::pagepool:4294967296:static:
+mmdiag:config:0:1:::pagepoolMaxPhysMemPct:75::
+mmdiag:config:0:1:::parallelMetadataWrite:0::
+`
 )
 
 func TestMain(m *testing.M) {
@@ -69,6 +77,9 @@ func TestMetricsHandler(t *testing.T) {
 	}
 	collectors.MmpmonExec = func(ctx context.Context) (string, error) {
 		return mmpmonStdout, nil
+	}
+	collectors.MmdiagExec = func(arg string, ctx context.Context) (string, error) {
+		return configStdout, nil
 	}
 	body, err := queryExporter()
 	if err != nil {

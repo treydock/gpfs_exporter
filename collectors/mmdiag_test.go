@@ -134,7 +134,7 @@ func TestMmdiagCollector(t *testing.T) {
 	threshold := 30
 	configWaiterThreshold = &threshold
 	configWaiterExclude = &defWaiterExclude
-	mmdiagExec = func(arg string, ctx context.Context) (string, error) {
+	MmdiagExec = func(arg string, ctx context.Context) (string, error) {
 		return waitersStdout, nil
 	}
 	expected := `
@@ -162,7 +162,7 @@ func TestMMdiagCollectorError(t *testing.T) {
 	threshold := 30
 	configWaiterThreshold = &threshold
 	configWaiterExclude = &defWaiterExclude
-	mmdiagExec = func(arg string, ctx context.Context) (string, error) {
+	MmdiagExec = func(arg string, ctx context.Context) (string, error) {
 		return "", fmt.Errorf("Error")
 	}
 	expected := `
@@ -189,7 +189,7 @@ func TestMMdiagCollectorTimeout(t *testing.T) {
 	threshold := 30
 	configWaiterThreshold = &threshold
 	configWaiterExclude = &defWaiterExclude
-	mmdiagExec = func(arg string, ctx context.Context) (string, error) {
+	MmdiagExec = func(arg string, ctx context.Context) (string, error) {
 		return "", context.DeadlineExceeded
 	}
 	expected := `

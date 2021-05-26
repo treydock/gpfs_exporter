@@ -20,9 +20,10 @@ Name | Description | Default
 mmgetstate | Collect state via mmgetstate | Enabled
 mmpmon| Collect metrics from `mmpmon` using `fs_io_s` | Enabled
 mount | Check status of GPFS mounts. | Enabled
+config | Collect configs via 'mmdiag --config' | Enabled
 verbs | Test if GPFS is using verbs interface | Disabled
 mmhealth | Test node health through `mmhealth` | Disabled
-mmdiag | Test mmdiag waiters | Disabled
+mmdiag | Collect mmdiag waiters | Disabled
 mmdf | Collect filesystem space for inodes, block and metadata. | Disabled
 mmces | Collect state of CES | Disabled
 mmrepquota | Collect fileset quota information | Disabled
@@ -81,6 +82,8 @@ Defaults:gpfs_exporter !requiretty
 gpfs_exporter ALL=(ALL) NOPASSWD:/usr/lpp/mmfs/bin/mmgetstate -Y
 # mmpmon collector
 gpfs_exporter ALL=(ALL) NOPASSWD:/usr/lpp/mmfs/bin/mmpmon -s -p
+# config collector
+gpfs_exporter ALL=(ALL) NOPASSWD:/usr/lpp/mmfs/bin/mmdiag --config -Y
 # mmhealth collector
 gpfs_exporter ALL=(ALL) NOPASSWD:/usr/lpp/mmfs/bin/mmhealth node show -Y
 # verbs collector
