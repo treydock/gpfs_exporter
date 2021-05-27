@@ -33,10 +33,10 @@ mmgetstate::0:1:::ib-proj-nsd05.domain:11:active:4:7:1122::(undefined):
 `
 )
 
-func TestNewGPFSCollector_mmgetstate(t *testing.T) {
+func TestNewGPFSCollector(t *testing.T) {
 	ret := NewGPFSCollector(log.NewNopLogger())
-	if len(ret.Collectors) != 3 {
-		t.Errorf("Unexpected number of collectors, expected 3, got %d", len(ret.Collectors))
+	if len(ret.Collectors) != 4 {
+		t.Errorf("Unexpected number of collectors, expected 4, got %d", len(ret.Collectors))
 	}
 }
 

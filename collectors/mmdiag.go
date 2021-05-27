@@ -33,7 +33,7 @@ var (
 	configWaiterThreshold = kingpin.Flag("collector.mmdiag.waiter-threshold", "Threshold for collected waiters").Default("30").Int()
 	configWaiterExclude   = kingpin.Flag("collector.mmdiag.waiter-exclude", "Pattern to exclude for waiters").Default(defWaiterExclude).String()
 	mmdiagTimeout         = kingpin.Flag("collector.mmdiag.timeout", "Timeout for mmdiag execution").Default("5").Int()
-	mmdiagExec            = mmdiag
+	MmdiagExec            = mmdiag
 )
 
 type DiagMetric struct {
@@ -91,7 +91,7 @@ func (c *MmdiagCollector) collect() (DiagMetric, error) {
 	var diagMetric DiagMetric
 	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(*mmdiagTimeout)*time.Second)
 	defer cancel()
-	out, err := mmdiagExec("--waiters", ctx)
+	out, err := MmdiagExec("--waiters", ctx)
 	if err != nil {
 		return diagMetric, err
 	}
