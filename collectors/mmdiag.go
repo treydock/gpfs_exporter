@@ -43,11 +43,14 @@ type DiagMetric struct {
 type DiagWaiter struct {
 	Seconds float64
 	Thread  string
+	Name    string
+	Reason  string
 }
 
 type MmdiagCollector struct {
-	Waiter *prometheus.Desc
-	logger log.Logger
+	Waiter     *prometheus.Desc
+	WaiterInfo *prometheus.Desc
+	logger     log.Logger
 }
 
 func init() {
@@ -58,12 +61,15 @@ func NewMmdiagCollector(logger log.Logger) Collector {
 	return &MmdiagCollector{
 		Waiter: prometheus.NewDesc(prometheus.BuildFQName(namespace, "mmdiag", "waiter"),
 			"GPFS max waiter in seconds", []string{"thread"}, nil),
+		WaiterInfo: prometheus.NewDesc(prometheus.BuildFQName(namespace, "mmdiag", "waiter_info"),
+			"GPFS waiter info", []string{"thread", "waiter", "reason"}, nil),
 		logger: logger,
 	}
 }
 
 func (c *MmdiagCollector) Describe(ch chan<- *prometheus.Desc) {
 	ch <- c.Waiter
+	ch <- c.WaiterInfo
 }
 
 func (c *MmdiagCollector) Collect(ch chan<- prometheus.Metric) {
@@ -81,6 +87,9 @@ func (c *MmdiagCollector) Collect(ch chan<- prometheus.Metric) {
 	}
 	for _, waiter := range diagMetric.Waiters {
 		ch <- prometheus.MustNewConstMetric(c.Waiter, prometheus.GaugeValue, waiter.Seconds, waiter.Thread)
+		if waiter.Name != "" || waiter.Reason != "" {
+			ch <- prometheus.MustNewConstMetric(c.WaiterInfo, prometheus.GaugeValue, 1, waiter.Thread, waiter.Name, waiter.Reason)
+		}
 	}
 	ch <- prometheus.MustNewConstMetric(collectError, prometheus.GaugeValue, float64(errorMetric), "mmdiag")
 	ch <- prometheus.MustNewConstMetric(collecTimeout, prometheus.GaugeValue, float64(timeout), "mmdiag")
@@ -115,6 +124,7 @@ func mmdiag(arg string, ctx context.Context) (string, error) {
 func parse_mmdiag_waiters(out string, diagMetric *DiagMetric, logger log.Logger) {
 	lines := strings.Split(out, "\n")
 	waitersPattern := regexp.MustCompile(`^Waiting ([0-9.]+) sec.*thread ([0-9]+)`)
+	waitersInfoPattern := regexp.MustCompile(`^Waiting ([0-9.]+) sec.*thread ([0-9]+) ([a-zA-Z0-9]+): (.+)`)
 	excludePattern := regexp.MustCompile(*configWaiterExclude)
 	for _, l := range lines {
 		if excludePattern.MatchString(l) {
@@ -129,9 +139,18 @@ func parse_mmdiag_waiters(out string, diagMetric *DiagMetric, logger log.Logger)
 			level.Error(logger).Log("msg", fmt.Sprintf("Unable to convert %s to float64", match[1]))
 			continue
 		}
+		infoMatch := waitersInfoPattern.FindStringSubmatch(l)
+		var name, reason string
+		if len(infoMatch) == 5 {
+			name = infoMatch[3]
+			reason = infoMatch[4]
+		} else {
+			level.Debug(logger).Log("msg", "Unable to extract waiter info", "line", l, "match", fmt.Sprintf("%+v", infoMatch))
+		}
+
 		threshold := float64(*configWaiterThreshold)
 		if secs >= threshold {
-			waiter := DiagWaiter{Seconds: secs, Thread: match[2]}
+			waiter := DiagWaiter{Seconds: secs, Thread: match[2], Name: name, Reason: reason}
 			diagMetric.Waiters = append(diagMetric.Waiters, waiter)
 		}
 	}
