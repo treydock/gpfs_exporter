@@ -1,4 +1,4 @@
-## Unreleased
+## 1.5.0 / 2021-06-07
 
 * Add `gpfs_mmdiag_waiter_info` metric
 
