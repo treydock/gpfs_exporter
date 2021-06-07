@@ -1,3 +1,7 @@
+## Unreleased
+
+* Add `gpfs_mmdiag_waiter_info` metric
+
 ## 1.4.0 / 2021-05-27
 
 * Add config collector, enabled by default

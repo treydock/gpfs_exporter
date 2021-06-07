@@ -16,6 +16,7 @@ package collectors
 import (
 	"context"
 	"fmt"
+	"os"
 	"os/exec"
 	"strings"
 	"testing"
@@ -33,6 +34,7 @@ Waiting 6861.7395 sec since 11:04:20, ignored, thread 19428 FsckClientReaperThre
 Waiting 40.4231 sec since 13:08:39, monitored, thread 120656 EventsExporterSenderThread: for poll on sock 1379
 Waiting 64.3890 sec since 17:55:45, monitored, thread 120655 NSDThread: for I/O completion
 Waiting 44.3890 sec since 17:55:45, monitored, thread 120656 NSDThread: for I/O completion
+Waiting 44.3890 sec since 17:55:45, monitored, thread 120657 foobar
 Waiting 0.0409 sec since 10:24:00, monitored, thread 23170 NSDThread: for I/O completion
 Waiting 0.0259 sec since 10:24:00, monitored, thread 23241 NSDThread: for I/O completion
 Waiting 0.0251 sec since 10:24:00, monitored, thread 23243 NSDThread: for I/O completion
@@ -108,8 +110,10 @@ func TestParseMmdiagWaiters(t *testing.T) {
 	configWaiterThreshold = &threshold
 	configWaiterExclude = &defWaiterExclude
 	var metric DiagMetric
-	parse_mmdiag_waiters(waitersStdout, &metric, log.NewNopLogger())
-	if val := len(metric.Waiters); val != 2 {
+	w := log.NewSyncWriter(os.Stderr)
+	logger := log.NewLogfmtLogger(w)
+	parse_mmdiag_waiters(waitersStdout, &metric, logger)
+	if val := len(metric.Waiters); val != 3 {
 		t.Errorf("Unexpected Waiters len got %v", val)
 		return
 	}
@@ -119,11 +123,23 @@ func TestParseMmdiagWaiters(t *testing.T) {
 	if val := metric.Waiters[0].Thread; val != "120655" {
 		t.Errorf("Unexpected waiter thread value %v", val)
 	}
+	if val := metric.Waiters[0].Name; val != "NSDThread" {
+		t.Errorf("Unexpected waiter thread name %v", val)
+	}
+	if val := metric.Waiters[0].Reason; val != "for I/O completion" {
+		t.Errorf("Unexpected waiter thread reason %v", val)
+	}
 	if val := metric.Waiters[1].Seconds; val != 44.3890 {
 		t.Errorf("Unexpected waiter seconds value %v", val)
 	}
 	if val := metric.Waiters[1].Thread; val != "120656" {
 		t.Errorf("Unexpected waiter thread value %v", val)
+	}
+	if val := metric.Waiters[1].Name; val != "NSDThread" {
+		t.Errorf("Unexpected waiter thread name %v", val)
+	}
+	if val := metric.Waiters[1].Reason; val != "for I/O completion" {
+		t.Errorf("Unexpected waiter thread reason %v", val)
 	}
 }
 
@@ -142,15 +158,21 @@ func TestMmdiagCollector(t *testing.T) {
 		# TYPE gpfs_mmdiag_waiter gauge
 		gpfs_mmdiag_waiter{thread="120655"} 64.3890
 		gpfs_mmdiag_waiter{thread="120656"} 44.3890
+		gpfs_mmdiag_waiter{thread="120657"} 44.3890
+		# HELP gpfs_mmdiag_waiter_info GPFS waiter info
+		# TYPE gpfs_mmdiag_waiter_info gauge
+		gpfs_mmdiag_waiter_info{reason="for I/O completion",thread="120655",waiter="NSDThread"} 1
+		gpfs_mmdiag_waiter_info{reason="for I/O completion",thread="120656",waiter="NSDThread"} 1
 	`
 	collector := NewMmdiagCollector(log.NewNopLogger())
 	gatherers := setupGatherer(collector)
 	if val, err := testutil.GatherAndCount(gatherers); err != nil {
 		t.Errorf("Unexpected error: %v", err)
-	} else if val != 5 {
-		t.Errorf("Unexpected collection count %d, expected 5", val)
+	} else if val != 8 {
+		t.Errorf("Unexpected collection count %d, expected 8", val)
 	}
-	if err := testutil.GatherAndCompare(gatherers, strings.NewReader(expected), "gpfs_mmdiag_waiter"); err != nil {
+	if err := testutil.GatherAndCompare(gatherers, strings.NewReader(expected),
+		"gpfs_mmdiag_waiter", "gpfs_mmdiag_waiter_info"); err != nil {
 		t.Errorf("unexpected collecting result:\n%s", err)
 	}
 }
