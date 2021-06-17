@@ -1,4 +1,4 @@
-## Unreleased
+## 1.5.1 / 2021-06-17
 
 * Fix `mmdf` collector to still write last collection metric during errors
 
