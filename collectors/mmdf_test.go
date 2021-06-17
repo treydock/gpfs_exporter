@@ -351,8 +351,8 @@ func TestMmdfCollectorError(t *testing.T) {
 	gatherers := setupGatherer(collector)
 	if val, err := testutil.GatherAndCount(gatherers); err != nil {
 		t.Errorf("Unexpected error: %v", err)
-	} else if val != 3 {
-		t.Errorf("Unexpected collection count %d, expected 3", val)
+	} else if val != 4 {
+		t.Errorf("Unexpected collection count %d, expected 4", val)
 	}
 	if err := testutil.GatherAndCompare(gatherers, strings.NewReader(expected), "gpfs_exporter_collect_error"); err != nil {
 		t.Errorf("unexpected collecting result:\n%s", err)
@@ -377,8 +377,8 @@ func TestMmdfCollectorTimeout(t *testing.T) {
 	gatherers := setupGatherer(collector)
 	if val, err := testutil.GatherAndCount(gatherers); err != nil {
 		t.Errorf("Unexpected error: %v", err)
-	} else if val != 3 {
-		t.Errorf("Unexpected collection count %d, expected 3", val)
+	} else if val != 4 {
+		t.Errorf("Unexpected collection count %d, expected 4", val)
 	}
 	if err := testutil.GatherAndCompare(gatherers, strings.NewReader(expected), "gpfs_exporter_collect_timeout"); err != nil {
 		t.Errorf("unexpected collecting result:\n%s", err)
