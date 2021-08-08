@@ -148,3 +148,47 @@ go get github.com/treydock/gpfs_exporter/cmd/gpfs_exporter
 go get github.com/treydock/gpfs_exporter/cmd/gpfs_mmdf_exporter
 go get github.com/treydock/gpfs_exporter/cmd/gpfs_mmlssnapshot_exporter
 ```
+
+## Grafana
+
+There is an example [GPFS Performance](https://grafana.com/grafana/dashboards/14844) dashboard.  See the description on that dashboard for additional information on labels needed to utilize that dashboard.
+
+## Prometheus Configuration
+
+This is an example scrape config with some metrics excluded for HPC compute nodes with label `role=compute`:
+
+```yaml
+- job_name: gpfs
+  scrape_timeout: 2m
+  scrape_interval: 3m
+  relabel_configs:
+  - source_labels: [__address__]
+    regex: "([^.]+)..*"
+    replacement: "$1"
+    target_label: host
+  metric_relabel_configs:
+  - source_labels: [__name__,role]
+    regex: gpfs_(mount|health|verbs)_status;compute
+    action: drop
+  - source_labels: [__name__,collector,role]
+    regex: gpfs_exporter_(collect_error|collector_duration_seconds);(mmhealth|mount|verbs);compute
+    action: drop
+  - source_labels: [__name__,role]
+    regex: "^(go|process|promhttp)_.*;compute"
+    action: drop
+  file_sd_configs:
+  - files:
+    - "/etc/prometheus/file_sd_config.d/gpfs_*.yaml"
+```
+
+An example scrape target configuration:
+
+```yaml
+- targets:
+  - c0001.example.com:9303
+  labels:
+    host: c0001
+    cluster: example
+    environment: production
+    role: compute
+```
