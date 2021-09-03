@@ -23,7 +23,7 @@ mount | Check status of GPFS mounts. | Enabled
 config | Collect configs via 'mmdiag --config' | Enabled
 verbs | Test if GPFS is using verbs interface | Disabled
 mmhealth | Test node health through `mmhealth` | Disabled
-mmdiag | Collect mmdiag waiters | Disabled
+waiter | Collect waiters via 'mmdiag --waiters' | Disabled
 mmdf | Collect filesystem space for inodes, block and metadata. | Disabled
 mmces | Collect state of CES | Disabled
 mmrepquota | Collect fileset quota information | Disabled
@@ -34,9 +34,11 @@ mmlsfileset | Collect GPFS fileset information | Disabled
 
 The default behavior of the `mount` collector is to collect mount statuses on GPFS mounts in /proc/mounts or /etc/fstab. The `--collector.mount.mounts` flag can be used to adjust which mount points to check.
 
-### mmdiag
+### waiter
 
-The waiters will generate metrics if their seconds value is greater than `--collector.mmdiag.waiter-threshold`.
+The waiter's seconds are stored in Histogram buckets defined by `--collector.waiter.buckets` which is a comma separated list of durations that are converted to seconds so `1s,5s,30s,1m` would have buckets of `[]float64{1,5,30,60}`.
+
+The flag `--collector.waiter.exclude` defines a regular expression of waiter names to exclude.
 
 ### mmdf
 
@@ -90,7 +92,7 @@ gpfs_exporter ALL=(ALL) NOPASSWD:/usr/lpp/mmfs/bin/mmhealth node show -Y
 gpfs_exporter ALL=(ALL) NOPASSWD:/usr/lpp/mmfs/bin/mmfsadm test verbs status
 # mmdf/mmlssnapshot collector if filesystems not specified
 gpfs_exporter ALL=(ALL) NOPASSWD:/usr/lpp/mmfs/bin/mmlsfs all -Y -T
-# mmdiag collector
+# waiter collector
 gpfs_exporter ALL=(ALL) NOPASSWD:/usr/lpp/mmfs/bin/mmdiag --waiters -Y
 # mmces collector
 gpfs_exporter ALL=(ALL) NOPASSWD:/usr/lpp/mmfs/bin/mmces state show *

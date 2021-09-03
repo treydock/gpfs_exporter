@@ -38,6 +38,7 @@ var (
 	factories      = make(map[string]func(logger log.Logger) Collector)
 	execCommand    = exec.CommandContext
 	MmlsfsExec     = mmlsfs
+	MmdiagExec     = mmdiag
 	NowLocation    = func() *time.Location {
 		return time.Now().Location()
 	}
@@ -117,6 +118,19 @@ func FileExists(filename string) bool {
 		return false
 	}
 	return !info.IsDir()
+}
+
+func mmdiag(arg string, ctx context.Context) (string, error) {
+	cmd := execCommand(ctx, "sudo", "/usr/lpp/mmfs/bin/mmdiag", arg, "-Y")
+	var out bytes.Buffer
+	cmd.Stdout = &out
+	err := cmd.Run()
+	if ctx.Err() == context.DeadlineExceeded {
+		return "", ctx.Err()
+	} else if err != nil {
+		return "", err
+	}
+	return out.String(), nil
 }
 
 func mmlfsfsFilesystems(ctx context.Context, logger log.Logger) ([]string, error) {

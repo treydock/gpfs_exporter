@@ -17,10 +17,8 @@ import (
 	"context"
 	"fmt"
 	"os"
-	"os/exec"
 	"strings"
 	"testing"
-	"time"
 
 	"github.com/go-kit/kit/log"
 	"github.com/prometheus/client_golang/prometheus/testutil"
@@ -57,142 +55,78 @@ Waiting 0.0002 sec since 10:24:00, monitored, thread 22987 NSDThread: for I/O co
 `
 )
 
-func TestMmdiag(t *testing.T) {
-	execCommand = fakeExecCommand
-	mockedExitStatus = 0
-	mockedStdout = "foo"
-	defer func() { execCommand = exec.CommandContext }()
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-	defer cancel()
-	out, err := mmdiag("--waiters", ctx)
-	if err != nil {
-		t.Errorf("Unexpected error: %s", err.Error())
-	}
-	if out != mockedStdout {
-		t.Errorf("Unexpected out: %s", out)
-	}
-}
-
-func TestMmdiagError(t *testing.T) {
-	execCommand = fakeExecCommand
-	mockedExitStatus = 1
-	mockedStdout = "foo"
-	defer func() { execCommand = exec.CommandContext }()
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-	defer cancel()
-	out, err := mmdiag("--waiters", ctx)
-	if err == nil {
-		t.Errorf("Expected error")
-	}
-	if out != "" {
-		t.Errorf("Unexpected out: %s", out)
-	}
-}
-
-func TestMmdiagTimeout(t *testing.T) {
-	execCommand = fakeExecCommand
-	mockedExitStatus = 1
-	mockedStdout = "foo"
-	defer func() { execCommand = exec.CommandContext }()
-	ctx, cancel := context.WithTimeout(context.Background(), 0*time.Second)
-	defer cancel()
-	out, err := mmdiag("--waiters", ctx)
-	if err != context.DeadlineExceeded {
-		t.Errorf("Expected DeadlineExceeded")
-	}
-	if out != "" {
-		t.Errorf("Unexpected out: %s", out)
-	}
-}
-
 func TestParseMmdiagWaiters(t *testing.T) {
-	threshold := 30
-	configWaiterThreshold = &threshold
-	configWaiterExclude = &defWaiterExclude
-	var metric DiagMetric
 	w := log.NewSyncWriter(os.Stderr)
 	logger := log.NewLogfmtLogger(w)
-	parse_mmdiag_waiters(waitersStdout, &metric, logger)
-	if val := len(metric.Waiters); val != 3 {
+	waiters := parse_mmdiag_waiters(waitersStdout, logger)
+	if val := len(waiters); val != 22 {
 		t.Errorf("Unexpected Waiters len got %v", val)
 		return
 	}
-	if val := metric.Waiters[0].Seconds; val != 64.3890 {
-		t.Errorf("Unexpected waiter seconds value %v", val)
+	if val := waiters[0].name; val != "NSDThread" {
+		t.Errorf("Unexpected name for waiter, got %s", val)
 	}
-	if val := metric.Waiters[0].Thread; val != "120655" {
-		t.Errorf("Unexpected waiter thread value %v", val)
+	if val := waiters[0].reason; val != "for I/O completion" {
+		t.Errorf("Unexpected reason for waiter, got %s", val)
 	}
-	if val := metric.Waiters[0].Name; val != "NSDThread" {
-		t.Errorf("Unexpected waiter thread name %v", val)
-	}
-	if val := metric.Waiters[0].Reason; val != "for I/O completion" {
-		t.Errorf("Unexpected waiter thread reason %v", val)
-	}
-	if val := metric.Waiters[1].Seconds; val != 44.3890 {
-		t.Errorf("Unexpected waiter seconds value %v", val)
-	}
-	if val := metric.Waiters[1].Thread; val != "120656" {
-		t.Errorf("Unexpected waiter thread value %v", val)
-	}
-	if val := metric.Waiters[1].Name; val != "NSDThread" {
-		t.Errorf("Unexpected waiter thread name %v", val)
-	}
-	if val := metric.Waiters[1].Reason; val != "for I/O completion" {
-		t.Errorf("Unexpected waiter thread reason %v", val)
+	if val := waiters[0].seconds; val != 64.3890 {
+		t.Errorf("Unexpected seconds for waiter, got %f", val)
 	}
 }
 
-func TestMmdiagCollector(t *testing.T) {
+func TestWaiterCollector(t *testing.T) {
 	if _, err := kingpin.CommandLine.Parse([]string{}); err != nil {
 		t.Fatal(err)
 	}
-	threshold := 30
-	configWaiterThreshold = &threshold
-	configWaiterExclude = &defWaiterExclude
 	MmdiagExec = func(arg string, ctx context.Context) (string, error) {
 		return waitersStdout, nil
 	}
 	expected := `
-		# HELP gpfs_mmdiag_waiter GPFS max waiter in seconds
-		# TYPE gpfs_mmdiag_waiter gauge
-		gpfs_mmdiag_waiter{thread="120655"} 64.3890
-		gpfs_mmdiag_waiter{thread="120656"} 44.3890
-		gpfs_mmdiag_waiter{thread="120657"} 44.3890
-		# HELP gpfs_mmdiag_waiter_info GPFS waiter info
-		# TYPE gpfs_mmdiag_waiter_info gauge
-		gpfs_mmdiag_waiter_info{reason="for I/O completion",thread="120655",waiter="NSDThread"} 1
-		gpfs_mmdiag_waiter_info{reason="for I/O completion",thread="120656",waiter="NSDThread"} 1
+		# HELP gpfs_waiter_seconds GPFS waiter in seconds
+		# TYPE gpfs_waiter_seconds histogram
+		gpfs_waiter_seconds_bucket{le="1"} 19
+		gpfs_waiter_seconds_bucket{le="5"} 19
+		gpfs_waiter_seconds_bucket{le="15"} 19
+		gpfs_waiter_seconds_bucket{le="60"} 21
+		gpfs_waiter_seconds_bucket{le="300"} 22
+		gpfs_waiter_seconds_bucket{le="3600"} 22
+		gpfs_waiter_seconds_bucket{le="+Inf"} 22
+		gpfs_waiter_seconds_sum 153.4144
+		gpfs_waiter_seconds_count 22
+		# HELP gpfs_waiter_info_count GPFS waiter info
+		# TYPE gpfs_waiter_info_count gauge
+		gpfs_waiter_info_count{reason="for I/O completion",waiter="NSDThread"} 21
 	`
-	collector := NewMmdiagCollector(log.NewNopLogger())
-	gatherers := setupGatherer(collector)
-	if val, err := testutil.GatherAndCount(gatherers); err != nil {
+	w := log.NewSyncWriter(os.Stderr)
+	logger := log.NewLogfmtLogger(w)
+	collector1 := NewWaiterCollector(logger)
+	collector2 := NewWaiterCollector(logger)
+	gatherers1 := setupGatherer(collector1)
+	gatherers2 := setupGatherer(collector2)
+	if val, err := testutil.GatherAndCount(gatherers1); err != nil {
 		t.Errorf("Unexpected error: %v", err)
-	} else if val != 8 {
-		t.Errorf("Unexpected collection count %d, expected 8", val)
+	} else if val != 5 {
+		t.Errorf("Unexpected collection count %d, expected 5", val)
 	}
-	if err := testutil.GatherAndCompare(gatherers, strings.NewReader(expected),
-		"gpfs_mmdiag_waiter", "gpfs_mmdiag_waiter_info"); err != nil {
+	if err := testutil.GatherAndCompare(gatherers2, strings.NewReader(expected),
+		"gpfs_waiter_seconds", "gpfs_waiter_info_count"); err != nil {
 		t.Errorf("unexpected collecting result:\n%s", err)
 	}
 }
 
-func TestMMdiagCollectorError(t *testing.T) {
+func TestWaiterCollectorError(t *testing.T) {
 	if _, err := kingpin.CommandLine.Parse([]string{}); err != nil {
 		t.Fatal(err)
 	}
-	threshold := 30
-	configWaiterThreshold = &threshold
-	configWaiterExclude = &defWaiterExclude
 	MmdiagExec = func(arg string, ctx context.Context) (string, error) {
 		return "", fmt.Errorf("Error")
 	}
 	expected := `
 		# HELP gpfs_exporter_collect_error Indicates if error has occurred during collection
 		# TYPE gpfs_exporter_collect_error gauge
-		gpfs_exporter_collect_error{collector="mmdiag"} 1
+		gpfs_exporter_collect_error{collector="waiter"} 1
 	`
-	collector := NewMmdiagCollector(log.NewNopLogger())
+	collector := NewWaiterCollector(log.NewNopLogger())
 	gatherers := setupGatherer(collector)
 	if val, err := testutil.GatherAndCount(gatherers); err != nil {
 		t.Errorf("Unexpected error: %v", err)
@@ -204,22 +138,19 @@ func TestMMdiagCollectorError(t *testing.T) {
 	}
 }
 
-func TestMMdiagCollectorTimeout(t *testing.T) {
+func TestWaiterCollectorTimeout(t *testing.T) {
 	if _, err := kingpin.CommandLine.Parse([]string{}); err != nil {
 		t.Fatal(err)
 	}
-	threshold := 30
-	configWaiterThreshold = &threshold
-	configWaiterExclude = &defWaiterExclude
 	MmdiagExec = func(arg string, ctx context.Context) (string, error) {
 		return "", context.DeadlineExceeded
 	}
 	expected := `
 		# HELP gpfs_exporter_collect_timeout Indicates the collector timed out
 		# TYPE gpfs_exporter_collect_timeout gauge
-		gpfs_exporter_collect_timeout{collector="mmdiag"} 1
+		gpfs_exporter_collect_timeout{collector="waiter"} 1
 	`
-	collector := NewMmdiagCollector(log.NewNopLogger())
+	collector := NewWaiterCollector(log.NewNopLogger())
 	gatherers := setupGatherer(collector)
 	if val, err := testutil.GatherAndCount(gatherers); err != nil {
 		t.Errorf("Unexpected error: %v", err)
