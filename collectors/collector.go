@@ -20,6 +20,7 @@ import (
 	"net/url"
 	"os"
 	"os/exec"
+	"sort"
 	"strings"
 	"sync"
 	"time"
@@ -59,6 +60,33 @@ var (
 		"Last execution time of ", []string{"collector"}, nil)
 	mmlsfsTimeout = kingpin.Flag("config.mmlsfs.timeout", "Timeout for mmlsfs execution").Default("5").Int()
 )
+
+type DurationBucketValues []float64
+
+func (d *DurationBucketValues) Set(value string) error {
+	buckets := []float64{}
+	bucketDurations := strings.Split(value, ",")
+	for _, bucketDuration := range bucketDurations {
+		duration, err := time.ParseDuration(bucketDuration)
+		if err != nil {
+			return fmt.Errorf("'%s' is not a valid bucket duration", value)
+		}
+		buckets = append(buckets, duration.Seconds())
+	}
+	sort.Float64s(buckets)
+	*d = buckets
+	return nil
+}
+
+func (d *DurationBucketValues) String() string {
+	return ""
+}
+
+func DurationBuckets(s kingpin.Settings) (target *[]float64) {
+	target = &[]float64{}
+	s.SetValue((*DurationBucketValues)(target))
+	return
+}
 
 type GPFSFilesystem struct {
 	Name       string

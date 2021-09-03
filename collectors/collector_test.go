@@ -23,6 +23,7 @@ import (
 	"time"
 
 	"github.com/prometheus/client_golang/prometheus"
+	"gopkg.in/alecthomas/kingpin.v2"
 )
 
 var (
@@ -43,6 +44,12 @@ func TestMain(m *testing.M) {
 	}
 	exitVal := m.Run()
 	os.Exit(exitVal)
+}
+
+func TestArgs(t *testing.T) {
+	if _, err := kingpin.CommandLine.Parse([]string{"--collector.waiter.buckets=foo"}); err == nil {
+		t.Errorf("Expected error, none given")
+	}
 }
 
 func fakeExecCommand(ctx context.Context, command string, args ...string) *exec.Cmd {

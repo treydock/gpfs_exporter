@@ -17,7 +17,6 @@ import (
 	"context"
 	"fmt"
 	"regexp"
-	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -36,7 +35,7 @@ var (
 	defWaiterExclude = "(EventsExporterSenderThread|Fsck)"
 	defWaiterBuckets = "1s,5s,15s,1m,5m,60m"
 	waiterExclude    = kingpin.Flag("collector.waiter.exclude", "Pattern to exclude for waiters").Default(defWaiterExclude).String()
-	waiterBuckets    = kingpin.Flag("collector.waiter.buckets", "Buckets for waiter metrics").Default(defWaiterBuckets).String()
+	waiterBuckets    = DurationBuckets(kingpin.Flag("collector.waiter.buckets", "Buckets for waiter metrics").Default(defWaiterBuckets))
 	waiterTimeout    = kingpin.Flag("collector.waiter.timeout", "Timeout for mmdiag execution").Default("5").Int()
 )
 
@@ -54,7 +53,6 @@ type Waiter struct {
 type WaiterCollector struct {
 	Waiter     prometheus.Histogram
 	WaiterInfo *prometheus.Desc
-	buckets    []float64
 	logger     log.Logger
 }
 
@@ -63,29 +61,17 @@ func init() {
 }
 
 func NewWaiterCollector(logger log.Logger) Collector {
-	buckets := []float64{}
-	bucketDurations := strings.Split(*waiterBuckets, ",")
-	for _, bucketDuration := range bucketDurations {
-		duration, err := time.ParseDuration(bucketDuration)
-		if err != nil {
-			level.Error(logger).Log("msg", "Error parsing bucket duration", "duration", bucketDuration)
-			continue
-		}
-		buckets = append(buckets, duration.Seconds())
-	}
-	sort.Float64s(buckets)
 	return &WaiterCollector{
 		Waiter: prometheus.NewHistogram(prometheus.HistogramOpts{
 			Namespace: namespace,
 			Subsystem: "waiter",
 			Name:      "seconds",
 			Help:      "GPFS waiter in seconds",
-			Buckets:   buckets,
+			Buckets:   *waiterBuckets,
 		}),
 		WaiterInfo: prometheus.NewDesc(prometheus.BuildFQName(namespace, "waiter", "info_count"),
 			"GPFS waiter info", []string{"waiter", "reason"}, nil),
-		buckets: buckets,
-		logger:  logger,
+		logger: logger,
 	}
 }
 
