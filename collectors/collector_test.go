@@ -23,6 +23,7 @@ import (
 	"time"
 
 	"github.com/prometheus/client_golang/prometheus"
+	"gopkg.in/alecthomas/kingpin.v2"
 )
 
 var (
@@ -43,6 +44,12 @@ func TestMain(m *testing.M) {
 	}
 	exitVal := m.Run()
 	os.Exit(exitVal)
+}
+
+func TestArgs(t *testing.T) {
+	if _, err := kingpin.CommandLine.Parse([]string{"--collector.waiter.buckets=foo"}); err == nil {
+		t.Errorf("Expected error, none given")
+	}
 }
 
 func fakeExecCommand(ctx context.Context, command string, args ...string) *exec.Cmd {
@@ -73,6 +80,54 @@ func setupGatherer(collector Collector) prometheus.Gatherer {
 	registry.MustRegister(collector)
 	gatherers := prometheus.Gatherers{registry}
 	return gatherers
+}
+
+func TestMmdiag(t *testing.T) {
+	execCommand = fakeExecCommand
+	mockedExitStatus = 0
+	mockedStdout = "foo"
+	defer func() { execCommand = exec.CommandContext }()
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	out, err := mmdiag("--waiters", ctx)
+	if err != nil {
+		t.Errorf("Unexpected error: %s", err.Error())
+	}
+	if out != mockedStdout {
+		t.Errorf("Unexpected out: %s", out)
+	}
+}
+
+func TestMmdiagError(t *testing.T) {
+	execCommand = fakeExecCommand
+	mockedExitStatus = 1
+	mockedStdout = "foo"
+	defer func() { execCommand = exec.CommandContext }()
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	out, err := mmdiag("--waiters", ctx)
+	if err == nil {
+		t.Errorf("Expected error")
+	}
+	if out != "" {
+		t.Errorf("Unexpected out: %s", out)
+	}
+}
+
+func TestMmdiagTimeout(t *testing.T) {
+	execCommand = fakeExecCommand
+	mockedExitStatus = 1
+	mockedStdout = "foo"
+	defer func() { execCommand = exec.CommandContext }()
+	ctx, cancel := context.WithTimeout(context.Background(), 0*time.Second)
+	defer cancel()
+	out, err := mmdiag("--waiters", ctx)
+	if err != context.DeadlineExceeded {
+		t.Errorf("Expected DeadlineExceeded")
+	}
+	if out != "" {
+		t.Errorf("Unexpected out: %s", out)
+	}
 }
 
 func TestMmlsfs(t *testing.T) {

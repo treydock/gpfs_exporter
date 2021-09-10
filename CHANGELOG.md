@@ -1,3 +1,16 @@
+## 2.0.0-rc.0 / 2021-09-03
+
+* [BREAKING] Change how waiter metrics are presented and stored
+  * Replace `gpfs_mmdiag_waiter` with `gpfs_waiter_seconds` that is a histogram, no longer use `thread` label
+  * Replace `gpfs_mmdiag_waiter_info` with `gpfs_waiter_info_count` that is count of waiter name + reason without `thread` label
+  * Add flag `--collector.waiter.buckets` to define histogram buckets
+* [BREAKING] Rename `mmdiag` collector to `waiter`
+  * Replace `--collector.mmdiag` with `--collector.waiter`
+  * Replace `--no-collector.mmdiag` with `--no-collector.waiter`
+  * Remove `--collector.mmdiag.waiter-threshold` flag
+  * Replace `--collector.mmdiag.waiter-exclude` with `--collector.waiter.exclude`
+  * Replace `--collector.mmdiag.timeout` with `--collector.waiter.timeout`
+
 ## 1.5.1 / 2021-06-17
 
 * Fix `mmdf` collector to still write last collection metric during errors
