@@ -75,7 +75,7 @@ func TestParseMmdiagWaiters(t *testing.T) {
 }
 
 func TestWaiterCollector(t *testing.T) {
-	if _, err := kingpin.CommandLine.Parse([]string{}); err != nil {
+	if _, err := kingpin.CommandLine.Parse([]string{"--collector.waiter.log-reason"}); err != nil {
 		t.Fatal(err)
 	}
 	MmdiagExec = func(arg string, ctx context.Context) (string, error) {
@@ -95,7 +95,7 @@ func TestWaiterCollector(t *testing.T) {
 		gpfs_waiter_seconds_count 22
 		# HELP gpfs_waiter_info_count GPFS waiter info
 		# TYPE gpfs_waiter_info_count gauge
-		gpfs_waiter_info_count{reason="for I/O completion",waiter="NSDThread"} 21
+		gpfs_waiter_info_count{waiter="NSDThread"} 21
 	`
 	w := log.NewSyncWriter(os.Stderr)
 	logger := log.NewLogfmtLogger(w)
