@@ -40,6 +40,8 @@ The waiter's seconds are stored in Histogram buckets defined by `--collector.wai
 
 The flag `--collector.waiter.exclude` defines a regular expression of waiter names to exclude.
 
+The flag `--collector.waiter.log-reason` can enable logging of waiter reasons. The reason can produce very high cardinality so it is not included in metrics.
+
 ### mmdf
 
 Due to the time it can take to execute mmdf that is an executable provided that can be used to collect mmdf via cron. See `gpfs_mmdf_exporter`.

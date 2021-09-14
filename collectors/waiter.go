@@ -27,16 +27,13 @@ import (
 	"gopkg.in/alecthomas/kingpin.v2"
 )
 
-const (
-	waiterInfoDelimiter = "<delim>"
-)
-
 var (
 	defWaiterExclude = "(EventsExporterSenderThread|Fsck)"
 	defWaiterBuckets = "1s,5s,15s,1m,5m,60m"
 	waiterExclude    = kingpin.Flag("collector.waiter.exclude", "Pattern to exclude for waiters").Default(defWaiterExclude).String()
 	waiterBuckets    = DurationBuckets(kingpin.Flag("collector.waiter.buckets", "Buckets for waiter metrics").Default(defWaiterBuckets))
 	waiterTimeout    = kingpin.Flag("collector.waiter.timeout", "Timeout for mmdiag execution").Default("5").Int()
+	waiterLogReason  = kingpin.Flag("collector.waiter.log-reason", "Log the waiter reason").Default("false").Bool()
 )
 
 type WaiterMetric struct {
@@ -70,7 +67,7 @@ func NewWaiterCollector(logger log.Logger) Collector {
 			Buckets:   *waiterBuckets,
 		}),
 		WaiterInfo: prometheus.NewDesc(prometheus.BuildFQName(namespace, "waiter", "info_count"),
-			"GPFS waiter info", []string{"waiter", "reason"}, nil),
+			"GPFS waiter info", []string{"waiter"}, nil),
 		logger: logger,
 	}
 }
@@ -100,8 +97,7 @@ func (c *WaiterCollector) Collect(ch chan<- prometheus.Metric) {
 		ch <- c.Waiter
 	}
 	for waiter, count := range waiterMetric.infoCounts {
-		info := strings.Split(waiter, waiterInfoDelimiter)
-		ch <- prometheus.MustNewConstMetric(c.WaiterInfo, prometheus.GaugeValue, count, info[0], info[1])
+		ch <- prometheus.MustNewConstMetric(c.WaiterInfo, prometheus.GaugeValue, count, waiter)
 	}
 	ch <- prometheus.MustNewConstMetric(collectError, prometheus.GaugeValue, float64(errorMetric), "waiter")
 	ch <- prometheus.MustNewConstMetric(collecTimeout, prometheus.GaugeValue, float64(timeout), "waiter")
@@ -124,8 +120,10 @@ func (c *WaiterCollector) collect() (WaiterMetric, error) {
 		if waiter.name == "" && waiter.reason == "" {
 			continue
 		}
-		key := fmt.Sprintf("%s%s%s", waiter.name, waiterInfoDelimiter, waiter.reason)
-		infoCounts[key] += 1
+		if *waiterLogReason {
+			level.Info(c.logger).Log("msg", "Waiter reason information", "waiter", waiter.name, "reason", waiter.reason, "seconds", waiter.seconds)
+		}
+		infoCounts[waiter.name] += 1
 	}
 	waiterMetric.seconds = seconds
 	waiterMetric.infoCounts = infoCounts

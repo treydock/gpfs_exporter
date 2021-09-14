@@ -2,8 +2,9 @@
 
 * [BREAKING] Change how waiter metrics are presented and stored
   * Replace `gpfs_mmdiag_waiter` with `gpfs_waiter_seconds` that is a histogram, no longer use `thread` label
-  * Replace `gpfs_mmdiag_waiter_info` with `gpfs_waiter_info_count` that is count of waiter name + reason without `thread` label
+  * Replace `gpfs_mmdiag_waiter_info` with `gpfs_waiter_info_count` that is count of waiter name without `thread` or `reason` labels
   * Add flag `--collector.waiter.buckets` to define histogram buckets
+  * Add flag `--collector.waiter.log-reason` to enable logging of waiter reasons
 * [BREAKING] Rename `mmdiag` collector to `waiter`
   * Replace `--collector.mmdiag` with `--collector.waiter`
   * Replace `--no-collector.mmdiag` with `--no-collector.waiter`
