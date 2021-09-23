@@ -55,6 +55,7 @@ mmdiag:waiters:0:1:::64149:00000000200A3500:RebuildWorkThread:2021-09-23_15%3A31
 mmdiag:waiters:0:1:::48622:0000000088C16F10:NSDThread:2021-09-23_15%3A31%3A34-0400:0.0134:monitored::::::for I/O completion:::
 mmdiag:waiters:0:1:::127779:000000003BFFFD40:RebuildWorkThread:2021-09-23_15%3A31%3A34-0400:0.0081:monitored::::::for I/O completion:::
 mmdiag:waiters:0:1:::48081:0000000088B8BFB0:NSDThread:2021-09-23_15%3A31%3A34-0400:0.0037:monitored::::::for I/O completion:::
+mmdiag:waiters:0:1:::48081:0000000088B8BFB0:NSDThread:2021-09-23_15%3A31%3A34-0400:foo:monitored::::::for I/O completion:::
 `
 )
 
@@ -65,7 +66,7 @@ func TestParseMmdiagWaiters(t *testing.T) {
 	w := log.NewSyncWriter(os.Stderr)
 	logger := log.NewLogfmtLogger(w)
 	waiters := parse_mmdiag_waiters(waitersStdout, logger)
-	if val := len(waiters); val != 25 {
+	if val := len(waiters); val != 26 {
 		t.Errorf("Unexpected Waiters len got %v", val)
 		return
 	}
@@ -101,7 +102,7 @@ func TestWaiterCollector(t *testing.T) {
 		gpfs_waiter_seconds_count 25
 		# HELP gpfs_waiter_info_count GPFS waiter info
 		# TYPE gpfs_waiter_info_count gauge
-		gpfs_waiter_info_count{waiter="NSDThread"} 3
+		gpfs_waiter_info_count{waiter="NSDThread"} 4
 		gpfs_waiter_info_count{waiter="RebuildWorkThread"} 22
 	`
 	w := log.NewSyncWriter(os.Stderr)

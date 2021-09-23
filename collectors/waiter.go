@@ -16,6 +16,7 @@ package collectors
 import (
 	"context"
 	"fmt"
+	"math"
 	"reflect"
 	"regexp"
 	"strconv"
@@ -122,7 +123,9 @@ func (c *WaiterCollector) collect() (WaiterMetric, error) {
 	seconds := []float64{}
 	infoCounts := make(map[string]float64)
 	for _, waiter := range waiters {
-		seconds = append(seconds, waiter.Seconds)
+		if !math.IsNaN(waiter.Seconds) {
+			seconds = append(seconds, waiter.Seconds)
+		}
 		if waiter.Name == "" && waiter.Reason == "" {
 			continue
 		}
@@ -172,11 +175,11 @@ func parse_mmdiag_waiters(out string, logger log.Logger) []Waiter {
 						f.SetFloat(val)
 					} else {
 						level.Error(logger).Log("msg", fmt.Sprintf("Error parsing %s value %s: %s", h, values[i], err.Error()))
+						f.SetFloat(math.NaN())
 					}
 				}
 			}
 		}
-		level.Debug(logger).Log("exclude", *waiterExclude, "name", metric.Name)
 		if excludePattern.MatchString(metric.Name) {
 			level.Debug(logger).Log("msg", "Skipping waiter due to ignored pattern", "name", metric.Name)
 			continue
