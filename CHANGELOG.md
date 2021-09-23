@@ -1,4 +1,4 @@
-## 2.0.0-rc.1 / 2021-09-14
+## 2.0.0-rc.2 / 2021-09-23
 
 * [BREAKING] Change how waiter metrics are presented and stored
   * Replace `gpfs_mmdiag_waiter` with `gpfs_waiter_seconds` that is a histogram, no longer use `thread` label
