@@ -16,6 +16,7 @@ package collectors
 import (
 	"context"
 	"fmt"
+	"reflect"
 	"regexp"
 	"strconv"
 	"strings"
@@ -34,6 +35,11 @@ var (
 	waiterBuckets    = DurationBuckets(kingpin.Flag("collector.waiter.buckets", "Buckets for waiter metrics").Default(defWaiterBuckets))
 	waiterTimeout    = kingpin.Flag("collector.waiter.timeout", "Timeout for mmdiag execution").Default("5").Int()
 	waiterLogReason  = kingpin.Flag("collector.waiter.log-reason", "Log the waiter reason").Default("false").Bool()
+	waiterMap        = map[string]string{
+		"threadName": "Name",
+		"waitTime":   "Seconds",
+		"auxReason":  "Reason",
+	}
 )
 
 type WaiterMetric struct {
@@ -42,9 +48,9 @@ type WaiterMetric struct {
 }
 
 type Waiter struct {
-	name    string
-	reason  string
-	seconds float64
+	Name    string
+	Reason  string
+	Seconds float64
 }
 
 type WaiterCollector struct {
@@ -116,14 +122,14 @@ func (c *WaiterCollector) collect() (WaiterMetric, error) {
 	seconds := []float64{}
 	infoCounts := make(map[string]float64)
 	for _, waiter := range waiters {
-		seconds = append(seconds, waiter.seconds)
-		if waiter.name == "" && waiter.reason == "" {
+		seconds = append(seconds, waiter.Seconds)
+		if waiter.Name == "" && waiter.Reason == "" {
 			continue
 		}
 		if *waiterLogReason {
-			level.Info(c.logger).Log("msg", "Waiter reason information", "waiter", waiter.name, "reason", waiter.reason, "seconds", waiter.seconds)
+			level.Info(c.logger).Log("msg", "Waiter reason information", "waiter", waiter.Name, "reason", waiter.Reason, "seconds", waiter.Seconds)
 		}
-		infoCounts[waiter.name] += 1
+		infoCounts[waiter.Name] += 1
 	}
 	waiterMetric.seconds = seconds
 	waiterMetric.infoCounts = infoCounts
@@ -133,36 +139,49 @@ func (c *WaiterCollector) collect() (WaiterMetric, error) {
 func parse_mmdiag_waiters(out string, logger log.Logger) []Waiter {
 	waiters := []Waiter{}
 	lines := strings.Split(out, "\n")
-	waitersPattern := regexp.MustCompile(`^Waiting ([0-9.]+) sec.*thread ([0-9]+)`)
-	waitersInfoPattern := regexp.MustCompile(`^Waiting ([0-9.]+) sec.*thread ([0-9]+) ([a-zA-Z0-9]+): (.+)`)
+	var headers []string
 	excludePattern := regexp.MustCompile(*waiterExclude)
 	for _, l := range lines {
-		if excludePattern.MatchString(l) {
+		if !strings.HasPrefix(l, "mmdiag") {
 			continue
 		}
-		match := waitersPattern.FindStringSubmatch(l)
-		if len(match) != 3 {
+		items := strings.Split(l, ":")
+		if len(items) < 3 {
 			continue
 		}
-		secs, err := strconv.ParseFloat(match[1], 64)
-		if err != nil {
-			level.Error(logger).Log("msg", fmt.Sprintf("Unable to convert %s to float64", match[1]))
+		if items[1] != "waiters" {
 			continue
 		}
-		infoMatch := waitersInfoPattern.FindStringSubmatch(l)
-		var name, reason string
-		if len(infoMatch) == 5 {
-			name = infoMatch[3]
-			reason = infoMatch[4]
+		var values []string
+		if items[2] == "HEADER" {
+			headers = append(headers, items...)
+			continue
 		} else {
-			level.Error(logger).Log("msg", "Unable to extract waiter info", "line", l, "match", fmt.Sprintf("%+v", infoMatch))
+			values = append(values, items...)
 		}
-		waiter := Waiter{
-			name:    name,
-			reason:  reason,
-			seconds: secs,
+		var metric Waiter
+		ps := reflect.ValueOf(&metric) // pointer to struct - addressable
+		s := ps.Elem()                 // struct
+		for i, h := range headers {
+			if field, ok := waiterMap[h]; ok {
+				f := s.FieldByName(field)
+				if f.Kind() == reflect.String {
+					f.SetString(values[i])
+				} else if f.Kind() == reflect.Float64 {
+					if val, err := strconv.ParseFloat(values[i], 64); err == nil {
+						f.SetFloat(val)
+					} else {
+						level.Error(logger).Log("msg", fmt.Sprintf("Error parsing %s value %s: %s", h, values[i], err.Error()))
+					}
+				}
+			}
 		}
-		waiters = append(waiters, waiter)
+		level.Debug(logger).Log("exclude", *waiterExclude, "name", metric.Name)
+		if excludePattern.MatchString(metric.Name) {
+			level.Debug(logger).Log("msg", "Skipping waiter due to ignored pattern", "name", metric.Name)
+			continue
+		}
+		waiters = append(waiters, metric)
 	}
 	return waiters
 }

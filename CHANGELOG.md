@@ -11,6 +11,7 @@
   * Remove `--collector.mmdiag.waiter-threshold` flag
   * Replace `--collector.mmdiag.waiter-exclude` with `--collector.waiter.exclude`
   * Replace `--collector.mmdiag.timeout` with `--collector.waiter.timeout`
+* [BREAKING] The waiter exclude will only compare against waiter name
 
 ## 1.5.1 / 2021-06-17
 
