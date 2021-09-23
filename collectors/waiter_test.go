@@ -57,6 +57,7 @@ mmdiag:waiters:0:1:::127779:000000003BFFFD40:RebuildWorkThread:2021-09-23_15%3A3
 mmdiag:waiters:0:1:::48081:0000000088B8BFB0:NSDThread:2021-09-23_15%3A31%3A34-0400:0.0037:monitored::::::for I/O completion:::
 mmdiag:waiters:0:1:::48081:0000000088B8BFB0::2021-09-23_15%3A31%3A34-0400:foo:monitored:::::::::
 foobar
+mmdiag:waiters
 mmdiag:foobar:0:1
 `
 )
