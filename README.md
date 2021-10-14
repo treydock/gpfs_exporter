@@ -70,7 +70,7 @@ The exporter `gpfs_mmlssnapshot_exporter` is provided to allow snapshot collecti
 
 ### mmlsfileset
 
-* `--collector.mmlssnapshot.filesystems` - A comma separated list of filesystems to collect. Default is to collect all filesystems listed by `mmlsfs`.
+* `--collector.mmlsfileset.filesystems` - A comma separated list of filesystems to collect. Default is to collect all filesystems listed by `mmlsfs`.
 
 **NOTE**: This collector does not collect used inodes. To get used inodes look at using the [mmrepquota](#mmrepquota) collector.
 
@@ -108,6 +108,9 @@ gpfs_exporter ALL=(ALL) NOPASSWD:/usr/lpp/mmfs/bin/mmrepquota -j -Y project scra
 # mmlssnapshot collector, each filesystem must be listed
 gpfs_exporter ALL=(ALL) NOPASSWD:/usr/lpp/mmfs/bin/mmlssnapshot project -s all -Y
 gpfs_exporter ALL=(ALL) NOPASSWD:/usr/lpp/mmfs/bin/mmlssnapshot ess -s all -Y
+# mmlsfileset collector, each filesystem must be listed
+gpfs_exporter ALL=(ALL) NOPASSWD:/usr/lpp/mmfs/bin/mmlsfileset project -Y
+gpfs_exporter ALL=(ALL) NOPASSWD:/usr/lpp/mmfs/bin/mmlsfileset ess -Y
 ```
 
 ## Install
