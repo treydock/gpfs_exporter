@@ -44,6 +44,7 @@ workflows:
             only: /.*/
     - prometheus/build:
         name: build
+        parallelism: 1
         filters:
           tags:
             only: /.*/
