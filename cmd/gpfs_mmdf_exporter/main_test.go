@@ -20,7 +20,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/go-kit/kit/log"
+	"github.com/go-kit/log"
 	"github.com/treydock/gpfs_exporter/collectors"
 	"gopkg.in/alecthomas/kingpin.v2"
 )

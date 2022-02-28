@@ -20,8 +20,8 @@ import (
 
 	linuxproc "github.com/c9s/goprocinfo/linux"
 	fstab "github.com/deniswernert/go-fstab"
-	"github.com/go-kit/kit/log"
-	"github.com/go-kit/kit/log/level"
+	"github.com/go-kit/log"
+	"github.com/go-kit/log/level"
 	"github.com/prometheus/client_golang/prometheus"
 	"gopkg.in/alecthomas/kingpin.v2"
 )
