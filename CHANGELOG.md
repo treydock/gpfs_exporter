@@ -1,3 +1,20 @@
+## 2.0.0 / 2022-03-08
+
+* [BREAKING] Change how waiter metrics are presented and stored
+  * Replace `gpfs_mmdiag_waiter` with `gpfs_waiter_seconds` that is a histogram, no longer use `thread` label
+  * Replace `gpfs_mmdiag_waiter_info` with `gpfs_waiter_info_count` that is count of waiter name without `thread` or `reason` labels
+  * Add flag `--collector.waiter.buckets` to define histogram buckets
+  * Add flag `--collector.waiter.log-reason` to enable logging of waiter reasons
+* [BREAKING] Rename `mmdiag` collector to `waiter`
+  * Replace `--collector.mmdiag` with `--collector.waiter`
+  * Replace `--no-collector.mmdiag` with `--no-collector.waiter`
+  * Remove `--collector.mmdiag.waiter-threshold` flag
+  * Replace `--collector.mmdiag.waiter-exclude` with `--collector.waiter.exclude`
+  * Replace `--collector.mmdiag.timeout` with `--collector.waiter.timeout`
+* [BREAKING] The waiter exclude will only compare against waiter name
+* Update Go to 1.17
+* Update Go module dependencies
+
 ## 2.0.0-rc.2 / 2021-09-23
 
 * [BREAKING] Change how waiter metrics are presented and stored
