@@ -17,8 +17,6 @@ import (
 	"bytes"
 	"context"
 	"fmt"
-	"reflect"
-	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -32,19 +30,8 @@ import (
 var (
 	configFilesystems = kingpin.Flag("collector.mmdf.filesystems", "Filesystems to query with mmdf, comma separated. Defaults to all filesystems.").Default("").String()
 	mmdfTimeout       = kingpin.Flag("collector.mmdf.timeout", "Timeout for mmdf execution").Default("60").Int()
-	mappedSections    = []string{"inode", "fsTotal", "metadata"}
-	KbToBytes         = []string{"fsSize", "freeBlocks", "totalMetadata"}
-	dfMap             = map[string]string{
-		"inode:usedInodes":       "InodesUsed",
-		"inode:freeInodes":       "InodesFree",
-		"inode:allocatedInodes":  "InodesAllocated",
-		"inode:maxInodes":        "InodesTotal",
-		"fsTotal:fsSize":         "FSTotal",
-		"fsTotal:freeBlocks":     "FSFree",
-		"metadata:totalMetadata": "MetadataTotal",
-		"metadata:freeBlocks":    "MetadataFree",
-	}
-	MmdfExec = mmdf
+	mappedSections    = []string{"inode", "fsTotal", "metadata", "poolTotal"}
+	MmdfExec          = mmdf
 )
 
 type DFMetric struct {
@@ -58,18 +45,31 @@ type DFMetric struct {
 	Metadata        bool
 	MetadataTotal   float64
 	MetadataFree    float64
+	Pools           []PoolMetric
+}
+
+type PoolMetric struct {
+	PoolName          string
+	PoolTotal         float64
+	PoolFree          float64
+	PoolFreeFragments float64
+	PoolMaxDiskSize   float64
 }
 
 type MmdfCollector struct {
-	InodesUsed      *prometheus.Desc
-	InodesFree      *prometheus.Desc
-	InodesAllocated *prometheus.Desc
-	InodesTotal     *prometheus.Desc
-	FSTotal         *prometheus.Desc
-	FSFree          *prometheus.Desc
-	MetadataTotal   *prometheus.Desc
-	MetadataFree    *prometheus.Desc
-	logger          log.Logger
+	InodesUsed        *prometheus.Desc
+	InodesFree        *prometheus.Desc
+	InodesAllocated   *prometheus.Desc
+	InodesTotal       *prometheus.Desc
+	FSTotal           *prometheus.Desc
+	FSFree            *prometheus.Desc
+	MetadataTotal     *prometheus.Desc
+	MetadataFree      *prometheus.Desc
+	PoolTotal         *prometheus.Desc
+	PoolFree          *prometheus.Desc
+	PoolFreeFragments *prometheus.Desc
+	PoolMaxDiskSize   *prometheus.Desc
+	logger            log.Logger
 }
 
 func init() {
@@ -94,6 +94,14 @@ func NewMmdfCollector(logger log.Logger) Collector {
 			"GPFS total metadata size in bytes", []string{"fs"}, nil),
 		MetadataFree: prometheus.NewDesc(prometheus.BuildFQName(namespace, "fs", "metadata_free_bytes"),
 			"GPFS metadata free size in bytes", []string{"fs"}, nil),
+		PoolTotal: prometheus.NewDesc(prometheus.BuildFQName(namespace, "fs", "pool_total_bytes"),
+			"GPFS pool total size in bytes", []string{"fs", "pool"}, nil),
+		PoolFree: prometheus.NewDesc(prometheus.BuildFQName(namespace, "fs", "pool_free_bytes"),
+			"GPFS pool free size in bytes", []string{"fs", "pool"}, nil),
+		PoolFreeFragments: prometheus.NewDesc(prometheus.BuildFQName(namespace, "fs", "pool_free_fragments_bytes"),
+			"GPFS pool free fragments in bytes", []string{"fs", "pool"}, nil),
+		PoolMaxDiskSize: prometheus.NewDesc(prometheus.BuildFQName(namespace, "fs", "pool_max_disk_size_bytes"),
+			"GPFS pool max disk size in bytes", []string{"fs", "pool"}, nil),
 		logger: logger,
 	}
 }
@@ -107,6 +115,8 @@ func (c *MmdfCollector) Describe(ch chan<- *prometheus.Desc) {
 	ch <- c.FSFree
 	ch <- c.MetadataTotal
 	ch <- c.MetadataFree
+	ch <- c.PoolTotal
+	ch <- c.PoolFree
 }
 
 func (c *MmdfCollector) Collect(ch chan<- prometheus.Metric) {
@@ -162,6 +172,12 @@ func (c *MmdfCollector) Collect(ch chan<- prometheus.Metric) {
 					ch <- prometheus.MustNewConstMetric(c.MetadataTotal, prometheus.GaugeValue, metric.MetadataTotal, fs)
 					ch <- prometheus.MustNewConstMetric(c.MetadataFree, prometheus.GaugeValue, metric.MetadataFree, fs)
 				}
+				for _, pool := range metric.Pools {
+					ch <- prometheus.MustNewConstMetric(c.PoolTotal, prometheus.GaugeValue, pool.PoolTotal, fs, pool.PoolName)
+					ch <- prometheus.MustNewConstMetric(c.PoolFree, prometheus.GaugeValue, pool.PoolFree, fs, pool.PoolName)
+					ch <- prometheus.MustNewConstMetric(c.PoolFreeFragments, prometheus.GaugeValue, pool.PoolFreeFragments, fs, pool.PoolName)
+					ch <- prometheus.MustNewConstMetric(c.PoolMaxDiskSize, prometheus.GaugeValue, pool.PoolMaxDiskSize, fs, pool.PoolName)
+				}
 			}
 			ch <- prometheus.MustNewConstMetric(lastExecution, prometheus.GaugeValue, float64(time.Now().Unix()), label)
 		}(fs)
@@ -176,8 +192,8 @@ func (c *MmdfCollector) mmdfCollect(fs string) (DFMetric, error) {
 	if err != nil {
 		return DFMetric{}, err
 	}
-	dfMetric, err := parse_mmdf(out, c.logger)
-	return dfMetric, err
+	dfMetric := parse_mmdf(out, c.logger)
+	return dfMetric, nil
 }
 
 func mmdf(fs string, ctx context.Context) (string, error) {
@@ -193,10 +209,10 @@ func mmdf(fs string, ctx context.Context) (string, error) {
 	return out.String(), nil
 }
 
-func parse_mmdf(out string, logger log.Logger) (DFMetric, error) {
-	dfMetrics := DFMetric{Metadata: true}
+func parse_mmdf(out string, logger log.Logger) DFMetric {
+	dfMetrics := DFMetric{Metadata: false}
+	pools := []PoolMetric{}
 	headers := make(map[string][]string)
-	values := make(map[string][]string)
 	lines := strings.Split(out, "\n")
 	for _, l := range lines {
 		if !strings.HasPrefix(l, "mmdf") {
@@ -211,45 +227,100 @@ func parse_mmdf(out string, logger log.Logger) (DFMetric, error) {
 		}
 		if items[2] == "HEADER" {
 			headers[items[1]] = append(headers[items[1]], items...)
-		} else {
-			values[items[1]] = append(values[items[1]], items...)
+			continue
 		}
-	}
-	ps := reflect.ValueOf(&dfMetrics) // pointer to struct - addressable
-	s := ps.Elem()                    // struct
-	for k, vals := range headers {
-		if _, ok := values[k]; !ok {
-			if k == "metadata" {
-				dfMetrics.Metadata = false
-				continue
-			} else {
-				level.Error(logger).Log("msg", "Header section missing from values", "header", k)
-				return dfMetrics, fmt.Errorf("Header section missing from values: %s", k)
+		section := items[1]
+		if !SliceContains(mappedSections, section) {
+			continue
+		}
+		if section == "inode" {
+			inodesUsedIndex := SliceIndex(headers["inode"], "usedInodes")
+			inodesFreeIndex := SliceIndex(headers["inode"], "freeInodes")
+			inodesAllocatedIndex := SliceIndex(headers["inode"], "allocatedInodes")
+			inodesTotalIndex := SliceIndex(headers["inode"], "maxInodes")
+			if inodesUsedIndex != -1 {
+				if inodesUsed, err := ParseFloat(items[inodesUsedIndex], false, logger); err == nil {
+					dfMetrics.InodesUsed = inodesUsed
+				}
 			}
-		}
-		if len(vals) != len(values[k]) {
-			level.Error(logger).Log("msg", "Length of headers does not equal length of values", "header", k, "values", len(values[k]), "headers", len(vals))
-			return dfMetrics, fmt.Errorf("Length of headers does not equal length of values: %s", k)
-		}
-		for i, v := range vals {
-			mapKey := fmt.Sprintf("%s:%s", k, v)
-			value := values[k][i]
-			if field, ok := dfMap[mapKey]; ok {
-				f := s.FieldByName(field)
-				if f.Kind() == reflect.String {
-					f.SetString(value)
-				} else if f.Kind() == reflect.Float64 {
-					if val, err := strconv.ParseFloat(value, 64); err == nil {
-						if SliceContains(KbToBytes, v) {
-							val = val * 1024
-						}
-						f.SetFloat(val)
-					} else {
-						level.Error(logger).Log("msg", fmt.Sprintf("Error parsing %s value %s: %s", mapKey, value, err.Error()))
-					}
+			if inodesFreeIndex != -1 {
+				if inodesFree, err := ParseFloat(items[inodesFreeIndex], false, logger); err == nil {
+					dfMetrics.InodesFree = inodesFree
+				}
+			}
+			if inodesAllocatedIndex != -1 {
+				if inodesAllocated, err := ParseFloat(items[inodesAllocatedIndex], false, logger); err == nil {
+					dfMetrics.InodesAllocated = inodesAllocated
+				}
+			}
+			if inodesTotalIndex != -1 {
+				if inodesTotal, err := ParseFloat(items[inodesTotalIndex], false, logger); err == nil {
+					dfMetrics.InodesTotal = inodesTotal
 				}
 			}
 		}
+		if section == "fsTotal" {
+			fsTotalIndex := SliceIndex(headers["fsTotal"], "fsSize")
+			fsFreeIndex := SliceIndex(headers["fsTotal"], "freeBlocks")
+			if fsTotalIndex != -1 {
+				if fsTotal, err := ParseFloat(items[fsTotalIndex], true, logger); err == nil {
+					dfMetrics.FSTotal = fsTotal
+				}
+			}
+			if fsFreeIndex != -1 {
+				if fsFree, err := ParseFloat(items[fsFreeIndex], true, logger); err == nil {
+					dfMetrics.FSFree = fsFree
+				}
+			}
+		}
+		if section == "metadata" {
+			dfMetrics.Metadata = true
+			metadataTotalIndex := SliceIndex(headers["metadata"], "totalMetadata")
+			metadataFreeIndex := SliceIndex(headers["metadata"], "freeBlocks")
+			if metadataTotalIndex != -1 {
+				if metadataTotal, err := ParseFloat(items[metadataTotalIndex], true, logger); err == nil {
+					dfMetrics.MetadataTotal = metadataTotal
+				}
+			}
+			if metadataFreeIndex != -1 {
+				if metadataFree, err := ParseFloat(items[metadataFreeIndex], true, logger); err == nil {
+					dfMetrics.MetadataFree = metadataFree
+				}
+			}
+		}
+		if section == "poolTotal" {
+			poolMetric := PoolMetric{}
+			poolNameIndex := SliceIndex(headers["poolTotal"], "poolName")
+			poolTotalIndex := SliceIndex(headers["poolTotal"], "poolSize")
+			poolFreeIndex := SliceIndex(headers["poolTotal"], "freeBlocks")
+			poolFreeFragmentsIndex := SliceIndex(headers["poolTotal"], "freeFragments")
+			poolMaxDiskSizeIndex := SliceIndex(headers["poolTotal"], "maxDiskSize")
+			if poolNameIndex != -1 {
+				poolMetric.PoolName = items[poolNameIndex]
+			}
+			if poolTotalIndex != -1 {
+				if poolTotal, err := ParseFloat(items[poolTotalIndex], true, logger); err == nil {
+					poolMetric.PoolTotal = poolTotal
+				}
+			}
+			if poolFreeIndex != -1 {
+				if poolFree, err := ParseFloat(items[poolFreeIndex], true, logger); err == nil {
+					poolMetric.PoolFree = poolFree
+				}
+			}
+			if poolFreeFragmentsIndex != -1 {
+				if poolFreeFragments, err := ParseFloat(items[poolFreeFragmentsIndex], true, logger); err == nil {
+					poolMetric.PoolFreeFragments = poolFreeFragments
+				}
+			}
+			if poolMaxDiskSizeIndex != -1 {
+				if poolMaxDiskSize, err := ParseFloat(items[poolMaxDiskSizeIndex], true, logger); err == nil {
+					poolMetric.PoolMaxDiskSize = poolMaxDiskSize
+				}
+			}
+			pools = append(pools, poolMetric)
+		}
 	}
-	return dfMetrics, nil
+	dfMetrics.Pools = pools
+	return dfMetrics
 }
