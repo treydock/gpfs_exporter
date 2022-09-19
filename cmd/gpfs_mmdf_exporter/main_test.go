@@ -36,9 +36,10 @@ mmdf:fsTotal:HEADER:version:reserved:reserved:fsSize:freeBlocks:freeBlocksPct:fr
 mmdf:inode:HEADER:version:reserved:reserved:usedInodes:freeInodes:allocatedInodes:maxInodes:
 mmdf:nsd:0:1:::P_META_VD102:system:771751936:300:Yes:No:320274944:41:5005384:1::
 mmdf:nsd:0:1:::P_DATA_VD02:data:46766489600:200:No:Yes:6092915712:13:154966272:0::
-mmdf:poolTotal:0:1:::data:3647786188800:475190722560:13:12059515296:0:3860104580096:
+mmdf:poolTotal:0:1:::system:783308292096:380564840448:49:10024464464:1:1153081262080:
 mmdf:data:0:1:::3647786188800:475190722560:13:12059515296:0:
 mmdf:metadata:0:1:::13891534848:6011299328:43:58139768:0:
+mmdf:poolTotal:0:1:::data:3064453922816:1342362296320:44:1999215152:0:10143773212672:
 mmdf:fsTotal:0:1:::3661677723648:481202021888:14:12117655064:0:
 mmdf:inode:0:1:::430741822:484301506:915043328:1332164000:
 `
@@ -61,6 +62,22 @@ gpfs_fs_metadata_free_bytes{fs="project"} 6.155570511872e+12
 # HELP gpfs_fs_metadata_size_bytes GPFS total metadata size in bytes
 # TYPE gpfs_fs_metadata_size_bytes gauge
 gpfs_fs_metadata_size_bytes{fs="project"} 1.4224931684352e+13
+# HELP gpfs_fs_pool_free_bytes GPFS pool free size in bytes
+# TYPE gpfs_fs_pool_free_bytes gauge
+gpfs_fs_pool_free_bytes{fs="project",pool="data"} 1.37457899143168e+15
+gpfs_fs_pool_free_bytes{fs="project",pool="system"} 3.89698396618752e+14
+# HELP gpfs_fs_pool_free_fragments_bytes GPFS pool free fragments in bytes
+# TYPE gpfs_fs_pool_free_fragments_bytes gauge
+gpfs_fs_pool_free_fragments_bytes{fs="project",pool="data"} 2.047196315648e+12
+gpfs_fs_pool_free_fragments_bytes{fs="project",pool="system"} 1.0265051611136e+13
+# HELP gpfs_fs_pool_max_disk_size_bytes GPFS pool max disk size in bytes
+# TYPE gpfs_fs_pool_max_disk_size_bytes gauge
+gpfs_fs_pool_max_disk_size_bytes{fs="project",pool="data"} 1.0387223769776128e+16
+gpfs_fs_pool_max_disk_size_bytes{fs="project",pool="system"} 1.18075521236992e+15
+# HELP gpfs_fs_pool_total_bytes GPFS pool total size in bytes
+# TYPE gpfs_fs_pool_total_bytes gauge
+gpfs_fs_pool_total_bytes{fs="project",pool="data"} 3.138000816963584e+15
+gpfs_fs_pool_total_bytes{fs="project",pool="system"} 8.02107691106304e+14
 # HELP gpfs_fs_size_bytes GPFS filesystem total size in bytes
 # TYPE gpfs_fs_size_bytes gauge
 gpfs_fs_size_bytes{fs="project"} 3.749557989015552e+15

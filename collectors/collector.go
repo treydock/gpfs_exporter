@@ -21,11 +21,13 @@ import (
 	"os"
 	"os/exec"
 	"sort"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
 
 	"github.com/go-kit/log"
+	"github.com/go-kit/log/level"
 	"github.com/prometheus/client_golang/prometheus"
 	"gopkg.in/alecthomas/kingpin.v2"
 )
@@ -138,6 +140,27 @@ func SliceContains(slice []string, str string) bool {
 		}
 	}
 	return false
+}
+
+func SliceIndex(slice []string, str string) int {
+	for i, v := range slice {
+		if v == str {
+			return i
+		}
+	}
+	return -1
+}
+
+func ParseFloat(str string, toBytes bool, logger log.Logger) (float64, error) {
+	if val, err := strconv.ParseFloat(str, 64); err == nil {
+		if toBytes {
+			val = val * 1024
+		}
+		return val, nil
+	} else {
+		level.Error(logger).Log("msg", fmt.Sprintf("Error parsing %s: %s", str, err.Error()))
+		return 0, err
+	}
 }
 
 func FileExists(filename string) bool {
