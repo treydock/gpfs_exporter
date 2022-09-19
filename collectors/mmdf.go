@@ -234,40 +234,34 @@ func parse_mmdf(out string, logger log.Logger) DFMetric {
 			continue
 		}
 		if section == "inode" {
-			inodesUsedIndex := SliceIndex(headers["inode"], "usedInodes")
-			inodesFreeIndex := SliceIndex(headers["inode"], "freeInodes")
-			inodesAllocatedIndex := SliceIndex(headers["inode"], "allocatedInodes")
-			inodesTotalIndex := SliceIndex(headers["inode"], "maxInodes")
-			if inodesUsedIndex != -1 {
+			if inodesUsedIndex := SliceIndex(headers["inode"], "usedInodes"); inodesUsedIndex != -1 {
 				if inodesUsed, err := ParseFloat(items[inodesUsedIndex], false, logger); err == nil {
 					dfMetrics.InodesUsed = inodesUsed
 				}
 			}
-			if inodesFreeIndex != -1 {
+			if inodesFreeIndex := SliceIndex(headers["inode"], "freeInodes"); inodesFreeIndex != -1 {
 				if inodesFree, err := ParseFloat(items[inodesFreeIndex], false, logger); err == nil {
 					dfMetrics.InodesFree = inodesFree
 				}
 			}
-			if inodesAllocatedIndex != -1 {
+			if inodesAllocatedIndex := SliceIndex(headers["inode"], "allocatedInodes"); inodesAllocatedIndex != -1 {
 				if inodesAllocated, err := ParseFloat(items[inodesAllocatedIndex], false, logger); err == nil {
 					dfMetrics.InodesAllocated = inodesAllocated
 				}
 			}
-			if inodesTotalIndex != -1 {
+			if inodesTotalIndex := SliceIndex(headers["inode"], "maxInodes"); inodesTotalIndex != -1 {
 				if inodesTotal, err := ParseFloat(items[inodesTotalIndex], false, logger); err == nil {
 					dfMetrics.InodesTotal = inodesTotal
 				}
 			}
 		}
 		if section == "fsTotal" {
-			fsTotalIndex := SliceIndex(headers["fsTotal"], "fsSize")
-			fsFreeIndex := SliceIndex(headers["fsTotal"], "freeBlocks")
-			if fsTotalIndex != -1 {
+			if fsTotalIndex := SliceIndex(headers["fsTotal"], "fsSize"); fsTotalIndex != -1 {
 				if fsTotal, err := ParseFloat(items[fsTotalIndex], true, logger); err == nil {
 					dfMetrics.FSTotal = fsTotal
 				}
 			}
-			if fsFreeIndex != -1 {
+			if fsFreeIndex := SliceIndex(headers["fsTotal"], "freeBlocks"); fsFreeIndex != -1 {
 				if fsFree, err := ParseFloat(items[fsFreeIndex], true, logger); err == nil {
 					dfMetrics.FSFree = fsFree
 				}
@@ -275,14 +269,12 @@ func parse_mmdf(out string, logger log.Logger) DFMetric {
 		}
 		if section == "metadata" {
 			dfMetrics.Metadata = true
-			metadataTotalIndex := SliceIndex(headers["metadata"], "totalMetadata")
-			metadataFreeIndex := SliceIndex(headers["metadata"], "freeBlocks")
-			if metadataTotalIndex != -1 {
+			if metadataTotalIndex := SliceIndex(headers["metadata"], "totalMetadata"); metadataTotalIndex != -1 {
 				if metadataTotal, err := ParseFloat(items[metadataTotalIndex], true, logger); err == nil {
 					dfMetrics.MetadataTotal = metadataTotal
 				}
 			}
-			if metadataFreeIndex != -1 {
+			if metadataFreeIndex := SliceIndex(headers["metadata"], "freeBlocks"); metadataFreeIndex != -1 {
 				if metadataFree, err := ParseFloat(items[metadataFreeIndex], true, logger); err == nil {
 					dfMetrics.MetadataFree = metadataFree
 				}
@@ -290,30 +282,25 @@ func parse_mmdf(out string, logger log.Logger) DFMetric {
 		}
 		if section == "poolTotal" {
 			poolMetric := PoolMetric{}
-			poolNameIndex := SliceIndex(headers["poolTotal"], "poolName")
-			poolTotalIndex := SliceIndex(headers["poolTotal"], "poolSize")
-			poolFreeIndex := SliceIndex(headers["poolTotal"], "freeBlocks")
-			poolFreeFragmentsIndex := SliceIndex(headers["poolTotal"], "freeFragments")
-			poolMaxDiskSizeIndex := SliceIndex(headers["poolTotal"], "maxDiskSize")
-			if poolNameIndex != -1 {
+			if poolNameIndex := SliceIndex(headers["poolTotal"], "poolName"); poolNameIndex != -1 {
 				poolMetric.PoolName = items[poolNameIndex]
 			}
-			if poolTotalIndex != -1 {
+			if poolTotalIndex := SliceIndex(headers["poolTotal"], "poolSize"); poolTotalIndex != -1 {
 				if poolTotal, err := ParseFloat(items[poolTotalIndex], true, logger); err == nil {
 					poolMetric.PoolTotal = poolTotal
 				}
 			}
-			if poolFreeIndex != -1 {
+			if poolFreeIndex := SliceIndex(headers["poolTotal"], "freeBlocks"); poolFreeIndex != -1 {
 				if poolFree, err := ParseFloat(items[poolFreeIndex], true, logger); err == nil {
 					poolMetric.PoolFree = poolFree
 				}
 			}
-			if poolFreeFragmentsIndex != -1 {
+			if poolFreeFragmentsIndex := SliceIndex(headers["poolTotal"], "freeFragments"); poolFreeFragmentsIndex != -1 {
 				if poolFreeFragments, err := ParseFloat(items[poolFreeFragmentsIndex], true, logger); err == nil {
 					poolMetric.PoolFreeFragments = poolFreeFragments
 				}
 			}
-			if poolMaxDiskSizeIndex != -1 {
+			if poolMaxDiskSizeIndex := SliceIndex(headers["poolTotal"], "maxDiskSize"); poolMaxDiskSizeIndex != -1 {
 				if poolMaxDiskSize, err := ParseFloat(items[poolMaxDiskSizeIndex], true, logger); err == nil {
 					poolMetric.PoolMaxDiskSize = poolMaxDiskSize
 				}
