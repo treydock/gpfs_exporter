@@ -1,3 +1,7 @@
+## 2.1.0 / 2022-09-19
+
+* Update mmdf collector to collect pool data
+
 ## 2.0.0 / 2022-03-08
 
 * [BREAKING] Change how waiter metrics are presented and stored
