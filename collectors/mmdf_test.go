@@ -165,19 +165,19 @@ func TestMmdfCollector(t *testing.T) {
 		# HELP gpfs_fs_metadata_size_bytes GPFS total metadata size in bytes
 		# TYPE gpfs_fs_metadata_size_bytes gauge
 		gpfs_fs_metadata_size_bytes{fs="project"} 14224931684352
-        # HELP gpfs_fs_pool_free_bytes GPFS pool free size in bytes
+		# HELP gpfs_fs_pool_free_bytes GPFS pool free size in bytes
 		# TYPE gpfs_fs_pool_free_bytes gauge
 		gpfs_fs_pool_free_bytes{fs="project",pool="data"} 1374578991431680
 		gpfs_fs_pool_free_bytes{fs="project",pool="system"} 389698396618752
-        # HELP gpfs_fs_pool_free_fragments_bytes GPFS pool free fragments in bytes
+		# HELP gpfs_fs_pool_free_fragments_bytes GPFS pool free fragments in bytes
 		# TYPE gpfs_fs_pool_free_fragments_bytes gauge
 		gpfs_fs_pool_free_fragments_bytes{fs="project",pool="data"} 2047196315648
 		gpfs_fs_pool_free_fragments_bytes{fs="project",pool="system"} 10265051611136
-        # HELP gpfs_fs_pool_max_disk_size_bytes GPFS pool max disk size in bytes
+		# HELP gpfs_fs_pool_max_disk_size_bytes GPFS pool max disk size in bytes
 		# TYPE gpfs_fs_pool_max_disk_size_bytes gauge
 		gpfs_fs_pool_max_disk_size_bytes{fs="project",pool="data"} 10387223769776128
 		gpfs_fs_pool_max_disk_size_bytes{fs="project",pool="system"} 1180755212369920
-        # HELP gpfs_fs_pool_total_bytes GPFS pool total size in bytes
+		# HELP gpfs_fs_pool_total_bytes GPFS pool total size in bytes
 		# TYPE gpfs_fs_pool_total_bytes gauge
 		gpfs_fs_pool_total_bytes{fs="project",pool="data"} 3138000816963584
 		gpfs_fs_pool_total_bytes{fs="project",pool="system"} 802107691106304
@@ -227,19 +227,19 @@ func TestMmdfCollectorNoMetadata(t *testing.T) {
 		# HELP gpfs_fs_inodes GPFS filesystem inodes total
 		# TYPE gpfs_fs_inodes gauge
 		gpfs_fs_inodes{fs="project"} 1332164000
-        # HELP gpfs_fs_pool_free_bytes GPFS pool free size in bytes
+		# HELP gpfs_fs_pool_free_bytes GPFS pool free size in bytes
 		# TYPE gpfs_fs_pool_free_bytes gauge
 		gpfs_fs_pool_free_bytes{fs="project",pool="data"} 1374578991431680
 		gpfs_fs_pool_free_bytes{fs="project",pool="system"} 389698396618752
-        # HELP gpfs_fs_pool_free_fragments_bytes GPFS pool free fragments in bytes
+		# HELP gpfs_fs_pool_free_fragments_bytes GPFS pool free fragments in bytes
 		# TYPE gpfs_fs_pool_free_fragments_bytes gauge
 		gpfs_fs_pool_free_fragments_bytes{fs="project",pool="data"} 2047196315648
 		gpfs_fs_pool_free_fragments_bytes{fs="project",pool="system"} 10265051611136
-        # HELP gpfs_fs_pool_max_disk_size_bytes GPFS pool max disk size in bytes
+		# HELP gpfs_fs_pool_max_disk_size_bytes GPFS pool max disk size in bytes
 		# TYPE gpfs_fs_pool_max_disk_size_bytes gauge
 		gpfs_fs_pool_max_disk_size_bytes{fs="project",pool="data"} 10387223769776128
 		gpfs_fs_pool_max_disk_size_bytes{fs="project",pool="system"} 1180755212369920
-        # HELP gpfs_fs_pool_total_bytes GPFS pool total size in bytes
+		# HELP gpfs_fs_pool_total_bytes GPFS pool total size in bytes
 		# TYPE gpfs_fs_pool_total_bytes gauge
 		gpfs_fs_pool_total_bytes{fs="project",pool="data"} 3138000816963584
 		gpfs_fs_pool_total_bytes{fs="project",pool="system"} 802107691106304
@@ -305,19 +305,19 @@ mmlsfs::0:1:::project:defaultMountPoint:%2Ffs%2Fproject::
 		# HELP gpfs_fs_metadata_size_bytes GPFS total metadata size in bytes
 		# TYPE gpfs_fs_metadata_size_bytes gauge
 		gpfs_fs_metadata_size_bytes{fs="project"} 14224931684352
-        # HELP gpfs_fs_pool_free_bytes GPFS pool free size in bytes
+		# HELP gpfs_fs_pool_free_bytes GPFS pool free size in bytes
 		# TYPE gpfs_fs_pool_free_bytes gauge
 		gpfs_fs_pool_free_bytes{fs="project",pool="data"} 1374578991431680
 		gpfs_fs_pool_free_bytes{fs="project",pool="system"} 389698396618752
-        # HELP gpfs_fs_pool_free_fragments_bytes GPFS pool free fragments in bytes
+		# HELP gpfs_fs_pool_free_fragments_bytes GPFS pool free fragments in bytes
 		# TYPE gpfs_fs_pool_free_fragments_bytes gauge
 		gpfs_fs_pool_free_fragments_bytes{fs="project",pool="data"} 2047196315648
 		gpfs_fs_pool_free_fragments_bytes{fs="project",pool="system"} 10265051611136
-        # HELP gpfs_fs_pool_max_disk_size_bytes GPFS pool max disk size in bytes
+		# HELP gpfs_fs_pool_max_disk_size_bytes GPFS pool max disk size in bytes
 		# TYPE gpfs_fs_pool_max_disk_size_bytes gauge
 		gpfs_fs_pool_max_disk_size_bytes{fs="project",pool="data"} 10387223769776128
 		gpfs_fs_pool_max_disk_size_bytes{fs="project",pool="system"} 1180755212369920
-        # HELP gpfs_fs_pool_total_bytes GPFS pool total size in bytes
+		# HELP gpfs_fs_pool_total_bytes GPFS pool total size in bytes
 		# TYPE gpfs_fs_pool_total_bytes gauge
 		gpfs_fs_pool_total_bytes{fs="project",pool="data"} 3138000816963584
 		gpfs_fs_pool_total_bytes{fs="project",pool="system"} 802107691106304
