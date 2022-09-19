@@ -222,15 +222,12 @@ func parse_mmdf(out string, logger log.Logger) DFMetric {
 		if len(items) < 3 {
 			continue
 		}
-		if !SliceContains(mappedSections, items[1]) {
+		section := items[1]
+		if !SliceContains(mappedSections, section) {
 			continue
 		}
 		if items[2] == "HEADER" {
 			headers[items[1]] = append(headers[items[1]], items...)
-			continue
-		}
-		section := items[1]
-		if !SliceContains(mappedSections, section) {
 			continue
 		}
 		if section == "inode" {
