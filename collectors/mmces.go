@@ -128,7 +128,7 @@ func (c *MmcesCollector) collect(nodename string) ([]CESMetric, error) {
 }
 
 func mmces(nodename string, ctx context.Context) (string, error) {
-	cmd := execCommand(ctx, "sudo", "/usr/lpp/mmfs/bin/mmces", "state", "show", "-N", nodename, "-Y")
+	cmd := execCommand(ctx, *sudoCmd, "/usr/lpp/mmfs/bin/mmces", "state", "show", "-N", nodename, "-Y")
 	var out bytes.Buffer
 	cmd.Stdout = &out
 	err := cmd.Run()

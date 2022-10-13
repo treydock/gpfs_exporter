@@ -118,7 +118,7 @@ func (c *MmhealthCollector) collect() ([]HealthMetric, error) {
 }
 
 func mmhealth(ctx context.Context) (string, error) {
-	cmd := execCommand(ctx, "sudo", "/usr/lpp/mmfs/bin/mmhealth", "node", "show", "-Y")
+	cmd := execCommand(ctx, *sudoCmd, "/usr/lpp/mmfs/bin/mmhealth", "node", "show", "-Y")
 	var out bytes.Buffer
 	cmd.Stdout = &out
 	err := cmd.Run()

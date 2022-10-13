@@ -170,7 +170,7 @@ func mmlssnapshot(fs string, ctx context.Context) (string, error) {
 	if *snapshotGetSize {
 		args = append(args, "-d")
 	}
-	cmd := execCommand(ctx, "sudo", args...)
+	cmd := execCommand(ctx, *sudoCmd, args...)
 	var out bytes.Buffer
 	cmd.Stdout = &out
 	err := cmd.Run()

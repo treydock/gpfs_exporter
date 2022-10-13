@@ -98,7 +98,7 @@ func (c *MmgetstateCollector) collect() (MmgetstateMetrics, error) {
 }
 
 func mmgetstate(ctx context.Context) (string, error) {
-	cmd := execCommand(ctx, "sudo", "/usr/lpp/mmfs/bin/mmgetstate", "-Y")
+	cmd := execCommand(ctx, *sudoCmd, "/usr/lpp/mmfs/bin/mmgetstate", "-Y")
 	var out bytes.Buffer
 	cmd.Stdout = &out
 	err := cmd.Run()
