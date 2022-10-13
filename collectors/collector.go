@@ -60,6 +60,7 @@ var (
 	lastExecution = prometheus.NewDesc(
 		prometheus.BuildFQName(namespace, "exporter", "last_execution"),
 		"Last execution time of ", []string{"collector"}, nil)
+	sudoCmd       = kingpin.Flag("config.sudo.command", "The command to run sudo").Default("sudo").String()
 	mmlsfsTimeout = kingpin.Flag("config.mmlsfs.timeout", "Timeout for mmlsfs execution").Default("5").Int()
 )
 
@@ -172,7 +173,7 @@ func FileExists(filename string) bool {
 }
 
 func mmdiag(arg string, ctx context.Context) (string, error) {
-	cmd := execCommand(ctx, "sudo", "/usr/lpp/mmfs/bin/mmdiag", arg, "-Y")
+	cmd := execCommand(ctx, *sudoCmd, "/usr/lpp/mmfs/bin/mmdiag", arg, "-Y")
 	var out bytes.Buffer
 	cmd.Stdout = &out
 	err := cmd.Run()
@@ -198,7 +199,7 @@ func mmlfsfsFilesystems(ctx context.Context, logger log.Logger) ([]string, error
 }
 
 func mmlsfs(ctx context.Context) (string, error) {
-	cmd := execCommand(ctx, "sudo", "/usr/lpp/mmfs/bin/mmlsfs", "all", "-Y", "-T")
+	cmd := execCommand(ctx, *sudoCmd, "/usr/lpp/mmfs/bin/mmlsfs", "all", "-Y", "-T")
 	var out bytes.Buffer
 	cmd.Stdout = &out
 	err := cmd.Run()

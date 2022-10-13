@@ -155,7 +155,7 @@ func mmrepquota(ctx context.Context) (string, error) {
 	} else {
 		args = append(args, strings.Split(*configMmrepquotaFilesystems, ",")...)
 	}
-	cmd := execCommand(ctx, "sudo", args...)
+	cmd := execCommand(ctx, *sudoCmd, args...)
 	var out bytes.Buffer
 	cmd.Stdout = &out
 	err := cmd.Run()

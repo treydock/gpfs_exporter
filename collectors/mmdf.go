@@ -197,7 +197,7 @@ func (c *MmdfCollector) mmdfCollect(fs string) (DFMetric, error) {
 }
 
 func mmdf(fs string, ctx context.Context) (string, error) {
-	cmd := execCommand(ctx, "sudo", "/usr/lpp/mmfs/bin/mmdf", fs, "-Y")
+	cmd := execCommand(ctx, *sudoCmd, "/usr/lpp/mmfs/bin/mmdf", fs, "-Y")
 	var out bytes.Buffer
 	cmd.Stdout = &out
 	err := cmd.Run()

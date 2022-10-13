@@ -132,7 +132,7 @@ func (c *MmpmonCollector) collect() ([]PerfMetrics, error) {
 }
 
 func mmpmon(ctx context.Context) (string, error) {
-	cmd := execCommand(ctx, "sudo", "/usr/lpp/mmfs/bin/mmpmon", "-s", "-p")
+	cmd := execCommand(ctx, *sudoCmd, "/usr/lpp/mmfs/bin/mmpmon", "-s", "-p")
 	cmd.Stdin = strings.NewReader("fs_io_s\n")
 	var out bytes.Buffer
 	cmd.Stdout = &out

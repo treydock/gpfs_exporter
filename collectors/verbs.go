@@ -90,7 +90,7 @@ func (c *VerbsCollector) collect() (VerbsMetrics, error) {
 }
 
 func verbs(ctx context.Context) (string, error) {
-	cmd := execCommand(ctx, "sudo", "/usr/lpp/mmfs/bin/mmfsadm", "test", "verbs", "status")
+	cmd := execCommand(ctx, *sudoCmd, "/usr/lpp/mmfs/bin/mmfsadm", "test", "verbs", "status")
 	var out bytes.Buffer
 	cmd.Stdout = &out
 	err := cmd.Run()
