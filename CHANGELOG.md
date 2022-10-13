@@ -1,3 +1,7 @@
+## 2.2.0 / 2022-10-13
+
+* Allow sudo command to be changed (#54)
+
 ## 2.1.0 / 2022-09-19
 
 * Update mmdf collector to collect pool data
