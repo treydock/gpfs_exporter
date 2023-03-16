@@ -46,14 +46,14 @@ var (
 )
 
 type QosMetric struct {
-	Pool   string
-	Time   float64
-	Class  string
-	Iops   float64
-	Ioql   float64
-	Qsdl   float64
-	ET     float64
-	MBs    float64
+	Pool  string
+	Time  float64
+	Class string
+	Iops  float64
+	Ioql  float64
+	Qsdl  float64
+	ET    float64
+	MBs   float64
 }
 
 type MmlsqosCollector struct {
