@@ -140,11 +140,11 @@ func (c *MmlsqosCollector) Collect(ch chan<- prometheus.Metric) {
 				return
 			}
 			for _, m := range metrics {
-				ch <- prometheus.MustNewConstMetric(c.Iops, prometheus.GaugeValue, m.Iops, fs, m.Pool, m.Class, fmt.Sprintf("%.2f", m.Time))
-				ch <- prometheus.MustNewConstMetric(c.Ioql, prometheus.GaugeValue, m.Ioql, fs, m.Pool, m.Class, fmt.Sprintf("%.2f", m.Time))
-				ch <- prometheus.MustNewConstMetric(c.Qsdl, prometheus.GaugeValue, m.Qsdl, fs, m.Pool, m.Class, fmt.Sprintf("%.2f", m.Time))
-				ch <- prometheus.MustNewConstMetric(c.ET, prometheus.GaugeValue, m.ET, fs, m.Pool, m.Class, fmt.Sprintf("%.2f", m.Time))
-				ch <- prometheus.MustNewConstMetric(c.MBs, prometheus.GaugeValue, m.MBs, fs, m.Pool, m.Class, fmt.Sprintf("%.2f", m.Time))
+				ch <- prometheus.MustNewConstMetric(c.Iops, prometheus.GaugeValue, m.Iops, fs, m.Pool, m.Class, fmt.Sprintf("%.f", m.Time))
+				ch <- prometheus.MustNewConstMetric(c.Ioql, prometheus.GaugeValue, m.Ioql, fs, m.Pool, m.Class, fmt.Sprintf("%.f", m.Time))
+				ch <- prometheus.MustNewConstMetric(c.Qsdl, prometheus.GaugeValue, m.Qsdl, fs, m.Pool, m.Class, fmt.Sprintf("%.f", m.Time))
+				ch <- prometheus.MustNewConstMetric(c.ET, prometheus.GaugeValue, m.ET, fs, m.Pool, m.Class, fmt.Sprintf("%.f", m.Time))
+				ch <- prometheus.MustNewConstMetric(c.MBs, prometheus.GaugeValue, m.MBs, fs, m.Pool, m.Class, fmt.Sprintf("%.f", m.Time))
 			}
 		}(fs)
 	}
