@@ -146,25 +146,25 @@ func TestParseMmlsqos(t *testing.T) {
 	if metrics[0].Iops != 33.267 {
 		t.Errorf("Unexpected value for Iops, got %v", metrics[0].Iops)
 	}
-	if metrics[0].Ioql != 0.013449 {
-		t.Errorf("Unexpected value for Ioql, got %v", metrics[0].Ioql)
+	if metrics[0].AvegarePendingRequests != 0.013449 {
+		t.Errorf("Unexpected value for AvegarePendingRequests, got %v", metrics[0].AvegarePendingRequests)
 	}
-	if metrics[0].Qsdl != 1.0751e-05 {
-		t.Errorf("Unexpected value for Qsdl, got %v", metrics[0].Qsdl)
+	if metrics[0].AvegareQueuedRequests != 1.0751e-05 {
+		t.Errorf("Unexpected value for AvegareQueuedRequests, got %v", metrics[0].AvegareQueuedRequests)
 	}
-	if metrics[0].ET != 30 {
-		t.Errorf("Unexpected value for ET, got %v", metrics[0].ET)
+	if metrics[0].MeasurementInterval != 30 {
+		t.Errorf("Unexpected value for MeasurementInterval, got %v", metrics[0].MeasurementInterval)
 	}
-	if metrics[0].MBs != 4.675 {
-		t.Errorf("Unexpected value for MBs, got %v", metrics[0].MBs)
+	if metrics[0].Bs != 4902092.8 {
+		t.Errorf("Unexpected value for Bs, got %v", metrics[0].Bs)
 	}
 	metrics, err = parse_mmlsqos(mmlsqosStdoutNanValue, log.NewNopLogger())
 	if err != nil {
 		t.Errorf("Unexpected error: %s", err.Error())
 		return
 	}
-	if metrics[0].Qsdl != 0 {
-		t.Errorf("Unexpected value for Qsdl, got %v", metrics[0].Qsdl)
+	if metrics[0].AvegareQueuedRequests != 0 {
+		t.Errorf("Unexpected value for AvegareQueuedRequests, got %v", metrics[0].AvegareQueuedRequests)
 	}
 }
 
@@ -191,13 +191,27 @@ func TestMmlsqosCollector(t *testing.T) {
 		return mmlsqosStdout, nil
 	}
 	expected := `
-# HELP gpfs_qos_et_seconds GPFS interval in seconds during which the measurement was made
-        # TYPE gpfs_qos_et_seconds gauge
-        gpfs_qos_et_seconds{class="maintenance",fs="mmfs1",measurement_period_seconds="1678438680",pool="system"} 30
-        gpfs_qos_et_seconds{class="misc",fs="mmfs1",measurement_period_seconds="1678438680",pool="nvme1"} 30
-        gpfs_qos_et_seconds{class="misc",fs="mmfs1",measurement_period_seconds="1678438680",pool="system"} 30
-        gpfs_qos_et_seconds{class="other",fs="mmfs1",measurement_period_seconds="1678438680",pool="nvme1"} 30
-        gpfs_qos_et_seconds{class="other",fs="mmfs1",measurement_period_seconds="1678438680",pool="system"} 30
+		# HELP gpfs_qos_average_pending_requests GPFS average number of I/O requests in the class that are pending for reasons other than being queued by QoS
+        # TYPE gpfs_qos_average_pending_requests gauge
+        gpfs_qos_average_pending_requests{class="maintenance",fs="mmfs1",measurement_period_seconds="1678438680",pool="system"} 5.579e-05
+        gpfs_qos_average_pending_requests{class="misc",fs="mmfs1",measurement_period_seconds="1678438680",pool="nvme1"} 0.013449
+        gpfs_qos_average_pending_requests{class="misc",fs="mmfs1",measurement_period_seconds="1678438680",pool="system"} 1.7781e+08
+        gpfs_qos_average_pending_requests{class="other",fs="mmfs1",measurement_period_seconds="1678438680",pool="nvme1"} 0.85256
+        gpfs_qos_average_pending_requests{class="other",fs="mmfs1",measurement_period_seconds="1678438680",pool="system"} 41.399
+        # HELP gpfs_qos_average_queued_requests GPFS average number of I/O requests in the class that are queued by QoS
+        # TYPE gpfs_qos_average_queued_requests gauge
+        gpfs_qos_average_queued_requests{class="maintenance",fs="mmfs1",measurement_period_seconds="1678438680",pool="system"} 0
+        gpfs_qos_average_queued_requests{class="misc",fs="mmfs1",measurement_period_seconds="1678438680",pool="nvme1"} 1.0751e-05
+        gpfs_qos_average_queued_requests{class="misc",fs="mmfs1",measurement_period_seconds="1678438680",pool="system"} 0.0055852
+        gpfs_qos_average_queued_requests{class="other",fs="mmfs1",measurement_period_seconds="1678438680",pool="nvme1"} 7.734906573251e+07
+        gpfs_qos_average_queued_requests{class="other",fs="mmfs1",measurement_period_seconds="1678438680",pool="system"} 1.9398e+08
+        # HELP gpfs_qos_bs GPFS performance of the class in Bytes per second
+        # TYPE gpfs_qos_bs gauge
+        gpfs_qos_bs{class="maintenance",fs="mmfs1",measurement_period_seconds="1678438680",pool="system"} 273.07016192
+        gpfs_qos_bs{class="misc",fs="mmfs1",measurement_period_seconds="1678438680",pool="nvme1"} 4.9020928e+06
+        gpfs_qos_bs{class="misc",fs="mmfs1",measurement_period_seconds="1678438680",pool="system"} 2.232942592e+08
+        gpfs_qos_bs{class="other",fs="mmfs1",measurement_period_seconds="1678438680",pool="nvme1"} 1.599602688e+09
+        gpfs_qos_bs{class="other",fs="mmfs1",measurement_period_seconds="1678438680",pool="system"} 1.5703474176e+08
         # HELP gpfs_qos_iops GPFS performance of the class in I/O operations per second
         # TYPE gpfs_qos_iops gauge
         gpfs_qos_iops{class="maintenance",fs="mmfs1",measurement_period_seconds="1678438680",pool="system"} 0.066667
@@ -205,27 +219,13 @@ func TestMmlsqosCollector(t *testing.T) {
         gpfs_qos_iops{class="misc",fs="mmfs1",measurement_period_seconds="1678438680",pool="system"} 24875
         gpfs_qos_iops{class="other",fs="mmfs1",measurement_period_seconds="1678438680",pool="nvme1"} 829.83
         gpfs_qos_iops{class="other",fs="mmfs1",measurement_period_seconds="1678438680",pool="system"} 35545
-        # HELP gpfs_qos_ioql GPFS average number of I/O requests in the class that are pending for reasons other than being queued by QoS
-        # TYPE gpfs_qos_ioql gauge
-        gpfs_qos_ioql{class="maintenance",fs="mmfs1",measurement_period_seconds="1678438680",pool="system"} 5.579e-05
-        gpfs_qos_ioql{class="misc",fs="mmfs1",measurement_period_seconds="1678438680",pool="nvme1"} 0.013449
-        gpfs_qos_ioql{class="misc",fs="mmfs1",measurement_period_seconds="1678438680",pool="system"} 1.7781e+08
-        gpfs_qos_ioql{class="other",fs="mmfs1",measurement_period_seconds="1678438680",pool="nvme1"} 0.85256
-        gpfs_qos_ioql{class="other",fs="mmfs1",measurement_period_seconds="1678438680",pool="system"} 41.399
-        # HELP gpfs_qos_mbs GPFS performance of the class in MegaBytes per second
-        # TYPE gpfs_qos_mbs gauge
-        gpfs_qos_mbs{class="maintenance",fs="mmfs1",measurement_period_seconds="1678438680",pool="system"} 0.00026042
-        gpfs_qos_mbs{class="misc",fs="mmfs1",measurement_period_seconds="1678438680",pool="nvme1"} 4.675
-        gpfs_qos_mbs{class="misc",fs="mmfs1",measurement_period_seconds="1678438680",pool="system"} 212.95
-        gpfs_qos_mbs{class="other",fs="mmfs1",measurement_period_seconds="1678438680",pool="nvme1"} 1525.5
-        gpfs_qos_mbs{class="other",fs="mmfs1",measurement_period_seconds="1678438680",pool="system"} 149.76
-        # HELP gpfs_qos_qsdl GPFS average number of I/O requests in the class that are queued by QoS
-        # TYPE gpfs_qos_qsdl gauge
-        gpfs_qos_qsdl{class="maintenance",fs="mmfs1",measurement_period_seconds="1678438680",pool="system"} 0
-        gpfs_qos_qsdl{class="misc",fs="mmfs1",measurement_period_seconds="1678438680",pool="nvme1"} 1.0751e-05
-        gpfs_qos_qsdl{class="misc",fs="mmfs1",measurement_period_seconds="1678438680",pool="system"} 0.0055852
-        gpfs_qos_qsdl{class="other",fs="mmfs1",measurement_period_seconds="1678438680",pool="nvme1"} 7.734906573251e+07
-        gpfs_qos_qsdl{class="other",fs="mmfs1",measurement_period_seconds="1678438680",pool="system"} 1.9398e+08
+        # HELP gpfs_qos_measurement_interval_seconds GPFS interval in seconds during which the measurement was made
+        # TYPE gpfs_qos_measurement_interval_seconds gauge
+        gpfs_qos_measurement_interval_seconds{class="maintenance",fs="mmfs1",measurement_period_seconds="1678438680",pool="system"} 30
+        gpfs_qos_measurement_interval_seconds{class="misc",fs="mmfs1",measurement_period_seconds="1678438680",pool="nvme1"} 30
+        gpfs_qos_measurement_interval_seconds{class="misc",fs="mmfs1",measurement_period_seconds="1678438680",pool="system"} 30
+        gpfs_qos_measurement_interval_seconds{class="other",fs="mmfs1",measurement_period_seconds="1678438680",pool="nvme1"} 30
+        gpfs_qos_measurement_interval_seconds{class="other",fs="mmfs1",measurement_period_seconds="1678438680",pool="system"} 30
 	`
 	collector := NewMmlsqosCollector(log.NewNopLogger())
 	gatherers := setupGatherer(collector)
@@ -235,8 +235,9 @@ func TestMmlsqosCollector(t *testing.T) {
 		t.Errorf("Unexpected collection count %d, expected 28", val)
 	}
 	if err := testutil.GatherAndCompare(gatherers, strings.NewReader(expected),
-		"gpfs_qos_epoch_timestamp_seconds", "gpfs_qos_et_seconds",
-		"gpfs_qos_iops", "gpfs_qos_ioql", "gpfs_qos_mbs", "gpfs_qos_qsdl"); err != nil {
+		"gpfs_qos_epoch_timestamp_seconds", "gpfs_qos_measurement_interval_seconds",
+		"gpfs_qos_iops", "gpfs_qos_average_pending_requests", "gpfs_qos_bs",
+		 "gpfs_qos_average_queued_requests"); err != nil {
 		t.Errorf("unexpected collecting result:\n%s", err)
 	}
 }
@@ -256,13 +257,27 @@ func TestMmlsqosCollectorMmlsfs(t *testing.T) {
 		return mmlsfsStdout, nil
 	}
 	expected := `
-# HELP gpfs_qos_et_seconds GPFS interval in seconds during which the measurement was made
-        # TYPE gpfs_qos_et_seconds gauge
-        gpfs_qos_et_seconds{class="maintenance",fs="mmfs1",measurement_period_seconds="1678438680",pool="system"} 30
-        gpfs_qos_et_seconds{class="misc",fs="mmfs1",measurement_period_seconds="1678438680",pool="nvme1"} 30
-        gpfs_qos_et_seconds{class="misc",fs="mmfs1",measurement_period_seconds="1678438680",pool="system"} 30
-        gpfs_qos_et_seconds{class="other",fs="mmfs1",measurement_period_seconds="1678438680",pool="nvme1"} 30
-        gpfs_qos_et_seconds{class="other",fs="mmfs1",measurement_period_seconds="1678438680",pool="system"} 30
+		# HELP gpfs_qos_average_pending_requests GPFS average number of I/O requests in the class that are pending for reasons other than being queued by QoS
+        # TYPE gpfs_qos_average_pending_requests gauge
+        gpfs_qos_average_pending_requests{class="maintenance",fs="mmfs1",measurement_period_seconds="1678438680",pool="system"} 5.579e-05
+        gpfs_qos_average_pending_requests{class="misc",fs="mmfs1",measurement_period_seconds="1678438680",pool="nvme1"} 0.013449
+        gpfs_qos_average_pending_requests{class="misc",fs="mmfs1",measurement_period_seconds="1678438680",pool="system"} 1.7781e+08
+        gpfs_qos_average_pending_requests{class="other",fs="mmfs1",measurement_period_seconds="1678438680",pool="nvme1"} 0.85256
+        gpfs_qos_average_pending_requests{class="other",fs="mmfs1",measurement_period_seconds="1678438680",pool="system"} 41.399
+        # HELP gpfs_qos_average_queued_requests GPFS average number of I/O requests in the class that are queued by QoS
+        # TYPE gpfs_qos_average_queued_requests gauge
+        gpfs_qos_average_queued_requests{class="maintenance",fs="mmfs1",measurement_period_seconds="1678438680",pool="system"} 0
+        gpfs_qos_average_queued_requests{class="misc",fs="mmfs1",measurement_period_seconds="1678438680",pool="nvme1"} 1.0751e-05
+        gpfs_qos_average_queued_requests{class="misc",fs="mmfs1",measurement_period_seconds="1678438680",pool="system"} 0.0055852
+        gpfs_qos_average_queued_requests{class="other",fs="mmfs1",measurement_period_seconds="1678438680",pool="nvme1"} 7.734906573251e+07
+        gpfs_qos_average_queued_requests{class="other",fs="mmfs1",measurement_period_seconds="1678438680",pool="system"} 1.9398e+08
+        # HELP gpfs_qos_bs GPFS performance of the class in Bytes per second
+        # TYPE gpfs_qos_bs gauge
+        gpfs_qos_bs{class="maintenance",fs="mmfs1",measurement_period_seconds="1678438680",pool="system"} 273.07016192
+        gpfs_qos_bs{class="misc",fs="mmfs1",measurement_period_seconds="1678438680",pool="nvme1"} 4.9020928e+06
+        gpfs_qos_bs{class="misc",fs="mmfs1",measurement_period_seconds="1678438680",pool="system"} 2.232942592e+08
+        gpfs_qos_bs{class="other",fs="mmfs1",measurement_period_seconds="1678438680",pool="nvme1"} 1.599602688e+09
+        gpfs_qos_bs{class="other",fs="mmfs1",measurement_period_seconds="1678438680",pool="system"} 1.5703474176e+08
         # HELP gpfs_qos_iops GPFS performance of the class in I/O operations per second
         # TYPE gpfs_qos_iops gauge
         gpfs_qos_iops{class="maintenance",fs="mmfs1",measurement_period_seconds="1678438680",pool="system"} 0.066667
@@ -270,27 +285,13 @@ func TestMmlsqosCollectorMmlsfs(t *testing.T) {
         gpfs_qos_iops{class="misc",fs="mmfs1",measurement_period_seconds="1678438680",pool="system"} 24875
         gpfs_qos_iops{class="other",fs="mmfs1",measurement_period_seconds="1678438680",pool="nvme1"} 829.83
         gpfs_qos_iops{class="other",fs="mmfs1",measurement_period_seconds="1678438680",pool="system"} 35545
-        # HELP gpfs_qos_ioql GPFS average number of I/O requests in the class that are pending for reasons other than being queued by QoS
-        # TYPE gpfs_qos_ioql gauge
-        gpfs_qos_ioql{class="maintenance",fs="mmfs1",measurement_period_seconds="1678438680",pool="system"} 5.579e-05
-        gpfs_qos_ioql{class="misc",fs="mmfs1",measurement_period_seconds="1678438680",pool="nvme1"} 0.013449
-        gpfs_qos_ioql{class="misc",fs="mmfs1",measurement_period_seconds="1678438680",pool="system"} 1.7781e+08
-        gpfs_qos_ioql{class="other",fs="mmfs1",measurement_period_seconds="1678438680",pool="nvme1"} 0.85256
-        gpfs_qos_ioql{class="other",fs="mmfs1",measurement_period_seconds="1678438680",pool="system"} 41.399
-        # HELP gpfs_qos_mbs GPFS performance of the class in MegaBytes per second
-        # TYPE gpfs_qos_mbs gauge
-        gpfs_qos_mbs{class="maintenance",fs="mmfs1",measurement_period_seconds="1678438680",pool="system"} 0.00026042
-        gpfs_qos_mbs{class="misc",fs="mmfs1",measurement_period_seconds="1678438680",pool="nvme1"} 4.675
-        gpfs_qos_mbs{class="misc",fs="mmfs1",measurement_period_seconds="1678438680",pool="system"} 212.95
-        gpfs_qos_mbs{class="other",fs="mmfs1",measurement_period_seconds="1678438680",pool="nvme1"} 1525.5
-        gpfs_qos_mbs{class="other",fs="mmfs1",measurement_period_seconds="1678438680",pool="system"} 149.76
-        # HELP gpfs_qos_qsdl GPFS average number of I/O requests in the class that are queued by QoS
-        # TYPE gpfs_qos_qsdl gauge
-        gpfs_qos_qsdl{class="maintenance",fs="mmfs1",measurement_period_seconds="1678438680",pool="system"} 0
-        gpfs_qos_qsdl{class="misc",fs="mmfs1",measurement_period_seconds="1678438680",pool="nvme1"} 1.0751e-05
-        gpfs_qos_qsdl{class="misc",fs="mmfs1",measurement_period_seconds="1678438680",pool="system"} 0.0055852
-        gpfs_qos_qsdl{class="other",fs="mmfs1",measurement_period_seconds="1678438680",pool="nvme1"} 7.734906573251e+07
-        gpfs_qos_qsdl{class="other",fs="mmfs1",measurement_period_seconds="1678438680",pool="system"} 1.9398e+08
+        # HELP gpfs_qos_measurement_interval_seconds GPFS interval in seconds during which the measurement was made
+        # TYPE gpfs_qos_measurement_interval_seconds gauge
+        gpfs_qos_measurement_interval_seconds{class="maintenance",fs="mmfs1",measurement_period_seconds="1678438680",pool="system"} 30
+        gpfs_qos_measurement_interval_seconds{class="misc",fs="mmfs1",measurement_period_seconds="1678438680",pool="nvme1"} 30
+        gpfs_qos_measurement_interval_seconds{class="misc",fs="mmfs1",measurement_period_seconds="1678438680",pool="system"} 30
+        gpfs_qos_measurement_interval_seconds{class="other",fs="mmfs1",measurement_period_seconds="1678438680",pool="nvme1"} 30
+        gpfs_qos_measurement_interval_seconds{class="other",fs="mmfs1",measurement_period_seconds="1678438680",pool="system"} 30
 	`
 	collector := NewMmlsqosCollector(log.NewNopLogger())
 	gatherers := setupGatherer(collector)
@@ -300,8 +301,9 @@ func TestMmlsqosCollectorMmlsfs(t *testing.T) {
 		t.Errorf("Unexpected collection count %d, expected 28", val)
 	}
 	if err := testutil.GatherAndCompare(gatherers, strings.NewReader(expected),
-		"gpfs_qos_epoch_timestamp_seconds", "gpfs_qos_et_seconds",
-		"gpfs_qos_iops", "gpfs_qos_ioql", "gpfs_qos_mbs", "gpfs_qos_qsdl"); err != nil {
+		"gpfs_qos_epoch_timestamp_seconds", "gpfs_qos_measurement_interval_seconds",
+		"gpfs_qos_iops", "gpfs_qos_average_pending_requests", "gpfs_qos_bs",
+		 "gpfs_qos_average_queued_requests"); err != nil {
 		t.Errorf("unexpected collecting result:\n%s", err)
 	}
 }

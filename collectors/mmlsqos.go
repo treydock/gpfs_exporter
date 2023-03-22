@@ -37,31 +37,31 @@ var (
 		"timeEpoch": "Time",
 		"class":     "Class",
 		"iops":      "Iops",
-		"ioql":      "Ioql",
-		"qsdl":      "Qsdl",
-		"et":        "ET",
-		"MBs":       "MBs",
+		"ioql":      "AvegarePendingRequests",
+		"qsdl":      "AvegareQueuedRequests",
+		"et":        "MeasurementInterval",
+		"MBs":       "Bs",
 	}
 	MmlsqosExec = mmlsqos
 )
 
 type QosMetric struct {
-	Pool  string
-	Time  float64
-	Class string
-	Iops  float64
-	Ioql  float64
-	Qsdl  float64
-	ET    float64
-	MBs   float64
+	Pool                    string
+	Time                    float64
+	Class                   string
+	Iops                    float64
+	AvegarePendingRequests  float64
+	AvegareQueuedRequests   float64
+	MeasurementInterval     float64
+	Bs                      float64
 }
 
 type MmlsqosCollector struct {
-	Iops   *prometheus.Desc
-	Ioql   *prometheus.Desc
-	Qsdl   *prometheus.Desc
-	ET     *prometheus.Desc
-	MBs    *prometheus.Desc
+	Iops                    *prometheus.Desc
+	AvegarePendingRequests  *prometheus.Desc
+	AvegareQueuedRequests   *prometheus.Desc
+	MeasurementInterval     *prometheus.Desc
+	Bs                      *prometheus.Desc
 	logger log.Logger
 }
 
@@ -74,24 +74,24 @@ func NewMmlsqosCollector(logger log.Logger) Collector {
 	return &MmlsqosCollector{
 		Iops: prometheus.NewDesc(prometheus.BuildFQName(namespace, "qos", "iops"),
 			"GPFS performance of the class in I/O operations per second", labels, nil),
-		Ioql: prometheus.NewDesc(prometheus.BuildFQName(namespace, "qos", "ioql"),
+		AvegarePendingRequests: prometheus.NewDesc(prometheus.BuildFQName(namespace, "qos", "average_pending_requests"),
 			"GPFS average number of I/O requests in the class that are pending for reasons other than being queued by QoS", labels, nil),
-		Qsdl: prometheus.NewDesc(prometheus.BuildFQName(namespace, "qos", "qsdl"),
+		AvegareQueuedRequests: prometheus.NewDesc(prometheus.BuildFQName(namespace, "qos", "average_queued_requests"),
 			"GPFS average number of I/O requests in the class that are queued by QoS", labels, nil),
-		ET: prometheus.NewDesc(prometheus.BuildFQName(namespace, "qos", "et_seconds"),
+		MeasurementInterval: prometheus.NewDesc(prometheus.BuildFQName(namespace, "qos", "measurement_interval_seconds"),
 			"GPFS interval in seconds during which the measurement was made", labels, nil),
-		MBs: prometheus.NewDesc(prometheus.BuildFQName(namespace, "qos", "mbs"),
-			"GPFS performance of the class in MegaBytes per second", labels, nil),
+		Bs: prometheus.NewDesc(prometheus.BuildFQName(namespace, "qos", "bs"),
+			"GPFS performance of the class in Bytes per second", labels, nil),
 		logger: logger,
 	}
 }
 
 func (c *MmlsqosCollector) Describe(ch chan<- *prometheus.Desc) {
 	ch <- c.Iops
-	ch <- c.Ioql
-	ch <- c.Qsdl
-	ch <- c.ET
-	ch <- c.MBs
+	ch <- c.AvegarePendingRequests
+	ch <- c.AvegareQueuedRequests
+	ch <- c.MeasurementInterval
+	ch <- c.Bs
 }
 
 func (c *MmlsqosCollector) Collect(ch chan<- prometheus.Metric) {
@@ -141,10 +141,10 @@ func (c *MmlsqosCollector) Collect(ch chan<- prometheus.Metric) {
 			}
 			for _, m := range metrics {
 				ch <- prometheus.MustNewConstMetric(c.Iops, prometheus.GaugeValue, m.Iops, fs, m.Pool, m.Class, fmt.Sprintf("%.f", m.Time))
-				ch <- prometheus.MustNewConstMetric(c.Ioql, prometheus.GaugeValue, m.Ioql, fs, m.Pool, m.Class, fmt.Sprintf("%.f", m.Time))
-				ch <- prometheus.MustNewConstMetric(c.Qsdl, prometheus.GaugeValue, m.Qsdl, fs, m.Pool, m.Class, fmt.Sprintf("%.f", m.Time))
-				ch <- prometheus.MustNewConstMetric(c.ET, prometheus.GaugeValue, m.ET, fs, m.Pool, m.Class, fmt.Sprintf("%.f", m.Time))
-				ch <- prometheus.MustNewConstMetric(c.MBs, prometheus.GaugeValue, m.MBs, fs, m.Pool, m.Class, fmt.Sprintf("%.f", m.Time))
+				ch <- prometheus.MustNewConstMetric(c.AvegarePendingRequests, prometheus.GaugeValue, m.AvegarePendingRequests, fs, m.Pool, m.Class, fmt.Sprintf("%.f", m.Time))
+				ch <- prometheus.MustNewConstMetric(c.AvegareQueuedRequests, prometheus.GaugeValue, m.AvegareQueuedRequests, fs, m.Pool, m.Class, fmt.Sprintf("%.f", m.Time))
+				ch <- prometheus.MustNewConstMetric(c.MeasurementInterval, prometheus.GaugeValue, m.MeasurementInterval, fs, m.Pool, m.Class, fmt.Sprintf("%.f", m.Time))
+				ch <- prometheus.MustNewConstMetric(c.Bs, prometheus.GaugeValue, m.Bs, fs, m.Pool, m.Class, fmt.Sprintf("%.f", m.Time))
 			}
 		}(fs)
 	}
@@ -207,9 +207,12 @@ func parse_mmlsqos(out string, logger log.Logger) ([]QosMetric, error) {
 				if f.Kind() == reflect.String {
 					f.SetString(values[i])
 				} else if f.Kind() == reflect.Float64 {
-					if values[i] == "nan" {
+					if strings.Contains(values[i], "nan") {
 						f.SetFloat(0)
 					} else if val, err := strconv.ParseFloat(strings.Replace(values[i], ",", ".", -1), 64); err == nil {
+						if field == "Bs" {
+							val = val * 1024 * 1024
+						}
 						f.SetFloat(val)
 					} else {
 						level.Error(logger).Log("msg", fmt.Sprintf("Error parsing %s value %s: %s", h, values[i], err.Error()))
