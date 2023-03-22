@@ -237,7 +237,7 @@ func TestMmlsqosCollector(t *testing.T) {
 	if err := testutil.GatherAndCompare(gatherers, strings.NewReader(expected),
 		"gpfs_qos_epoch_timestamp_seconds", "gpfs_qos_measurement_interval_seconds",
 		"gpfs_qos_iops", "gpfs_qos_average_pending_requests", "gpfs_qos_bs",
-		 "gpfs_qos_average_queued_requests"); err != nil {
+		"gpfs_qos_average_queued_requests"); err != nil {
 		t.Errorf("unexpected collecting result:\n%s", err)
 	}
 }
@@ -303,7 +303,7 @@ func TestMmlsqosCollectorMmlsfs(t *testing.T) {
 	if err := testutil.GatherAndCompare(gatherers, strings.NewReader(expected),
 		"gpfs_qos_epoch_timestamp_seconds", "gpfs_qos_measurement_interval_seconds",
 		"gpfs_qos_iops", "gpfs_qos_average_pending_requests", "gpfs_qos_bs",
-		 "gpfs_qos_average_queued_requests"); err != nil {
+		"gpfs_qos_average_queued_requests"); err != nil {
 		t.Errorf("unexpected collecting result:\n%s", err)
 	}
 }

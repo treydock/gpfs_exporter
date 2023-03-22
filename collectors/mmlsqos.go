@@ -46,23 +46,23 @@ var (
 )
 
 type QosMetric struct {
-	Pool                    string
-	Time                    float64
-	Class                   string
-	Iops                    float64
-	AvegarePendingRequests  float64
-	AvegareQueuedRequests   float64
-	MeasurementInterval     float64
-	Bs                      float64
+	Pool                   string
+	Time                   float64
+	Class                  string
+	Iops                   float64
+	AvegarePendingRequests float64
+	AvegareQueuedRequests  float64
+	MeasurementInterval    float64
+	Bs                     float64
 }
 
 type MmlsqosCollector struct {
-	Iops                    *prometheus.Desc
-	AvegarePendingRequests  *prometheus.Desc
-	AvegareQueuedRequests   *prometheus.Desc
-	MeasurementInterval     *prometheus.Desc
-	Bs                      *prometheus.Desc
-	logger log.Logger
+	Iops                   *prometheus.Desc
+	AvegarePendingRequests *prometheus.Desc
+	AvegareQueuedRequests  *prometheus.Desc
+	MeasurementInterval    *prometheus.Desc
+	Bs                     *prometheus.Desc
+	logger                 log.Logger
 }
 
 func init() {
