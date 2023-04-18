@@ -80,7 +80,7 @@ func NewMmlsqosCollector(logger log.Logger) Collector {
 			"GPFS average number of I/O requests in the class that are queued by QoS", labels, nil),
 		MeasurementInterval: prometheus.NewDesc(prometheus.BuildFQName(namespace, "qos", "measurement_interval_seconds"),
 			"GPFS interval in seconds during which the measurement was made", labels, nil),
-		Bs: prometheus.NewDesc(prometheus.BuildFQName(namespace, "qos", "bs"),
+		Bs: prometheus.NewDesc(prometheus.BuildFQName(namespace, "qos", "bytes_per_second"),
 			"GPFS performance of the class in Bytes per second", labels, nil),
 		logger: logger,
 	}
