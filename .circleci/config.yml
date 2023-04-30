@@ -2,7 +2,7 @@
 version: 2.1
 
 orbs:
-  prometheus: prometheus/prometheus@0.16.0
+  prometheus: prometheus/prometheus@0.17.1
   codecov: codecov/codecov@3.2.2
 
 executors:
@@ -23,17 +23,6 @@ jobs:
         file: coverage.txt
     - prometheus/store_artifact:
         file: gpfs_exporter
-  release:
-    executor: golang
-    steps:
-    - prometheus/setup_build_environment:
-        docker_version: 19.03.8
-    - run: promu crossbuild tarballs
-    - run: promu checksum .tarballs
-    - run: promu release .tarballs
-    - store_artifacts:
-        destination: releases
-        path: .tarballs
 workflows:
   version: 2
   gpfs_exporter:
@@ -48,8 +37,10 @@ workflows:
         filters:
           tags:
             only: /.*/
-    - release:
+    - prometheus/publish_release:
         context: org-context
+        docker_hub_organization: ''
+        quay_io_organization: ''
         requires:
         - test
         - build

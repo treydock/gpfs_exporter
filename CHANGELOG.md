@@ -1,3 +1,7 @@
+## 2.3.0 / 2023-04-30
+
+* Add mmlsqos collector (#56)
+
 ## 2.2.0 / 2022-10-13
 
 * Allow sudo command to be changed (#54)
