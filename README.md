@@ -29,6 +29,7 @@ mmces | Collect state of CES | Disabled
 mmrepquota | Collect fileset quota information | Disabled
 mmlssnapshot | Collect GPFS snapshot information | Disabled
 mmlsfileset | Collect GPFS fileset information | Disabled
+mmlsqos | Collect GPFS I/O performance values of a file system, when you enable Quality of Service | Disabled
 
 ### mount
 
@@ -74,6 +75,15 @@ The exporter `gpfs_mmlssnapshot_exporter` is provided to allow snapshot collecti
 
 **NOTE**: This collector does not collect used inodes. To get used inodes look at using the [mmrepquota](#mmrepquota) collector.
 
+### mmlsqos
+
+Displays the I/O performance values of a file system, when you enable Quality of Service for I/O operations (QoS) with the mmchqos command.
+
+Flags:
+* `--collector.mmlsqos.filesystems` - A comma separated list of filesystems to collect. Default is to collect all filesystems listed by `mmlsfs`.
+* `--collector.mmlsqos.timeout` - Count of seconds for running mmlsqos command before timeout error will be raised. Default value is 60 seconds.
+* `--collector.mmlsqos.seconds` - Displays the I/O performance values for the previous number of seconds. The valid range of seconds is 1-999. The default value is 60 seconds.
+
 ## Sudo
 
 Ensure the user running `gpfs_exporter` can execute GPFS commands necessary to collect metrics.
@@ -111,6 +121,9 @@ gpfs_exporter ALL=(ALL) NOPASSWD:/usr/lpp/mmfs/bin/mmlssnapshot ess -s all -Y
 # mmlsfileset collector, each filesystem must be listed
 gpfs_exporter ALL=(ALL) NOPASSWD:/usr/lpp/mmfs/bin/mmlsfileset project -Y
 gpfs_exporter ALL=(ALL) NOPASSWD:/usr/lpp/mmfs/bin/mmlsfileset ess -Y
+# mmlsqos collector, each filesystem must be listed
+gpfs_exporter ALL=(ALL) NOPASSWD:/usr/lpp/mmfs/bin/mmlsqos mmfs1 -Y
+gpfs_exporter ALL=(ALL) NOPASSWD:/usr/lpp/mmfs/bin/mmlsqos ess -Y
 ```
 
 ## Install
