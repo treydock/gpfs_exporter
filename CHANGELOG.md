@@ -1,3 +1,7 @@
+## 2.4.0 / 2023-05-06
+
+* Update to Go 1.20.3 and update Go dependencies (#58)
+
 ## 2.3.0 / 2023-04-30
 
 * Add mmlsqos collector (#56)
