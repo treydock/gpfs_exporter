@@ -20,6 +20,7 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/alecthomas/kingpin/v2"
 	"github.com/go-kit/log"
 	"github.com/go-kit/log/level"
 	"github.com/gofrs/flock"
@@ -30,7 +31,6 @@ import (
 	"github.com/prometheus/common/promlog/flag"
 	"github.com/prometheus/common/version"
 	"github.com/treydock/gpfs_exporter/collectors"
-	"gopkg.in/alecthomas/kingpin.v2"
 )
 
 var (
