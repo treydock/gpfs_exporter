@@ -16,6 +16,7 @@ package collectors
 import (
 	"context"
 	"fmt"
+	"os"
 	"os/exec"
 	"strings"
 	"testing"
@@ -92,7 +93,9 @@ func TestMmhealthTimeout(t *testing.T) {
 }
 
 func TestParseMmhealth(t *testing.T) {
-	metrics := mmhealth_parse(mmhealthStdout, log.NewNopLogger())
+	w := log.NewSyncWriter(os.Stderr)
+	logger := log.NewLogfmtLogger(w)
+	metrics := mmhealth_parse(mmhealthStdout, logger)
 	if len(metrics) != 9 {
 		t.Errorf("Expected 8 metrics returned, got %d", len(metrics))
 		return
@@ -116,19 +119,23 @@ func TestParseMmhealthIgnores(t *testing.T) {
 		t.Fatal(err)
 	}
 	noignore := "^$"
+	empty := ""
 	ignore := "FILESYSTEM"
+	eventIgnore := "^(gpfs_pagepool_small)$"
 	mmhealthIgnoredComponent = &ignore
 	mmhealthIgnoredEntityName = &noignore
 	mmhealthIgnoredEntityType = &noignore
+	mmhealthIgnoredEvent = &eventIgnore
 	metrics := mmhealth_parse(mmhealthStdout, log.NewNopLogger())
-	if len(metrics) != 5 {
-		t.Errorf("Expected 5 metrics returned, got %d", len(metrics))
+	if len(metrics) != 4 {
+		t.Errorf("Expected 4 metrics returned, got %d", len(metrics))
 		return
 	}
 	ignore = "ess"
 	mmhealthIgnoredComponent = &noignore
 	mmhealthIgnoredEntityName = &ignore
 	mmhealthIgnoredEntityType = &noignore
+	mmhealthIgnoredEvent = &empty
 	metrics = mmhealth_parse(mmhealthStdout, log.NewNopLogger())
 	if len(metrics) != 8 {
 		t.Errorf("Expected 8 metrics returned, got %d", len(metrics))
@@ -138,6 +145,7 @@ func TestParseMmhealthIgnores(t *testing.T) {
 	mmhealthIgnoredComponent = &noignore
 	mmhealthIgnoredEntityName = &noignore
 	mmhealthIgnoredEntityType = &ignore
+	mmhealthIgnoredEvent = &empty
 	metrics = mmhealth_parse(mmhealthStdout, log.NewNopLogger())
 	if len(metrics) != 6 {
 		t.Errorf("Expected 6 metrics returned, got %d", len(metrics))

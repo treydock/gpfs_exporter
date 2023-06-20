@@ -34,21 +34,25 @@ var (
 	mmhealthIgnoredComponent  = kingpin.Flag("collector.mmhealth.ignored-component", "Regex of components to ignore").Default("^$").String()
 	mmhealthIgnoredEntityName = kingpin.Flag("collector.mmhealth.ignored-entityname", "Regex of entity names to ignore").Default("^$").String()
 	mmhealthIgnoredEntityType = kingpin.Flag("collector.mmhealth.ignored-entitytype", "Regex of entity types to ignore").Default("^$").String()
+	mmhealthIgnoredEvent      = kingpin.Flag("collector.mmhealth.ignored-event", "Regex of events to ignore").Default("").String()
 	mmhealthMap               = map[string]string{
 		"component":  "Component",
 		"entityname": "EntityName",
 		"entitytype": "EntityType",
 		"status":     "Status",
+		"event":      "Event",
 	}
 	mmhealthStatuses = []string{"CHECKING", "DEGRADED", "DEPEND", "DISABLED", "FAILED", "HEALTHY", "STARTING", "STOPPED", "SUSPENDED", "TIPS"}
 	mmhealthExec     = mmhealth
 )
 
 type HealthMetric struct {
+	Type       string
 	Component  string
 	EntityName string
 	EntityType string
 	Status     string
+	Event      string
 }
 
 type MmhealthCollector struct {
@@ -134,28 +138,37 @@ func mmhealth_parse(out string, logger log.Logger) []HealthMetric {
 	mmhealthIgnoredComponentPattern := regexp.MustCompile(*mmhealthIgnoredComponent)
 	mmhealthIgnoredEntityNamePattern := regexp.MustCompile(*mmhealthIgnoredEntityName)
 	mmhealthIgnoredEntityTypePattern := regexp.MustCompile(*mmhealthIgnoredEntityType)
+	mmhealthIgnoredEventPattern := regexp.MustCompile(*mmhealthIgnoredEvent)
 	var metrics []HealthMetric
+	var events []string
 	lines := strings.Split(out, "\n")
-	var headers []string
-	for _, l := range lines {
+	typeHeaders := make(map[string][]string)
+	for _, line := range lines {
+		l := strings.TrimSpace(line)
 		if !strings.HasPrefix(l, "mmhealth") {
+			level.Debug(logger).Log("msg", "Skip due to prefix", "line", l)
 			continue
 		}
 		items := strings.Split(l, ":")
 		if len(items) < 3 {
+			level.Debug(logger).Log("msg", "Skip due to length", "len", len(items), "line", l)
 			continue
-		}
-		if items[1] != "State" {
-			continue
-		}
-		var values []string
-		if items[2] == "HEADER" {
-			headers = append(headers, items...)
-			continue
-		} else {
-			values = append(values, items...)
 		}
 		var metric HealthMetric
+		metric.Type = items[1]
+		if metric.Type != "State" && metric.Type != "Event" {
+			level.Debug(logger).Log("msg", "Skip due to type", "type", metric.Type, "line", l)
+			continue
+		}
+		var headers []string
+		var values []string
+		if items[2] == "HEADER" {
+			typeHeaders[metric.Type] = items
+			continue
+		} else {
+			headers = typeHeaders[metric.Type]
+			values = items
+		}
 		ps := reflect.ValueOf(&metric) // pointer to struct - addressable
 		s := ps.Elem()                 // struct
 		for i, h := range headers {
@@ -184,7 +197,24 @@ func mmhealth_parse(out string, logger log.Logger) []HealthMetric {
 			level.Debug(logger).Log("msg", "Skipping entity type due to ignored pattern", "entitytype", metric.EntityType)
 			continue
 		}
-		metrics = append(metrics, metric)
+		if metric.Type == "Event" {
+			if *mmhealthIgnoredEvent != "" && mmhealthIgnoredEventPattern.MatchString(metric.Event) {
+				events = append(events, fmt.Sprintf("%s-%s-%s", metric.Component, metric.EntityName, metric.EntityType))
+			}
+		} else {
+			metrics = append(metrics, metric)
+		}
 	}
-	return metrics
+	if len(events) == 0 {
+		return metrics
+	}
+	var finalMetrics []HealthMetric
+	for _, m := range metrics {
+		key := fmt.Sprintf("%s-%s-%s", m.Component, m.EntityName, m.EntityType)
+		if SliceContains(events, key) {
+			continue
+		}
+		finalMetrics = append(finalMetrics, m)
+	}
+	return finalMetrics
 }
