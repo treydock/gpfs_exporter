@@ -1,3 +1,7 @@
+## 2.5.0 / 2023-06-20
+
+* Support filtering mmhealth by events (#60)
+
 ## 2.4.0 / 2023-05-06
 
 * Update to Go 1.20.3 and update Go dependencies (#58)
