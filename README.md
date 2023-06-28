@@ -61,7 +61,7 @@ The default is FQDN of those running the exporter.
 ### mmrepquota
 
 * `--collector.mmrepquota.filesystems` - A comma separated list of filesystems to collect. Default is to collect all filesystems.
-* `--collector.mmrepquota.quotatypes` - Quota types to collect (`j` for FILESET, `u` for USR, `g` for GRP). Default is FILESET only. Ex: `uj` collects FILESET and USR.
+* `--collector.mmrepquota.quotatypes` - Comma seperated list of filesystem types to collect (`fileset` for FILESET, `user` for USR, `group` for GRP). Default is FILESET only. Ex: `fileset,user` collects FILESET and USR.
 
 ### mmlssnapshot
 
