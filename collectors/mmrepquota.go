@@ -45,6 +45,11 @@ var (
 		"filesLimit":     "FilesLimit",
 		"filesInDoubt":   "FilesInDoubt",
 	}
+	quotaTypeMap = map[string]rune{
+		"user":    'u',
+		"group":   'g',
+		"fileset": 'j',
+	}
 	mmrepquotaExec = mmrepquota
 )
 
@@ -193,8 +198,10 @@ func (c *MmrepquotaCollector) Collect(ch chan<- prometheus.Metric) {
 	errorMetric := 0
 	metrics := []QuotaMetric{}
 
-	for _, quotaType := range *configMmrepquotaTypes {
-		metric, err := c.collect(fmt.Sprintf("-%c", quotaType))
+	for _, quotaType := range strings.Split(*configMmrepquotaTypes, ",") {
+		quotaType = strings.TrimSpace(quotaType)
+		quotaArg := quotaTypeMap[quotaType]
+		metric, err := c.collect(fmt.Sprintf("-%c", quotaArg))
 		metrics = append(metrics, metric...)
 
 		if err == context.DeadlineExceeded {
