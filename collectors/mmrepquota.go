@@ -30,7 +30,7 @@ import (
 
 var (
 	configMmrepquotaFilesystems = kingpin.Flag("collector.mmrepquota.filesystems", "Filesystems to query with mmrepquota, comma separated. Defaults to all filesystems.").Default("").String()
-	configMmrepquotaTypes       = kingpin.Flag("collector.mmrepquota.quotatypes", "Quota Types to query with mmrepquota, Default to fileset only").Default("j").String()
+	configMmrepquotaTypes       = kingpin.Flag("collector.mmrepquota.quotatypes", "Quota Types to query with mmrepquota, Default to fileset only").Default("fileset").String()
 	mmrepquotaTimeout           = kingpin.Flag("collector.mmrepquota.timeout", "Timeout for mmrepquota execution").Default("20").Int()
 	quotaMap                    = map[string]string{
 		"name":           "Name",
@@ -96,6 +96,11 @@ type MmrepquotaCollector struct {
 	GroupFilesInDoubt *prometheus.Desc
 
 	logger log.Logger
+}
+
+type MetricCollectionResult struct {
+	Result []QuotaMetric
+	Error  error
 }
 
 func init() {
@@ -198,12 +203,29 @@ func (c *MmrepquotaCollector) Collect(ch chan<- prometheus.Metric) {
 	errorMetric := 0
 	metrics := []QuotaMetric{}
 
-	for _, quotaType := range strings.Split(*configMmrepquotaTypes, ",") {
+	typesToCollect := strings.Split(*configMmrepquotaTypes, ",")
+
+	results := make(chan MetricCollectionResult, len(typesToCollect)-1)
+
+	for _, quotaType := range typesToCollect {
 		quotaType = strings.TrimSpace(quotaType)
 		quotaArg := quotaTypeMap[quotaType]
-		metric, err := c.collect(fmt.Sprintf("-%c", quotaArg))
-		metrics = append(metrics, metric...)
 
+		// Collect quota types concurrently, place metrics on results channel as MetricCollectionResult
+		go func(quotaArg rune) {
+			metric, err := c.collect(fmt.Sprintf("-%c", quotaArg))
+			results <- MetricCollectionResult{Result: metric, Error: err}
+			fmt.Println(metric)
+		}(quotaArg)
+	}
+
+	// merge metrics from results channel
+	for i := 0; i < len(typesToCollect); i++ {
+		result := <-results
+		fmt.Println(result)
+		metrics = append(metrics, result.Result...)
+
+		err := result.Error
 		if err == context.DeadlineExceeded {
 			timeout = 1
 			level.Error(c.logger).Log("msg", "Timeout executing mmrepquota")
