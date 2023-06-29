@@ -219,7 +219,7 @@ func (c *MmrepquotaCollector) Collect(ch chan<- prometheus.Metric) {
 	}
 
 	// merge metrics from results channel
-	for i := 0; i < len(typesToCollect); i++ {
+	for range typesToCollect {
 		result := <-results
 		metrics = append(metrics, result.Result...)
 
