@@ -215,7 +215,6 @@ func (c *MmrepquotaCollector) Collect(ch chan<- prometheus.Metric) {
 		go func(quotaArg rune) {
 			metric, err := c.collect(fmt.Sprintf("-%c", quotaArg))
 			results <- MetricCollectionResult{Result: metric, Error: err}
-			fmt.Println(metric)
 		}(quotaArg)
 	}
 
