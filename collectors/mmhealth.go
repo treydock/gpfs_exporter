@@ -200,6 +200,7 @@ func mmhealth_parse(out string, logger log.Logger) []HealthMetric {
 		if metric.Type == "Event" {
 			if *mmhealthIgnoredEvent != "" && mmhealthIgnoredEventPattern.MatchString(metric.Event) {
 				events = append(events, fmt.Sprintf("%s-%s-%s", metric.Component, metric.EntityName, metric.EntityType))
+				events = append(events, fmt.Sprintf("%s-%s", metric.EntityName, metric.EntityType))
 			}
 		} else {
 			metrics = append(metrics, metric)
@@ -212,6 +213,9 @@ func mmhealth_parse(out string, logger log.Logger) []HealthMetric {
 	for _, m := range metrics {
 		key := fmt.Sprintf("%s-%s-%s", m.Component, m.EntityName, m.EntityType)
 		if SliceContains(events, key) {
+			continue
+		}
+		if m.Component == "NODE" && SliceContains(events, fmt.Sprintf("%s-%s", m.EntityName, m.EntityType)) {
 			continue
 		}
 		finalMetrics = append(finalMetrics, m)

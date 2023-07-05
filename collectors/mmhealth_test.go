@@ -33,6 +33,19 @@ mmhealth:Event:HEADER:version:reserved:reserved:node:component:entityname:entity
 mmhealth:State:HEADER:version:reserved:reserved:node:component:entityname:entitytype:status:laststatuschange:
 mmhealth:State:0:1:::ib-haswell1.example.com:NODE:ib-haswell1.example.com:NODE:TIPS:2020-01-27 09%3A35%3A21.859186 EST:
 mmhealth:State:0:1:::ib-haswell1.example.com:GPFS:ib-haswell1.example.com:NODE:TIPS:2020-01-27 09%3A35%3A21.791895 EST:
+mmhealth:State:0:1:::ib-haswell1.example.com:NETWORK:ib-haswell1.example.com:NODE:HEALTHY:2020-01-07 17%3A02%3A40.131272 EST:
+mmhealth:State:0:1:::ib-haswell1.example.com:NETWORK:ib0:NIC:HEALTHY:2020-01-07 16%3A47%3A39.397852 EST:
+mmhealth:State:0:1:::ib-haswell1.example.com:NETWORK:mlx5_0/1:IB_RDMA:FOO:2020-01-07 17%3A02%3A40.205075 EST:
+mmhealth:State:0:1:::ib-haswell1.example.com:FILESYSTEM:ib-haswell1.example.com:NODE:HEALTHY:2020-01-27 09%3A35%3A21.499264 EST:
+mmhealth:State:0:1:::ib-haswell1.example.com:FILESYSTEM:project:FILESYSTEM:HEALTHY:2020-01-27 09%3A35%3A21.573978 EST:
+mmhealth:State:0:1:::ib-haswell1.example.com:FILESYSTEM:scratch:FILESYSTEM:HEALTHY:2020-01-27 09%3A35%3A21.657798 EST:
+mmhealth:State:0:1:::ib-haswell1.example.com:FILESYSTEM:ess:FILESYSTEM:HEALTHY:2020-01-27 09%3A35%3A21.716417 EST:
+`
+	mmhealthStdoutEvent = `
+mmhealth:Event:HEADER:version:reserved:reserved:node:component:entityname:entitytype:event:arguments:activesince:identifier:ishidden:
+mmhealth:State:HEADER:version:reserved:reserved:node:component:entityname:entitytype:status:laststatuschange:
+mmhealth:State:0:1:::ib-haswell1.example.com:NODE:ib-haswell1.example.com:NODE:TIPS:2020-01-27 09%3A35%3A21.859186 EST:
+mmhealth:State:0:1:::ib-haswell1.example.com:GPFS:ib-haswell1.example.com:NODE:TIPS:2020-01-27 09%3A35%3A21.791895 EST:
 mmhealth:Event:0:1:::ib-haswell1.example.com:GPFS:ib-haswell1.example.com:NODE:gpfs_pagepool_small::2020-01-07 16%3A47%3A43.892296 EST::no:
 mmhealth:State:0:1:::ib-haswell1.example.com:NETWORK:ib-haswell1.example.com:NODE:HEALTHY:2020-01-07 17%3A02%3A40.131272 EST:
 mmhealth:State:0:1:::ib-haswell1.example.com:NETWORK:ib0:NIC:HEALTHY:2020-01-07 16%3A47%3A39.397852 EST:
@@ -126,9 +139,9 @@ func TestParseMmhealthIgnores(t *testing.T) {
 	mmhealthIgnoredEntityName = &noignore
 	mmhealthIgnoredEntityType = &noignore
 	mmhealthIgnoredEvent = &eventIgnore
-	metrics := mmhealth_parse(mmhealthStdout, log.NewNopLogger())
-	if len(metrics) != 4 {
-		t.Errorf("Expected 4 metrics returned, got %d", len(metrics))
+	metrics := mmhealth_parse(mmhealthStdoutEvent, log.NewNopLogger())
+	if len(metrics) != 3 {
+		t.Errorf("Expected 3 metrics returned, got %d", len(metrics))
 		return
 	}
 	ignore = "ess"
@@ -136,7 +149,7 @@ func TestParseMmhealthIgnores(t *testing.T) {
 	mmhealthIgnoredEntityName = &ignore
 	mmhealthIgnoredEntityType = &noignore
 	mmhealthIgnoredEvent = &empty
-	metrics = mmhealth_parse(mmhealthStdout, log.NewNopLogger())
+	metrics = mmhealth_parse(mmhealthStdoutEvent, log.NewNopLogger())
 	if len(metrics) != 8 {
 		t.Errorf("Expected 8 metrics returned, got %d", len(metrics))
 		return
@@ -146,7 +159,7 @@ func TestParseMmhealthIgnores(t *testing.T) {
 	mmhealthIgnoredEntityName = &noignore
 	mmhealthIgnoredEntityType = &ignore
 	mmhealthIgnoredEvent = &empty
-	metrics = mmhealth_parse(mmhealthStdout, log.NewNopLogger())
+	metrics = mmhealth_parse(mmhealthStdoutEvent, log.NewNopLogger())
 	if len(metrics) != 6 {
 		t.Errorf("Expected 6 metrics returned, got %d", len(metrics))
 		return
