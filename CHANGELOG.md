@@ -1,3 +1,7 @@
+## 2.5.1 / 2023-07-05
+
+* Skip NODE mmhealth status if filtering out releated event (#61)
+
 ## 2.5.0 / 2023-06-20
 
 * Support filtering mmhealth by events (#60)
