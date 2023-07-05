@@ -30,7 +30,7 @@ import (
 
 var (
 	configMmrepquotaFilesystems = kingpin.Flag("collector.mmrepquota.filesystems", "Filesystems to query with mmrepquota, comma separated. Defaults to all filesystems.").Default("").String()
-	configMmrepquotaTypes       = kingpin.Flag("collector.mmrepquota.quotatypes", "Quota Types to query with mmrepquota, Default to fileset only").Default("fileset").String()
+	configMmrepquotaTypes       = kingpin.Flag("collector.mmrepquota.quota-types", "Quota Types to query with mmrepquota, Default to fileset only").Default("fileset").String()
 	mmrepquotaTimeout           = kingpin.Flag("collector.mmrepquota.timeout", "Timeout for mmrepquota execution").Default("20").Int()
 	quotaMap                    = map[string]string{
 		"name":           "Name",
