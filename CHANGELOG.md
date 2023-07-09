@@ -1,3 +1,7 @@
+## 2.6.0 / 2023-07-09
+
+* Add users and groups mmrepquota (#59)
+
 ## 2.5.1 / 2023-07-05
 
 * Skip NODE mmhealth status if filtering out releated event (#61)
