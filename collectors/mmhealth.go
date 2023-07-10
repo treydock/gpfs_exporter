@@ -57,6 +57,7 @@ type HealthMetric struct {
 
 type MmhealthCollector struct {
 	State  *prometheus.Desc
+	Event  *prometheus.Desc
 	logger log.Logger
 }
 
@@ -68,12 +69,15 @@ func NewMmhealthCollector(logger log.Logger) Collector {
 	return &MmhealthCollector{
 		State: prometheus.NewDesc(prometheus.BuildFQName(namespace, "health", "status"),
 			"GPFS health status", []string{"component", "entityname", "entitytype", "status"}, nil),
+		Event: prometheus.NewDesc(prometheus.BuildFQName(namespace, "health", "event"),
+			"GPFS health event", []string{"component", "entityname", "entitytype", "event"}, nil),
 		logger: logger,
 	}
 }
 
 func (c *MmhealthCollector) Describe(ch chan<- *prometheus.Desc) {
 	ch <- c.State
+	ch <- c.Event
 }
 
 func (c *MmhealthCollector) Collect(ch chan<- prometheus.Metric) {
@@ -90,6 +94,10 @@ func (c *MmhealthCollector) Collect(ch chan<- prometheus.Metric) {
 		errorMetric = 1
 	}
 	for _, m := range metrics {
+		if m.Type == "Event" {
+			ch <- prometheus.MustNewConstMetric(c.Event, prometheus.GaugeValue, 1, m.Component, m.EntityName, m.EntityType, m.Event)
+			continue
+		}
 		for _, s := range mmhealthStatuses {
 			var value float64
 			if s == m.Status {
@@ -140,7 +148,6 @@ func mmhealth_parse(out string, logger log.Logger) []HealthMetric {
 	mmhealthIgnoredEntityTypePattern := regexp.MustCompile(*mmhealthIgnoredEntityType)
 	mmhealthIgnoredEventPattern := regexp.MustCompile(*mmhealthIgnoredEvent)
 	var metrics []HealthMetric
-	var events []string
 	lines := strings.Split(out, "\n")
 	typeHeaders := make(map[string][]string)
 	for _, line := range lines {
@@ -197,28 +204,11 @@ func mmhealth_parse(out string, logger log.Logger) []HealthMetric {
 			level.Debug(logger).Log("msg", "Skipping entity type due to ignored pattern", "entitytype", metric.EntityType)
 			continue
 		}
-		if metric.Type == "Event" {
-			if *mmhealthIgnoredEvent != "" && mmhealthIgnoredEventPattern.MatchString(metric.Event) {
-				events = append(events, fmt.Sprintf("%s-%s-%s", metric.Component, metric.EntityName, metric.EntityType))
-				events = append(events, fmt.Sprintf("%s-%s", metric.EntityName, metric.EntityType))
-			}
-		} else {
-			metrics = append(metrics, metric)
-		}
-	}
-	if len(events) == 0 {
-		return metrics
-	}
-	var finalMetrics []HealthMetric
-	for _, m := range metrics {
-		key := fmt.Sprintf("%s-%s-%s", m.Component, m.EntityName, m.EntityType)
-		if SliceContains(events, key) {
+		if metric.Type == "Event" && *mmhealthIgnoredEvent != "" && mmhealthIgnoredEventPattern.MatchString(metric.Event) {
+			level.Debug(logger).Log("msg", "Skipping event due to ignored pattern", "event", metric.Event)
 			continue
 		}
-		if m.Component == "NODE" && SliceContains(events, fmt.Sprintf("%s-%s", m.EntityName, m.EntityType)) {
-			continue
-		}
-		finalMetrics = append(finalMetrics, m)
+		metrics = append(metrics, metric)
 	}
-	return finalMetrics
+	return metrics
 }
