@@ -33,19 +33,6 @@ mmhealth:Event:HEADER:version:reserved:reserved:node:component:entityname:entity
 mmhealth:State:HEADER:version:reserved:reserved:node:component:entityname:entitytype:status:laststatuschange:
 mmhealth:State:0:1:::ib-haswell1.example.com:NODE:ib-haswell1.example.com:NODE:TIPS:2020-01-27 09%3A35%3A21.859186 EST:
 mmhealth:State:0:1:::ib-haswell1.example.com:GPFS:ib-haswell1.example.com:NODE:TIPS:2020-01-27 09%3A35%3A21.791895 EST:
-mmhealth:State:0:1:::ib-haswell1.example.com:NETWORK:ib-haswell1.example.com:NODE:HEALTHY:2020-01-07 17%3A02%3A40.131272 EST:
-mmhealth:State:0:1:::ib-haswell1.example.com:NETWORK:ib0:NIC:HEALTHY:2020-01-07 16%3A47%3A39.397852 EST:
-mmhealth:State:0:1:::ib-haswell1.example.com:NETWORK:mlx5_0/1:IB_RDMA:FOO:2020-01-07 17%3A02%3A40.205075 EST:
-mmhealth:State:0:1:::ib-haswell1.example.com:FILESYSTEM:ib-haswell1.example.com:NODE:HEALTHY:2020-01-27 09%3A35%3A21.499264 EST:
-mmhealth:State:0:1:::ib-haswell1.example.com:FILESYSTEM:project:FILESYSTEM:HEALTHY:2020-01-27 09%3A35%3A21.573978 EST:
-mmhealth:State:0:1:::ib-haswell1.example.com:FILESYSTEM:scratch:FILESYSTEM:HEALTHY:2020-01-27 09%3A35%3A21.657798 EST:
-mmhealth:State:0:1:::ib-haswell1.example.com:FILESYSTEM:ess:FILESYSTEM:HEALTHY:2020-01-27 09%3A35%3A21.716417 EST:
-`
-	mmhealthStdoutEvent = `
-mmhealth:Event:HEADER:version:reserved:reserved:node:component:entityname:entitytype:event:arguments:activesince:identifier:ishidden:
-mmhealth:State:HEADER:version:reserved:reserved:node:component:entityname:entitytype:status:laststatuschange:
-mmhealth:State:0:1:::ib-haswell1.example.com:NODE:ib-haswell1.example.com:NODE:TIPS:2020-01-27 09%3A35%3A21.859186 EST:
-mmhealth:State:0:1:::ib-haswell1.example.com:GPFS:ib-haswell1.example.com:NODE:TIPS:2020-01-27 09%3A35%3A21.791895 EST:
 mmhealth:Event:0:1:::ib-haswell1.example.com:GPFS:ib-haswell1.example.com:NODE:gpfs_pagepool_small::2020-01-07 16%3A47%3A43.892296 EST::no:
 mmhealth:State:0:1:::ib-haswell1.example.com:NETWORK:ib-haswell1.example.com:NODE:HEALTHY:2020-01-07 17%3A02%3A40.131272 EST:
 mmhealth:State:0:1:::ib-haswell1.example.com:NETWORK:ib0:NIC:HEALTHY:2020-01-07 16%3A47%3A39.397852 EST:
@@ -109,8 +96,8 @@ func TestParseMmhealth(t *testing.T) {
 	w := log.NewSyncWriter(os.Stderr)
 	logger := log.NewLogfmtLogger(w)
 	metrics := mmhealth_parse(mmhealthStdout, logger)
-	if len(metrics) != 9 {
-		t.Errorf("Expected 8 metrics returned, got %d", len(metrics))
+	if len(metrics) != 10 {
+		t.Errorf("Expected 10 metrics returned, got %d", len(metrics))
 		return
 	}
 	if val := metrics[0].Component; val != "NODE" {
@@ -124,6 +111,12 @@ func TestParseMmhealth(t *testing.T) {
 	}
 	if val := metrics[0].Status; val != "TIPS" {
 		t.Errorf("Unexpected Status got %s", val)
+	}
+	if val := metrics[2].Type; val != "Event" {
+		t.Errorf("Unexpected Type got %s", val)
+	}
+	if val := metrics[2].Event; val != "gpfs_pagepool_small" {
+		t.Errorf("Unexpected Event got %s", val)
 	}
 }
 
@@ -139,9 +132,9 @@ func TestParseMmhealthIgnores(t *testing.T) {
 	mmhealthIgnoredEntityName = &noignore
 	mmhealthIgnoredEntityType = &noignore
 	mmhealthIgnoredEvent = &eventIgnore
-	metrics := mmhealth_parse(mmhealthStdoutEvent, log.NewNopLogger())
-	if len(metrics) != 3 {
-		t.Errorf("Expected 3 metrics returned, got %d", len(metrics))
+	metrics := mmhealth_parse(mmhealthStdout, log.NewNopLogger())
+	if len(metrics) != 5 {
+		t.Errorf("Expected 5 metrics returned, got %d", len(metrics))
 		return
 	}
 	ignore = "ess"
@@ -149,9 +142,9 @@ func TestParseMmhealthIgnores(t *testing.T) {
 	mmhealthIgnoredEntityName = &ignore
 	mmhealthIgnoredEntityType = &noignore
 	mmhealthIgnoredEvent = &empty
-	metrics = mmhealth_parse(mmhealthStdoutEvent, log.NewNopLogger())
-	if len(metrics) != 8 {
-		t.Errorf("Expected 8 metrics returned, got %d", len(metrics))
+	metrics = mmhealth_parse(mmhealthStdout, log.NewNopLogger())
+	if len(metrics) != 9 {
+		t.Errorf("Expected 9 metrics returned, got %d", len(metrics))
 		return
 	}
 	ignore = "FILESYSTEM"
@@ -159,9 +152,9 @@ func TestParseMmhealthIgnores(t *testing.T) {
 	mmhealthIgnoredEntityName = &noignore
 	mmhealthIgnoredEntityType = &ignore
 	mmhealthIgnoredEvent = &empty
-	metrics = mmhealth_parse(mmhealthStdoutEvent, log.NewNopLogger())
-	if len(metrics) != 6 {
-		t.Errorf("Expected 6 metrics returned, got %d", len(metrics))
+	metrics = mmhealth_parse(mmhealthStdout, log.NewNopLogger())
+	if len(metrics) != 7 {
+		t.Errorf("Expected 7 metrics returned, got %d", len(metrics))
 		return
 	}
 }
@@ -178,6 +171,9 @@ func TestMmhealthCollector(t *testing.T) {
 	mmhealthIgnoredEntityName = &ignore
 	mmhealthIgnoredEntityType = &ignore
 	expected := `
+		# HELP gpfs_health_event GPFS health event
+		# TYPE gpfs_health_event gauge
+		gpfs_health_event{component="GPFS",entityname="ib-haswell1.example.com",entitytype="NODE",event="gpfs_pagepool_small"} 1
 		# HELP gpfs_health_status GPFS health status
 		# TYPE gpfs_health_status gauge
 		gpfs_health_status{component="FILESYSTEM",entityname="ib-haswell1.example.com",entitytype="NODE",status="CHECKING"} 0
@@ -280,14 +276,16 @@ func TestMmhealthCollector(t *testing.T) {
 		gpfs_health_status{component="NODE",entityname="ib-haswell1.example.com",entitytype="NODE",status="TIPS"} 1
 		gpfs_health_status{component="NODE",entityname="ib-haswell1.example.com",entitytype="NODE",status="UNKNOWN"} 0
 	`
-	collector := NewMmhealthCollector(log.NewNopLogger())
+	w := log.NewSyncWriter(os.Stderr)
+	logger := log.NewLogfmtLogger(w)
+	collector := NewMmhealthCollector(logger)
 	gatherers := setupGatherer(collector)
 	if val, err := testutil.GatherAndCount(gatherers); err != nil {
 		t.Errorf("Unexpected error: %v", err)
-	} else if val != 102 {
-		t.Errorf("Unexpected collection count %d, expected 102", val)
+	} else if val != 103 {
+		t.Errorf("Unexpected collection count %d, expected 103", val)
 	}
-	if err := testutil.GatherAndCompare(gatherers, strings.NewReader(expected), "gpfs_health_status"); err != nil {
+	if err := testutil.GatherAndCompare(gatherers, strings.NewReader(expected), "gpfs_health_status", "gpfs_health_event"); err != nil {
 		t.Errorf("unexpected collecting result:\n%s", err)
 	}
 }

@@ -35,6 +35,15 @@ mmlsqos | Collect GPFS I/O performance values of a file system, when you enable 
 
 The default behavior of the `mount` collector is to collect mount statuses on GPFS mounts in /proc/mounts or /etc/fstab. The `--collector.mount.mounts` flag can be used to adjust which mount points to check.
 
+### mmhealth
+
+The mmhealth statuses and events collected can be filtered with the following flags that all take a regex.
+
+* `--collector.mmhealth.ignored-component` - The component regex to ignore.
+* `--collector.mmhealth.ignored-entityname` - The entity name regex to ignore.
+* `--collector.mmhealth.ignored-entitytype` - The entity type regex to ignore.
+* `--collector.mmhealth.ignored-event` - The event regex to ignore.
+
 ### waiter
 
 The waiter's seconds are stored in Histogram buckets defined by `--collector.waiter.buckets` which is a comma separated list of durations that are converted to seconds so `1s,5s,30s,1m` would have buckets of `[]float64{1,5,30,60}`.
