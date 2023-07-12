@@ -148,6 +148,7 @@ func mmhealth_parse(out string, logger log.Logger) []HealthMetric {
 	mmhealthIgnoredEntityTypePattern := regexp.MustCompile(*mmhealthIgnoredEntityType)
 	mmhealthIgnoredEventPattern := regexp.MustCompile(*mmhealthIgnoredEvent)
 	var metrics []HealthMetric
+	var eventKeys []string
 	lines := strings.Split(out, "\n")
 	typeHeaders := make(map[string][]string)
 	for _, line := range lines {
@@ -207,6 +208,15 @@ func mmhealth_parse(out string, logger log.Logger) []HealthMetric {
 		if metric.Type == "Event" && *mmhealthIgnoredEvent != "" && mmhealthIgnoredEventPattern.MatchString(metric.Event) {
 			level.Debug(logger).Log("msg", "Skipping event due to ignored pattern", "event", metric.Event)
 			continue
+		}
+		if metric.Type == "Event" {
+			eventKey := fmt.Sprintf("%s-%s-%s-%s", metric.Component, metric.EntityName, metric.EntityType, metric.Event)
+			if SliceContains(eventKeys, eventKey) {
+				level.Debug(logger).Log("msg", "Skipping event as already encountered", "event", metric.Event)
+				continue
+			} else {
+				eventKeys = append(eventKeys, eventKey)
+			}
 		}
 		metrics = append(metrics, metric)
 	}
