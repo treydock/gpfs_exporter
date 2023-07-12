@@ -1,4 +1,4 @@
-## 3.0.0-rc.0 / 2023-07-12
+## 3.0.0-rc.1 / 2023-07-12
 
 * [BREAKING] Change how mmhealth event filtering works and make events a metric (#62)
   * Add gpfs_health_event metric.
