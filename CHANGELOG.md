@@ -1,3 +1,9 @@
+## 3.0.0-rc.0 / 2023-07-12
+
+* [BREAKING] Change how mmhealth event filtering works and make events a metric (#62)
+  * Add gpfs_health_event metric.
+  * The collector.mmhealth.ignored-event flag will only filter events for the gpfs_health_event metric
+
 ## 2.6.0 / 2023-07-09
 
 * Add users and groups mmrepquota (#59)
