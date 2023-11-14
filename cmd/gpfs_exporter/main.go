@@ -26,9 +26,9 @@ import (
 	"github.com/prometheus/common/promlog"
 	"github.com/prometheus/common/promlog/flag"
 	"github.com/prometheus/common/version"
-	"github.com/treydock/gpfs_exporter/collectors"
 	"github.com/prometheus/exporter-toolkit/web"
 	"github.com/prometheus/exporter-toolkit/web/kingpinflag"
+	"github.com/treydock/gpfs_exporter/collectors"
 )
 
 var (
