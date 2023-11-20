@@ -26,11 +26,13 @@ import (
 	"github.com/prometheus/common/promlog"
 	"github.com/prometheus/common/promlog/flag"
 	"github.com/prometheus/common/version"
+	"github.com/prometheus/exporter-toolkit/web"
+	"github.com/prometheus/exporter-toolkit/web/kingpinflag"
 	"github.com/treydock/gpfs_exporter/collectors"
 )
 
 var (
-	listenAddr             = kingpin.Flag("web.listen-address", "Address to listen on for web interface and telemetry.").Default(":9303").String()
+	listenAddr             = ":9303"
 	disableExporterMetrics = kingpin.Flag("web.disable-exporter-metrics", "Exclude metrics about the exporter (promhttp_*, process_*, go_*)").Default("false").Bool()
 )
 
@@ -58,6 +60,8 @@ func metricsHandler(logger log.Logger) http.HandlerFunc {
 }
 
 func main() {
+	var toolkitFlags = kingpinflag.AddFlags(kingpin.CommandLine, listenAddr)
+
 	promlogConfig := &promlog.Config{}
 	flag.AddFlags(kingpin.CommandLine, promlogConfig)
 	kingpin.Version(version.Print("gpfs_exporter"))
@@ -67,7 +71,7 @@ func main() {
 	logger := promlog.New(promlogConfig)
 	level.Info(logger).Log("msg", "Starting gpfs_exporter", "version", version.Info())
 	level.Info(logger).Log("msg", "Build context", "build_context", version.BuildContext())
-	level.Info(logger).Log("msg", "Starting Server", "address", *listenAddr)
+	level.Info(logger).Log("msg", "Starting Server", "address", listenAddr)
 
 	http.Handle("/metrics", metricsHandler(logger))
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
@@ -79,8 +83,8 @@ func main() {
              </body>
              </html>`))
 	})
-	err := http.ListenAndServe(*listenAddr, nil)
-	if err != nil {
+	server := &http.Server{}
+	if err := web.ListenAndServe(server, toolkitFlags, logger); err != nil {
 		level.Error(logger).Log("err", err)
 		os.Exit(1)
 	}

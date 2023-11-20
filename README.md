@@ -179,6 +179,16 @@ go get github.com/treydock/gpfs_exporter/cmd/gpfs_mmdf_exporter
 go get github.com/treydock/gpfs_exporter/cmd/gpfs_mmlssnapshot_exporter
 ```
 
+## TLS and basic auth
+
+`gpfs_exporter` supports TLS and basic auth using [exporter-toolkit](https://github.com/prometheus/exporter-toolkit). To use TLS and/or basic auth, users need to use `--web.config.file` CLI flag as follows
+
+```
+gpfs_exporter --web.config.file=web-config.yaml
+```
+
+A sample `web-config.yaml` file can be fetched from [exporter-toolkit repository](https://github.com/prometheus/exporter-toolkit/blob/master/docs/web-config.yml). The reference of the `web-config.yaml` file can be consulted in the [docs](https://github.com/prometheus/exporter-toolkit/blob/master/docs/web-configuration.md).
+
 ## Grafana
 
 There is an example [GPFS Performance](https://grafana.com/grafana/dashboards/14844) dashboard.  See the description on that dashboard for additional information on labels needed to utilize that dashboard.
