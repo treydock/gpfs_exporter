@@ -47,18 +47,22 @@ mmrepquota::HEADER:version:reserved:reserved:filesystemName:quotaType:id:name:bl
 mmrepquota::0:1:::scratch:FILESET:0:root:928235294208:0:0:5308909920:none:141909093:0:0:140497:none:i:on:off:::
 *** Report for USR quotas on home
 mmrepquota::HEADER:version:reserved:reserved:filesystemName:quotaType:id:name:blockUsage:blockQuota:blockLimit:blockInDoubt:blockGrace:filesUsage:filesQuota:filesLimit:filesInDoubt:filesGrace:remarks:quota:defQuota:fid:filesetname:
-mmrepquota::0:1:::home:USR:0:root:337419744:0:0:163840:none:1395:0:0:400:none:i:on:off:::
-mmrepquota::0:1:::home:USR:408:PZS1003:341467872:2147483648:2147483648:0:none:6286:2000000:2000000:0:none:e:on:off:::
+mmrepquota::0:1:::home:USR:0:root:337419744:0:0:163840:none:1395:0:0:400:none:i:on:off::foo:
+mmrepquota::0:1:::home:USR:0:root:337419744:0:0:163840:none:1395:0:0:400:none:i:on:off::bar:
+mmrepquota::0:1:::home:USR:408:PZS1003:341467872:2147483648:2147483648:0:none:6286:2000000:2000000:0:none:e:on:off::foo:
+mmrepquota::0:1:::home:USR:408:PZS1003:341467872:2147483648:2147483648:0:none:6286:2000000:2000000:0:none:e:on:off::bar:
 *** Report for USR quotas on scratch
 mmrepquota::HEADER:version:reserved:reserved:filesystemName:quotaType:id:name:blockUsage:blockQuota:blockLimit:blockInDoubt:blockGrace:filesUsage:filesQuota:filesLimit:filesInDoubt:filesGrace:remarks:quota:defQuota:fid:filesetname:
-mmrepquota::0:1:::scratch:USR:0:root:928235294208:0:0:5308909920:none:141909093:0:0:140497:none:i:on:off:::
+mmrepquota::0:1:::scratch:USR:0:root:928235294208:0:0:5308909920:none:141909093:0:0:140497:none:i:on:off::tmpdir:
 *** Report for GRP quotas on project
 mmrepquota::HEADER:version:reserved:reserved:filesystemName:quotaType:id:name:blockUsage:blockQuota:blockLimit:blockInDoubt:blockGrace:filesUsage:filesQuota:filesLimit:filesInDoubt:filesGrace:remarks:quota:defQuota:fid:filesetname:
-mmrepquota::0:1:::project:GRP:0:root:337419744:0:0:163840:none:1395:0:0:400:none:i:on:off:::
-mmrepquota::0:1:::project:GRP:408:PZS1003:341467872:2147483648:2147483648:0:none:6286:2000000:2000000:0:none:e:on:off:::
+mmrepquota::0:1:::project:GRP:0:root:337419744:0:0:163840:none:1395:0:0:400:none:i:on:off::foo:
+mmrepquota::0:1:::project:GRP:0:root:337419744:0:0:163840:none:1395:0:0:400:none:i:on:off::bar:
+mmrepquota::0:1:::project:GRP:408:PZS1003:341467872:2147483648:2147483648:0:none:6286:2000000:2000000:0:none:e:on:off::foo:
+mmrepquota::0:1:::project:GRP:408:PZS1003:341467872:2147483648:2147483648:0:none:6286:2000000:2000000:0:none:e:on:off::bar:
 *** Report for GRP quotas on scratch
 mmrepquota::HEADER:version:reserved:reserved:filesystemName:quotaType:id:name:blockUsage:blockQuota:blockLimit:blockInDoubt:blockGrace:filesUsage:filesQuota:filesLimit:filesInDoubt:filesGrace:remarks:quota:defQuota:fid:filesetname:
-mmrepquota::0:1:::scratch:GRP:0:root:928235294208:0:0:5308909920:none:141909093:0:0:140497:none:i:on:off:::
+mmrepquota::0:1:::scratch:GRP:0:root:928235294208:0:0:5308909920:none:141909093:0:0:140497:none:i:on:off::tmpdir:
 `
 )
 
@@ -131,7 +135,7 @@ func TestParseMmrepquota(t *testing.T) {
 }
 func TestParseMmrepquotaAll(t *testing.T) {
 	metrics := parse_mmrepquota(mmrepquotaStdoutAll, log.NewNopLogger())
-	if len(metrics) != 9 {
+	if len(metrics) != 13 {
 		t.Errorf("Unexpected metric count: %d", len(metrics))
 		return
 	}
@@ -163,7 +167,6 @@ gpfs_exporter_collect_error{collector="mmrepquota"} 0
 # HELP gpfs_exporter_collect_timeout Indicates the collector timed out
 # TYPE gpfs_exporter_collect_timeout gauge
 gpfs_exporter_collect_timeout{collector="mmrepquota"} 0
-
 # HELP gpfs_fileset_in_doubt_bytes GPFS fileset quota block in doubt
 # TYPE gpfs_fileset_in_doubt_bytes gauge
 gpfs_fileset_in_doubt_bytes{fileset="PZS1003",fs="project"} 0
@@ -279,95 +282,126 @@ gpfs_fileset_used_bytes{fileset="root",fs="scratch"} 950512941268992
 gpfs_fileset_used_files{fileset="PZS1003",fs="project"} 6286
 gpfs_fileset_used_files{fileset="root",fs="project"} 1395
 gpfs_fileset_used_files{fileset="root",fs="scratch"} 141909093
-# HELP gpfs_user_in_doubt_bytes GPFS user quota block in doubt
-# TYPE gpfs_user_in_doubt_bytes gauge
-gpfs_user_in_doubt_bytes{fs="home",user="PZS1003"} 0
-gpfs_user_in_doubt_bytes{fs="home",user="root"} 167772160
-gpfs_user_in_doubt_bytes{fs="scratch",user="root"} 5436323758080
-# HELP gpfs_user_in_doubt_files GPFS user quota files in doubt
-# TYPE gpfs_user_in_doubt_files gauge
-gpfs_user_in_doubt_files{fs="home",user="PZS1003"} 0
-gpfs_user_in_doubt_files{fs="home",user="root"} 400
-gpfs_user_in_doubt_files{fs="scratch",user="root"} 140497
-# HELP gpfs_user_limit_bytes GPFS user quota block limit
-# TYPE gpfs_user_limit_bytes gauge
-gpfs_user_limit_bytes{fs="home",user="PZS1003"} 2199023255552
-gpfs_user_limit_bytes{fs="home",user="root"} 0
-gpfs_user_limit_bytes{fs="scratch",user="root"} 0
-# HELP gpfs_user_limit_files GPFS user quota files limit
-# TYPE gpfs_user_limit_files gauge
-gpfs_user_limit_files{fs="home",user="PZS1003"} 2000000
-gpfs_user_limit_files{fs="home",user="root"} 0
-gpfs_user_limit_files{fs="scratch",user="root"} 0
-# HELP gpfs_user_quota_bytes GPFS user block quota
-# TYPE gpfs_user_quota_bytes gauge
-gpfs_user_quota_bytes{fs="home",user="PZS1003"} 2199023255552
-gpfs_user_quota_bytes{fs="home",user="root"} 0
-gpfs_user_quota_bytes{fs="scratch",user="root"} 0
-# HELP gpfs_user_quota_files GPFS user files quota
-# TYPE gpfs_user_quota_files gauge
-gpfs_user_quota_files{fs="home",user="PZS1003"} 2000000
-gpfs_user_quota_files{fs="home",user="root"} 0
-gpfs_user_quota_files{fs="scratch",user="root"} 0
-# HELP gpfs_user_used_bytes GPFS user quota used
-# TYPE gpfs_user_used_bytes gauge
-gpfs_user_used_bytes{fs="home",user="PZS1003"} 349663100928
-gpfs_user_used_bytes{fs="home",user="root"} 345517817856
-gpfs_user_used_bytes{fs="scratch",user="root"} 950512941268992
-# HELP gpfs_user_used_files GPFS user quota files used
-# TYPE gpfs_user_used_files gauge
-gpfs_user_used_files{fs="home",user="PZS1003"} 6286
-gpfs_user_used_files{fs="home",user="root"} 1395
-gpfs_user_used_files{fs="scratch",user="root"} 141909093
-
 # HELP gpfs_group_in_doubt_bytes GPFS group quota block in doubt
 # TYPE gpfs_group_in_doubt_bytes gauge
-gpfs_group_in_doubt_bytes{fs="project",group="PZS1003"} 0
-gpfs_group_in_doubt_bytes{fs="project",group="root"} 167772160
-gpfs_group_in_doubt_bytes{fs="scratch",group="root"} 5436323758080
+gpfs_group_in_doubt_bytes{fileset="bar",fs="project",group="PZS1003"} 0
+gpfs_group_in_doubt_bytes{fileset="bar",fs="project",group="root"} 1.6777216e+08
+gpfs_group_in_doubt_bytes{fileset="foo",fs="project",group="PZS1003"} 0
+gpfs_group_in_doubt_bytes{fileset="foo",fs="project",group="root"} 1.6777216e+08
+gpfs_group_in_doubt_bytes{fileset="tmpdir",fs="scratch",group="root"} 5.43632375808e+12
 # HELP gpfs_group_in_doubt_files GPFS group quota files in doubt
 # TYPE gpfs_group_in_doubt_files gauge
-gpfs_group_in_doubt_files{fs="project",group="PZS1003"} 0
-gpfs_group_in_doubt_files{fs="project",group="root"} 400
-gpfs_group_in_doubt_files{fs="scratch",group="root"} 140497
+gpfs_group_in_doubt_files{fileset="bar",fs="project",group="PZS1003"} 0
+gpfs_group_in_doubt_files{fileset="bar",fs="project",group="root"} 400
+gpfs_group_in_doubt_files{fileset="foo",fs="project",group="PZS1003"} 0
+gpfs_group_in_doubt_files{fileset="foo",fs="project",group="root"} 400
+gpfs_group_in_doubt_files{fileset="tmpdir",fs="scratch",group="root"} 140497
 # HELP gpfs_group_limit_bytes GPFS group quota block limit
 # TYPE gpfs_group_limit_bytes gauge
-gpfs_group_limit_bytes{fs="project",group="PZS1003"} 2199023255552
-gpfs_group_limit_bytes{fs="project",group="root"} 0
-gpfs_group_limit_bytes{fs="scratch",group="root"} 0
+gpfs_group_limit_bytes{fileset="bar",fs="project",group="PZS1003"} 2.199023255552e+12
+gpfs_group_limit_bytes{fileset="bar",fs="project",group="root"} 0
+gpfs_group_limit_bytes{fileset="foo",fs="project",group="PZS1003"} 2.199023255552e+12
+gpfs_group_limit_bytes{fileset="foo",fs="project",group="root"} 0
+gpfs_group_limit_bytes{fileset="tmpdir",fs="scratch",group="root"} 0
 # HELP gpfs_group_limit_files GPFS group quota files limit
 # TYPE gpfs_group_limit_files gauge
-gpfs_group_limit_files{fs="project",group="PZS1003"} 2000000
-gpfs_group_limit_files{fs="project",group="root"} 0
-gpfs_group_limit_files{fs="scratch",group="root"} 0
+gpfs_group_limit_files{fileset="bar",fs="project",group="PZS1003"} 2e+06
+gpfs_group_limit_files{fileset="bar",fs="project",group="root"} 0
+gpfs_group_limit_files{fileset="foo",fs="project",group="PZS1003"} 2e+06
+gpfs_group_limit_files{fileset="foo",fs="project",group="root"} 0
+gpfs_group_limit_files{fileset="tmpdir",fs="scratch",group="root"} 0
 # HELP gpfs_group_quota_bytes GPFS group block quota
 # TYPE gpfs_group_quota_bytes gauge
-gpfs_group_quota_bytes{fs="project",group="PZS1003"} 2199023255552
-gpfs_group_quota_bytes{fs="project",group="root"} 0
-gpfs_group_quota_bytes{fs="scratch",group="root"} 0
+gpfs_group_quota_bytes{fileset="bar",fs="project",group="PZS1003"} 2.199023255552e+12
+gpfs_group_quota_bytes{fileset="bar",fs="project",group="root"} 0
+gpfs_group_quota_bytes{fileset="foo",fs="project",group="PZS1003"} 2.199023255552e+12
+gpfs_group_quota_bytes{fileset="foo",fs="project",group="root"} 0
+gpfs_group_quota_bytes{fileset="tmpdir",fs="scratch",group="root"} 0
 # HELP gpfs_group_quota_files GPFS group files quota
 # TYPE gpfs_group_quota_files gauge
-gpfs_group_quota_files{fs="project",group="PZS1003"} 2000000
-gpfs_group_quota_files{fs="project",group="root"} 0
-gpfs_group_quota_files{fs="scratch",group="root"} 0
+gpfs_group_quota_files{fileset="bar",fs="project",group="PZS1003"} 2e+06
+gpfs_group_quota_files{fileset="bar",fs="project",group="root"} 0
+gpfs_group_quota_files{fileset="foo",fs="project",group="PZS1003"} 2e+06
+gpfs_group_quota_files{fileset="foo",fs="project",group="root"} 0
+gpfs_group_quota_files{fileset="tmpdir",fs="scratch",group="root"} 0
 # HELP gpfs_group_used_bytes GPFS group quota used
 # TYPE gpfs_group_used_bytes gauge
-gpfs_group_used_bytes{fs="project",group="PZS1003"} 349663100928
-gpfs_group_used_bytes{fs="project",group="root"} 345517817856
-gpfs_group_used_bytes{fs="scratch",group="root"} 950512941268992
+gpfs_group_used_bytes{fileset="bar",fs="project",group="PZS1003"} 3.49663100928e+11
+gpfs_group_used_bytes{fileset="bar",fs="project",group="root"} 3.45517817856e+11
+gpfs_group_used_bytes{fileset="foo",fs="project",group="PZS1003"} 3.49663100928e+11
+gpfs_group_used_bytes{fileset="foo",fs="project",group="root"} 3.45517817856e+11
+gpfs_group_used_bytes{fileset="tmpdir",fs="scratch",group="root"} 9.50512941268992e+14
 # HELP gpfs_group_used_files GPFS group quota files used
 # TYPE gpfs_group_used_files gauge
-gpfs_group_used_files{fs="project",group="PZS1003"} 6286
-gpfs_group_used_files{fs="project",group="root"} 1395
-gpfs_group_used_files{fs="scratch",group="root"} 141909093
+gpfs_group_used_files{fileset="bar",fs="project",group="PZS1003"} 6286
+gpfs_group_used_files{fileset="bar",fs="project",group="root"} 1395
+gpfs_group_used_files{fileset="foo",fs="project",group="PZS1003"} 6286
+gpfs_group_used_files{fileset="foo",fs="project",group="root"} 1395
+gpfs_group_used_files{fileset="tmpdir",fs="scratch",group="root"} 1.41909093e+08
+# HELP gpfs_user_in_doubt_bytes GPFS user quota block in doubt
+# TYPE gpfs_user_in_doubt_bytes gauge
+gpfs_user_in_doubt_bytes{fileset="bar",fs="home",user="PZS1003"} 0
+gpfs_user_in_doubt_bytes{fileset="bar",fs="home",user="root"} 1.6777216e+08
+gpfs_user_in_doubt_bytes{fileset="foo",fs="home",user="PZS1003"} 0
+gpfs_user_in_doubt_bytes{fileset="foo",fs="home",user="root"} 1.6777216e+08
+gpfs_user_in_doubt_bytes{fileset="tmpdir",fs="scratch",user="root"} 5.43632375808e+12
+# HELP gpfs_user_in_doubt_files GPFS user quota files in doubt
+# TYPE gpfs_user_in_doubt_files gauge
+gpfs_user_in_doubt_files{fileset="bar",fs="home",user="PZS1003"} 0
+gpfs_user_in_doubt_files{fileset="bar",fs="home",user="root"} 400
+gpfs_user_in_doubt_files{fileset="foo",fs="home",user="PZS1003"} 0
+gpfs_user_in_doubt_files{fileset="foo",fs="home",user="root"} 400
+gpfs_user_in_doubt_files{fileset="tmpdir",fs="scratch",user="root"} 140497
+# HELP gpfs_user_limit_bytes GPFS user quota block limit
+# TYPE gpfs_user_limit_bytes gauge
+gpfs_user_limit_bytes{fileset="bar",fs="home",user="PZS1003"} 2.199023255552e+12
+gpfs_user_limit_bytes{fileset="bar",fs="home",user="root"} 0
+gpfs_user_limit_bytes{fileset="foo",fs="home",user="PZS1003"} 2.199023255552e+12
+gpfs_user_limit_bytes{fileset="foo",fs="home",user="root"} 0
+gpfs_user_limit_bytes{fileset="tmpdir",fs="scratch",user="root"} 0
+# HELP gpfs_user_limit_files GPFS user quota files limit
+# TYPE gpfs_user_limit_files gauge
+gpfs_user_limit_files{fileset="bar",fs="home",user="PZS1003"} 2e+06
+gpfs_user_limit_files{fileset="bar",fs="home",user="root"} 0
+gpfs_user_limit_files{fileset="foo",fs="home",user="PZS1003"} 2e+06
+gpfs_user_limit_files{fileset="foo",fs="home",user="root"} 0
+gpfs_user_limit_files{fileset="tmpdir",fs="scratch",user="root"} 0
+# HELP gpfs_user_quota_bytes GPFS user block quota
+# TYPE gpfs_user_quota_bytes gauge
+gpfs_user_quota_bytes{fileset="bar",fs="home",user="PZS1003"} 2.199023255552e+12
+gpfs_user_quota_bytes{fileset="bar",fs="home",user="root"} 0
+gpfs_user_quota_bytes{fileset="foo",fs="home",user="PZS1003"} 2.199023255552e+12
+gpfs_user_quota_bytes{fileset="foo",fs="home",user="root"} 0
+gpfs_user_quota_bytes{fileset="tmpdir",fs="scratch",user="root"} 0
+# HELP gpfs_user_quota_files GPFS user files quota
+# TYPE gpfs_user_quota_files gauge
+gpfs_user_quota_files{fileset="bar",fs="home",user="PZS1003"} 2e+06
+gpfs_user_quota_files{fileset="bar",fs="home",user="root"} 0
+gpfs_user_quota_files{fileset="foo",fs="home",user="PZS1003"} 2e+06
+gpfs_user_quota_files{fileset="foo",fs="home",user="root"} 0
+gpfs_user_quota_files{fileset="tmpdir",fs="scratch",user="root"} 0
+# HELP gpfs_user_used_bytes GPFS user quota used
+# TYPE gpfs_user_used_bytes gauge
+gpfs_user_used_bytes{fileset="bar",fs="home",user="PZS1003"} 3.49663100928e+11
+gpfs_user_used_bytes{fileset="bar",fs="home",user="root"} 3.45517817856e+11
+gpfs_user_used_bytes{fileset="foo",fs="home",user="PZS1003"} 3.49663100928e+11
+gpfs_user_used_bytes{fileset="foo",fs="home",user="root"} 3.45517817856e+11
+gpfs_user_used_bytes{fileset="tmpdir",fs="scratch",user="root"} 9.50512941268992e+14
+# HELP gpfs_user_used_files GPFS user quota files used
+# TYPE gpfs_user_used_files gauge
+gpfs_user_used_files{fileset="bar",fs="home",user="PZS1003"} 6286
+gpfs_user_used_files{fileset="bar",fs="home",user="root"} 1395
+gpfs_user_used_files{fileset="foo",fs="home",user="PZS1003"} 6286
+gpfs_user_used_files{fileset="foo",fs="home",user="root"} 1395
+gpfs_user_used_files{fileset="tmpdir",fs="scratch",user="root"} 1.41909093e+08
 `
 
 	collector := NewMmrepquotaCollector(log.NewNopLogger())
 	gatherers := setupGatherer(collector)
 	if val, err := testutil.GatherAndCount(gatherers); err != nil {
 		t.Errorf("Unexpected error: %v", err)
-	} else if val != 75 {
-		t.Errorf("Unexpected collection count %d, expected 75", val)
+	} else if val != 107 {
+		t.Errorf("Unexpected collection count %d, expected 107", val)
 	}
 	if err := testutil.GatherAndCompare(gatherers, strings.NewReader(expected),
 		"gpfs_exporter_collect_error", "gpfs_exporter_collect_timeout",
