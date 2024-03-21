@@ -44,6 +44,7 @@ var (
 		"filesQuota":     "FilesQuota",
 		"filesLimit":     "FilesLimit",
 		"filesInDoubt":   "FilesInDoubt",
+		"filesetname":    "FilesetName",
 	}
 	quotaTypeMap = map[string]rune{
 		"user":    'u',
@@ -65,6 +66,7 @@ type QuotaMetric struct {
 	FilesQuota   float64
 	FilesLimit   float64
 	FilesInDoubt float64
+	FilesetName  string
 }
 
 type MmrepquotaCollector struct {
@@ -109,8 +111,8 @@ func init() {
 
 func NewMmrepquotaCollector(logger log.Logger) Collector {
 	fileset_labels := []string{"fileset", "fs"}
-	user_labels := []string{"user", "fs"}
-	group_labels := []string{"group", "fs"}
+	user_labels := []string{"user", "fs", "fileset"}
+	group_labels := []string{"group", "fs", "fileset"}
 	return &MmrepquotaCollector{
 		FilesetBlockUsage: prometheus.NewDesc(prometheus.BuildFQName(namespace, "fileset", "used_bytes"),
 			"GPFS fileset quota used", fileset_labels, nil),
@@ -244,23 +246,23 @@ func (c *MmrepquotaCollector) Collect(ch chan<- prometheus.Metric) {
 			ch <- prometheus.MustNewConstMetric(c.FilesetFilesLimit, prometheus.GaugeValue, m.FilesLimit, m.Name, m.FS)
 			ch <- prometheus.MustNewConstMetric(c.FilesetFilesInDoubt, prometheus.GaugeValue, m.FilesInDoubt, m.Name, m.FS)
 		} else if m.QuotaType == "USR" {
-			ch <- prometheus.MustNewConstMetric(c.UserBlockUsage, prometheus.GaugeValue, m.BlockUsage, m.Name, m.FS)
-			ch <- prometheus.MustNewConstMetric(c.UserBlockQuota, prometheus.GaugeValue, m.BlockQuota, m.Name, m.FS)
-			ch <- prometheus.MustNewConstMetric(c.UserBlockLimit, prometheus.GaugeValue, m.BlockLimit, m.Name, m.FS)
-			ch <- prometheus.MustNewConstMetric(c.UserBlockInDoubt, prometheus.GaugeValue, m.BlockInDoubt, m.Name, m.FS)
-			ch <- prometheus.MustNewConstMetric(c.UserFilesUsage, prometheus.GaugeValue, m.FilesUsage, m.Name, m.FS)
-			ch <- prometheus.MustNewConstMetric(c.UserFilesQuota, prometheus.GaugeValue, m.FilesQuota, m.Name, m.FS)
-			ch <- prometheus.MustNewConstMetric(c.UserFilesLimit, prometheus.GaugeValue, m.FilesLimit, m.Name, m.FS)
-			ch <- prometheus.MustNewConstMetric(c.UserFilesInDoubt, prometheus.GaugeValue, m.FilesInDoubt, m.Name, m.FS)
+			ch <- prometheus.MustNewConstMetric(c.UserBlockUsage, prometheus.GaugeValue, m.BlockUsage, m.Name, m.FS, m.FilesetName)
+			ch <- prometheus.MustNewConstMetric(c.UserBlockQuota, prometheus.GaugeValue, m.BlockQuota, m.Name, m.FS, m.FilesetName)
+			ch <- prometheus.MustNewConstMetric(c.UserBlockLimit, prometheus.GaugeValue, m.BlockLimit, m.Name, m.FS, m.FilesetName)
+			ch <- prometheus.MustNewConstMetric(c.UserBlockInDoubt, prometheus.GaugeValue, m.BlockInDoubt, m.Name, m.FS, m.FilesetName)
+			ch <- prometheus.MustNewConstMetric(c.UserFilesUsage, prometheus.GaugeValue, m.FilesUsage, m.Name, m.FS, m.FilesetName)
+			ch <- prometheus.MustNewConstMetric(c.UserFilesQuota, prometheus.GaugeValue, m.FilesQuota, m.Name, m.FS, m.FilesetName)
+			ch <- prometheus.MustNewConstMetric(c.UserFilesLimit, prometheus.GaugeValue, m.FilesLimit, m.Name, m.FS, m.FilesetName)
+			ch <- prometheus.MustNewConstMetric(c.UserFilesInDoubt, prometheus.GaugeValue, m.FilesInDoubt, m.Name, m.FS, m.FilesetName)
 		} else if m.QuotaType == "GRP" {
-			ch <- prometheus.MustNewConstMetric(c.GroupBlockUsage, prometheus.GaugeValue, m.BlockUsage, m.Name, m.FS)
-			ch <- prometheus.MustNewConstMetric(c.GroupBlockQuota, prometheus.GaugeValue, m.BlockQuota, m.Name, m.FS)
-			ch <- prometheus.MustNewConstMetric(c.GroupBlockLimit, prometheus.GaugeValue, m.BlockLimit, m.Name, m.FS)
-			ch <- prometheus.MustNewConstMetric(c.GroupBlockInDoubt, prometheus.GaugeValue, m.BlockInDoubt, m.Name, m.FS)
-			ch <- prometheus.MustNewConstMetric(c.GroupFilesUsage, prometheus.GaugeValue, m.FilesUsage, m.Name, m.FS)
-			ch <- prometheus.MustNewConstMetric(c.GroupFilesQuota, prometheus.GaugeValue, m.FilesQuota, m.Name, m.FS)
-			ch <- prometheus.MustNewConstMetric(c.GroupFilesLimit, prometheus.GaugeValue, m.FilesLimit, m.Name, m.FS)
-			ch <- prometheus.MustNewConstMetric(c.GroupFilesInDoubt, prometheus.GaugeValue, m.FilesInDoubt, m.Name, m.FS)
+			ch <- prometheus.MustNewConstMetric(c.GroupBlockUsage, prometheus.GaugeValue, m.BlockUsage, m.Name, m.FS, m.FilesetName)
+			ch <- prometheus.MustNewConstMetric(c.GroupBlockQuota, prometheus.GaugeValue, m.BlockQuota, m.Name, m.FS, m.FilesetName)
+			ch <- prometheus.MustNewConstMetric(c.GroupBlockLimit, prometheus.GaugeValue, m.BlockLimit, m.Name, m.FS, m.FilesetName)
+			ch <- prometheus.MustNewConstMetric(c.GroupBlockInDoubt, prometheus.GaugeValue, m.BlockInDoubt, m.Name, m.FS, m.FilesetName)
+			ch <- prometheus.MustNewConstMetric(c.GroupFilesUsage, prometheus.GaugeValue, m.FilesUsage, m.Name, m.FS, m.FilesetName)
+			ch <- prometheus.MustNewConstMetric(c.GroupFilesQuota, prometheus.GaugeValue, m.FilesQuota, m.Name, m.FS, m.FilesetName)
+			ch <- prometheus.MustNewConstMetric(c.GroupFilesLimit, prometheus.GaugeValue, m.FilesLimit, m.Name, m.FS, m.FilesetName)
+			ch <- prometheus.MustNewConstMetric(c.GroupFilesInDoubt, prometheus.GaugeValue, m.FilesInDoubt, m.Name, m.FS, m.FilesetName)
 		}
 	}
 	ch <- prometheus.MustNewConstMetric(collectError, prometheus.GaugeValue, float64(errorMetric), "mmrepquota")
