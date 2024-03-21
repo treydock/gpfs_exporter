@@ -1,3 +1,7 @@
+## 3.0.1 / 2024-03-21
+
+* add fileset label to user and group quotas to avoid duplicates (#68)
+
 ## 3.0.0 / 2023-11-20
 
 * [BREAKING] Change how mmhealth event filtering works and make events a metric (#62)
