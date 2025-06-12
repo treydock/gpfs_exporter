@@ -1,3 +1,7 @@
+## 3.1.0 / 2025-06-12
+
+* Add mmlspool collector (#72)
+
 ## 3.0.1 / 2024-03-21
 
 * add fileset label to user and group quotas to avoid duplicates (#68)
