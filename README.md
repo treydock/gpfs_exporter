@@ -30,6 +30,7 @@ mmrepquota | Collect fileset quota information | Disabled
 mmlssnapshot | Collect GPFS snapshot information | Disabled
 mmlsfileset | Collect GPFS fileset information | Disabled
 mmlsqos | Collect GPFS I/O performance values of a file system, when you enable Quality of Service | Disabled
+mmlspool | Collect GPFS pool data | Disabled
 
 ### mount
 
@@ -94,6 +95,14 @@ Flags:
 * `--collector.mmlsqos.timeout` - Count of seconds for running mmlsqos command before timeout error will be raised. Default value is 60 seconds.
 * `--collector.mmlsqos.seconds` - Displays the I/O performance values for the previous number of seconds. The valid range of seconds is 1-999. The default value is 60 seconds.
 
+### mmlspool
+
+Collects GPFS pool data
+
+Flags:
+* `--collector.mmlspool.filesystems` - A comma separated list of filesystems to collect. Default is to collect all filesystems listed by `mmlsfs`.
+* `--collector.mmlsqos.timeout` - Count of seconds for running mmlspool command before timeout error will be raised. Default value is 30 seconds.
+
 ## Sudo
 
 Ensure the user running `gpfs_exporter` can execute GPFS commands necessary to collect metrics.
@@ -134,6 +143,9 @@ gpfs_exporter ALL=(ALL) NOPASSWD:/usr/lpp/mmfs/bin/mmlsfileset ess -Y
 # mmlsqos collector, each filesystem must be listed
 gpfs_exporter ALL=(ALL) NOPASSWD:/usr/lpp/mmfs/bin/mmlsqos mmfs1 -Y
 gpfs_exporter ALL=(ALL) NOPASSWD:/usr/lpp/mmfs/bin/mmlsqos ess -Y
+# mmlspool collector, each filesystem must be listed
+gpfs_exporter ALL=(ALL) NOPASSWD:/usr/lpp/mmfs/bin/mmlspool mmfs1 -Y
+gpfs_exporter ALL=(ALL) NOPASSWD:/usr/lpp/mmfs/bin/mmlspool ess -Y
 ```
 
 ## Install

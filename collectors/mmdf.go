@@ -45,10 +45,10 @@ type DFMetric struct {
 	Metadata        bool
 	MetadataTotal   float64
 	MetadataFree    float64
-	Pools           []PoolMetric
+	Pools           []DfPoolMetric
 }
 
-type PoolMetric struct {
+type DfPoolMetric struct {
 	PoolName          string
 	PoolTotal         float64
 	PoolFree          float64
@@ -211,7 +211,7 @@ func mmdf(fs string, ctx context.Context) (string, error) {
 
 func parse_mmdf(out string, logger log.Logger) DFMetric {
 	dfMetrics := DFMetric{Metadata: false}
-	pools := []PoolMetric{}
+	pools := []DfPoolMetric{}
 	headers := make(map[string][]string)
 	lines := strings.Split(out, "\n")
 	for _, l := range lines {
@@ -278,7 +278,7 @@ func parse_mmdf(out string, logger log.Logger) DFMetric {
 			}
 		}
 		if section == "poolTotal" {
-			poolMetric := PoolMetric{}
+			poolMetric := DfPoolMetric{}
 			if poolNameIndex := SliceIndex(headers["poolTotal"], "poolName"); poolNameIndex != -1 {
 				poolMetric.PoolName = items[poolNameIndex]
 			}
