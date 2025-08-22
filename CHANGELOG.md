@@ -1,3 +1,7 @@
+## 3.2.0 / 2025-08-22
+
+* Add mmlsdisk collector (#74)
+
 ## 3.1.0 / 2025-06-12
 
 * Add mmlspool collector (#72)
