@@ -25,6 +25,7 @@ import (
 	"time"
 
 	"github.com/alecthomas/kingpin/v2"
+	"github.com/prometheus/common/model"
 	"github.com/treydock/gpfs_exporter/collectors"
 )
 
@@ -52,6 +53,7 @@ mmdiag:config:0:1:::parallelMetadataWrite:0::
 )
 
 func TestMain(m *testing.M) {
+	model.SetNameValidationScheme(model.LegacyValidation)
 	if _, err := kingpin.CommandLine.Parse([]string{}); err != nil {
 		os.Exit(1)
 	}
