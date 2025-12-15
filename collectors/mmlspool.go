@@ -121,7 +121,7 @@ func (c *MmlspoolCollector) Collect(ch chan<- prometheus.Metric) {
 				c.logger.Error(fmt.Sprintf("Timeout executing %s", label))
 				timeout = 1
 			} else if err != nil {
-				c.logger.Error("Cannot collect", err, "fs", fs)
+				c.logger.Error("Cannot collect", slog.Any("err", err), "fs", fs)
 				errorMetric = 1
 			}
 			ch <- prometheus.MustNewConstMetric(collectError, prometheus.GaugeValue, float64(errorMetric), label)
@@ -189,10 +189,10 @@ func parse_mmlspool(fs string, out string, logger *slog.Logger) ([]PoolMetric, e
 		}
 		if items[0] == "Name" {
 			headers = parse_mmlspool_headers(items)
-			logger.Debug("headers", fmt.Sprintf("%v", headers), "line", line)
+			logger.Debug("headers", "headers", fmt.Sprintf("%v", headers), "line", line)
 			continue
 		}
-		logger.Debug("items", fmt.Sprintf("%v", items), "line", line)
+		logger.Debug("items", "items", fmt.Sprintf("%v", items), "line", line)
 		pool := PoolMetric{
 			FS: fs,
 		}

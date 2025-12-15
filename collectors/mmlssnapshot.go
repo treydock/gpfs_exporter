@@ -130,7 +130,7 @@ func (c *MmlssnapshotCollector) Collect(ch chan<- prometheus.Metric) {
 				c.logger.Error(fmt.Sprintf("Timeout executing %s", label))
 				timeout = 1
 			} else if err != nil {
-				c.logger.Error("Cannot collect", err, "fs", fs)
+				c.logger.Error("Cannot collect", slog.Any("err", err), "fs", fs)
 				errorMetric = 1
 			}
 			ch <- prometheus.MustNewConstMetric(collectError, prometheus.GaugeValue, float64(errorMetric), label)
