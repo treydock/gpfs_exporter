@@ -64,7 +64,7 @@ func (c *VerbsCollector) Collect(ch chan<- prometheus.Metric) {
 		timeout = 1
 		c.logger.Error("Timeout executing verbs check")
 	} else if err != nil {
-		c.logger.Error("Cannot collect", err)
+		c.logger.Error("Cannot collect", slog.Any("err", err))
 		errorMetric = 1
 	}
 	if metric.Status == "started" {

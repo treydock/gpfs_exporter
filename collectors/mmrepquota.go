@@ -229,7 +229,7 @@ func (c *MmrepquotaCollector) Collect(ch chan<- prometheus.Metric) {
 			timeout = 1
 			c.logger.Error("Timeout executing mmrepquota")
 		} else if err != nil {
-			c.logger.Error("Cannot collect", err)
+			c.logger.Error("Cannot collect", slog.Any("err", err))
 			errorMetric = 1
 		}
 	}

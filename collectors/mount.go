@@ -57,7 +57,7 @@ func (c *MountCollector) Collect(ch chan<- prometheus.Metric) {
 	c.logger.Debug("Collecting mount metrics")
 	err := c.collect(ch)
 	if err != nil {
-		c.logger.Error("Cannot collect", err)
+		c.logger.Error("Cannot collect", slog.Any("err", err))
 		ch <- prometheus.MustNewConstMetric(collectError, prometheus.GaugeValue, 1, "mount")
 	} else {
 		ch <- prometheus.MustNewConstMetric(collectError, prometheus.GaugeValue, 0, "mount")
@@ -100,7 +100,7 @@ func (c *MountCollector) collect(ch chan<- prometheus.Metric) error {
 	ch <- prometheus.MustNewConstMetric(collecTimeout, prometheus.GaugeValue, 0, "mount")
 
 	if err != nil {
-		c.logger.Error("Cannot collect", err)
+		c.logger.Error("Cannot collect", slog.Any("err", err))
 		return err
 	}
 

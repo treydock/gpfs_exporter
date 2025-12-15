@@ -107,7 +107,7 @@ func (c *MmlsqosCollector) Collect(ch chan<- prometheus.Metric) {
 			c.logger.Error("Timeout executing mmlsfs")
 		} else if err != nil {
 			mmlsfsError = 1
-			c.logger.Error("Cannot collect", err)
+			c.logger.Error("Cannot collect", slog.Any("err", err))
 		}
 		ch <- prometheus.MustNewConstMetric(collecTimeout, prometheus.GaugeValue, mmlsfsTimeout, "mmlsqos-mmlsfs")
 		ch <- prometheus.MustNewConstMetric(collectError, prometheus.GaugeValue, mmlsfsError, "mmlsqos-mmlsfs")

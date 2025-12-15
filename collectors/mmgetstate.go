@@ -65,7 +65,7 @@ func (c *MmgetstateCollector) Collect(ch chan<- prometheus.Metric) {
 		c.logger.Error("Timeout executing mmgetstate")
 		timeout = 1
 	} else if err != nil {
-		c.logger.Error("Cannot collect", err)
+		c.logger.Error("Cannot collect", slog.Any("err", err))
 		errorMetric = 1
 	}
 	for _, state := range mmgetstateStates {

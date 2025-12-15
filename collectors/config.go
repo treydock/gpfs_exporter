@@ -65,7 +65,7 @@ func (c *ConfigCollector) Collect(ch chan<- prometheus.Metric) {
 		c.logger.Error("Timeout executing 'mmdiag --config'")
 		timeout = 1
 	} else if err != nil {
-		c.logger.Error("Cannot collect metrics", err)
+		c.logger.Error("Cannot collect metrics", slog.Any("err", err))
 		errorMetric = 1
 	}
 
@@ -117,7 +117,7 @@ func parse_mmdiag_config(out string, configMetric *ConfigMetric, logger *slog.Lo
 		}
 		value, err := strconv.ParseFloat(items[valueIdx], 64)
 		if err != nil {
-			logger.Error(fmt.Sprintf("Unable to convert %s to float64", items[valueIdx]), "err", err)
+			logger.Error(fmt.Sprintf("Unable to convert %s to float64", items[valueIdx]), slog.Any("err", err))
 			continue
 		}
 		switch items[keyIdx] {

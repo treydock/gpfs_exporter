@@ -92,7 +92,7 @@ func (c *MmcesCollector) Collect(ch chan<- prometheus.Metric) {
 		c.logger.Error("Timeout executing mmces")
 		timeout = 1
 	} else if err != nil {
-		c.logger.Error("Cannot collect", err)
+		c.logger.Error("Cannot collect", slog.Any("err", err))
 		errorMetric = 1
 	}
 	for _, m := range metrics {
