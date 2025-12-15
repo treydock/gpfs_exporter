@@ -21,16 +21,15 @@ import (
 	"strings"
 
 	"github.com/alecthomas/kingpin/v2"
-	"github.com/go-kit/log"
-	"github.com/go-kit/log/level"
 	"github.com/gofrs/flock"
 	"github.com/prometheus/client_golang/prometheus"
 	dto "github.com/prometheus/client_model/go"
 	"github.com/prometheus/common/expfmt"
-	"github.com/prometheus/common/promlog"
-	"github.com/prometheus/common/promlog/flag"
+	"github.com/prometheus/common/promslog"
+	"github.com/prometheus/common/promslog/flag"
 	"github.com/prometheus/common/version"
 	"github.com/treydock/gpfs_exporter/collectors"
+	"log/slog"
 )
 
 var (
@@ -38,43 +37,43 @@ var (
 	lockFile = kingpin.Flag("lockfile", "Lock file path").Default("/tmp/gpfs_mmdf_exporter.lock").String()
 )
 
-func writeMetrics(mfs []*dto.MetricFamily, logger log.Logger) error {
+func writeMetrics(mfs []*dto.MetricFamily, logger *slog.Logger) error {
 	tmp, err := os.CreateTemp(filepath.Dir(*output), filepath.Base(*output))
 	if err != nil {
-		level.Error(logger).Log("msg", "Unable to create temp file", "err", err)
+		logger.Error("Unable to create temp file", "err", err)
 		return err
 	}
 	defer os.Remove(tmp.Name())
 	for _, mf := range mfs {
 		if _, err := expfmt.MetricFamilyToText(tmp, mf); err != nil {
-			level.Error(logger).Log("msg", "Error generating metric text", "err", err)
+			logger.Error("Error generating metric text", "err", err)
 			return err
 		}
 	}
 	if err := tmp.Close(); err != nil {
-		level.Error(logger).Log("msg", "Error closing tmp file", "err", err)
+		logger.Error("Error closing tmp file", "err", err)
 		return err
 	}
 	if err := os.Chmod(tmp.Name(), 0644); err != nil {
-		level.Error(logger).Log("msg", "Error executing chmod 0644 on tmp file", "err", err)
+		logger.Error("Error executing chmod 0644 on tmp file", "err", err)
 		return err
 	}
-	level.Debug(logger).Log("msg", "Renaming temp file to output", "temp", tmp.Name(), "output", *output)
+	logger.Debug("Renaming temp file to output", "temp", tmp.Name(), "output", *output)
 	if err := os.Rename(tmp.Name(), *output); err != nil {
-		level.Error(logger).Log("msg", "Error renaming tmp file to output", "err", err)
+		logger.Error("Error renaming tmp file to output", "err", err)
 		return err
 	}
 	return nil
 }
 
-func collect(logger log.Logger) error {
+func collect(logger *slog.Logger) error {
 	registry := prometheus.NewRegistry()
 	registry.MustRegister(collectors.NewMmlssnapshotCollector(logger))
 	var newMfs []*dto.MetricFamily
 	var failures []string
 	mfs, err := registry.Gather()
 	if err != nil {
-		level.Error(logger).Log("msg", "Error executing Gather", "err", err)
+		logger.Error("Error executing Gather", "err", err)
 		return err
 	}
 	for _, mf := range mfs {
@@ -99,14 +98,14 @@ func collect(logger log.Logger) error {
 	if len(failures) != 0 && collectors.FileExists(*output) {
 		file, err := os.Open(*output)
 		if err != nil {
-			level.Error(logger).Log("msg", "Error opening metrics file", "err", err)
+			logger.Error("Error opening metrics file", "err", err)
 			goto failure
 		}
 		parser := expfmt.TextParser{}
 		prevMfs, err := parser.TextToMetricFamilies(file)
 		file.Close()
 		if err != nil {
-			level.Error(logger).Log("msg", "Error parsing output metrics", "err", err)
+			logger.Error("Error parsing output metrics", "err", err)
 			goto failure
 		}
 		keys := make([]string, 0, len(prevMfs))
@@ -140,23 +139,22 @@ failure:
 }
 
 func main() {
-	promlogConfig := &promlog.Config{}
+	promlogConfig := &promslog.Config{}
 	flag.AddFlags(kingpin.CommandLine, promlogConfig)
 	kingpin.Version(version.Print("gpfs_exporter"))
 	kingpin.HelpFlag.Short('h')
 	kingpin.Parse()
 
-	logger := promlog.New(promlogConfig)
+	logger := promslog.New(promlogConfig)
 
 	fileLock := flock.New(*lockFile)
 	locked, err := fileLock.TryLock()
 	if err != nil {
-		level.Error(logger).Log("msg", "Unable to obtain lock on lock file", "lockfile", *lockFile)
-		level.Error(logger).Log("msg", err)
+		logger.Error("Unable to obtain lock on lock file", "lockfile", *lockFile, "err", err)
 		os.Exit(1)
 	}
 	if !locked {
-		level.Error(logger).Log("msg", fmt.Sprintf("Lock file %s is locked", *lockFile))
+		logger.Error(fmt.Sprintf("Lock file %s is locked", *lockFile))
 		os.Exit(1)
 	}
 	err = collect(logger)

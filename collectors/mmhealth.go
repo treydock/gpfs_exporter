@@ -17,6 +17,7 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"log/slog"
 	"reflect"
 	"regexp"
 	"strconv"
@@ -24,8 +25,6 @@ import (
 	"time"
 
 	"github.com/alecthomas/kingpin/v2"
-	"github.com/go-kit/log"
-	"github.com/go-kit/log/level"
 	"github.com/prometheus/client_golang/prometheus"
 )
 
@@ -58,14 +57,14 @@ type HealthMetric struct {
 type MmhealthCollector struct {
 	State  *prometheus.Desc
 	Event  *prometheus.Desc
-	logger log.Logger
+	logger *slog.Logger
 }
 
 func init() {
 	registerCollector("mmhealth", false, NewMmhealthCollector)
 }
 
-func NewMmhealthCollector(logger log.Logger) Collector {
+func NewMmhealthCollector(logger *slog.Logger) Collector {
 	return &MmhealthCollector{
 		State: prometheus.NewDesc(prometheus.BuildFQName(namespace, "health", "status"),
 			"GPFS health status", []string{"component", "entityname", "entitytype", "status"}, nil),
@@ -81,16 +80,16 @@ func (c *MmhealthCollector) Describe(ch chan<- *prometheus.Desc) {
 }
 
 func (c *MmhealthCollector) Collect(ch chan<- prometheus.Metric) {
-	level.Debug(c.logger).Log("msg", "Collecting mmhealth metrics")
+	c.logger.Debug("Collecting mmhealth metrics")
 	collectTime := time.Now()
 	timeout := 0
 	errorMetric := 0
 	metrics, err := c.collect()
 	if err == context.DeadlineExceeded {
 		timeout = 1
-		level.Error(c.logger).Log("msg", "Timeout executing mmhealth")
+		c.logger.Error("Timeout executing mmhealth")
 	} else if err != nil {
-		level.Error(c.logger).Log("msg", err)
+		c.logger.Error("Cannot collect", err)
 		errorMetric = 1
 	}
 	for _, m := range metrics {
@@ -108,7 +107,7 @@ func (c *MmhealthCollector) Collect(ch chan<- prometheus.Metric) {
 		var unknown float64
 		if !SliceContains(mmhealthStatuses, m.Status) {
 			unknown = 1
-			level.Warn(c.logger).Log("msg", "Unknown status encountered", "status", m.Status,
+			c.logger.Warn("Unknown status encountered", "status", m.Status,
 				"component", m.Component, "entityname", m.EntityName, "entitytype", m.EntityType)
 		}
 		ch <- prometheus.MustNewConstMetric(c.State, prometheus.GaugeValue, unknown, m.Component, m.EntityName, m.EntityType, "UNKNOWN")
@@ -142,7 +141,7 @@ func mmhealth(ctx context.Context) (string, error) {
 	return out.String(), nil
 }
 
-func mmhealth_parse(out string, logger log.Logger) []HealthMetric {
+func mmhealth_parse(out string, logger *slog.Logger) []HealthMetric {
 	mmhealthIgnoredComponentPattern := regexp.MustCompile(*mmhealthIgnoredComponent)
 	mmhealthIgnoredEntityNamePattern := regexp.MustCompile(*mmhealthIgnoredEntityName)
 	mmhealthIgnoredEntityTypePattern := regexp.MustCompile(*mmhealthIgnoredEntityType)
@@ -154,18 +153,18 @@ func mmhealth_parse(out string, logger log.Logger) []HealthMetric {
 	for _, line := range lines {
 		l := strings.TrimSpace(line)
 		if !strings.HasPrefix(l, "mmhealth") {
-			level.Debug(logger).Log("msg", "Skip due to prefix", "line", l)
+			logger.Debug("Skip due to prefix", "line", l)
 			continue
 		}
 		items := strings.Split(l, ":")
 		if len(items) < 3 {
-			level.Debug(logger).Log("msg", "Skip due to length", "len", len(items), "line", l)
+			logger.Debug("Skip due to length", "len", len(items), "line", l)
 			continue
 		}
 		var metric HealthMetric
 		metric.Type = items[1]
 		if metric.Type != "State" && metric.Type != "Event" {
-			level.Debug(logger).Log("msg", "Skip due to type", "type", metric.Type, "line", l)
+			logger.Debug("Skip due to type", "type", metric.Type, "line", l)
 			continue
 		}
 		var headers []string
@@ -188,31 +187,31 @@ func mmhealth_parse(out string, logger log.Logger) []HealthMetric {
 					if val, err := strconv.ParseInt(values[i], 10, 64); err == nil {
 						f.SetInt(val)
 					} else {
-						level.Error(logger).Log("msg", fmt.Sprintf("Error parsing %s value %s: %s", h, values[i], err.Error()))
+						logger.Error(fmt.Sprintf("Error parsing %s value %s: %s", h, values[i], err.Error()))
 					}
 				}
 			}
 		}
 		if mmhealthIgnoredComponentPattern.MatchString(metric.Component) {
-			level.Debug(logger).Log("msg", "Skipping component due to ignored pattern", "component", metric.Component)
+			logger.Debug("Skipping component due to ignored pattern", "component", metric.Component)
 			continue
 		}
 		if mmhealthIgnoredEntityNamePattern.MatchString(metric.EntityName) {
-			level.Debug(logger).Log("msg", "Skipping entity name due to ignored pattern", "entityname", metric.EntityName)
+			logger.Debug("Skipping entity name due to ignored pattern", "entityname", metric.EntityName)
 			continue
 		}
 		if mmhealthIgnoredEntityTypePattern.MatchString(metric.EntityType) {
-			level.Debug(logger).Log("msg", "Skipping entity type due to ignored pattern", "entitytype", metric.EntityType)
+			logger.Debug("Skipping entity type due to ignored pattern", "entitytype", metric.EntityType)
 			continue
 		}
 		if metric.Type == "Event" && *mmhealthIgnoredEvent != "" && mmhealthIgnoredEventPattern.MatchString(metric.Event) {
-			level.Debug(logger).Log("msg", "Skipping event due to ignored pattern", "event", metric.Event)
+			logger.Debug("Skipping event due to ignored pattern", "event", metric.Event)
 			continue
 		}
 		if metric.Type == "Event" {
 			eventKey := fmt.Sprintf("%s-%s-%s-%s", metric.Component, metric.EntityName, metric.EntityType, metric.Event)
 			if SliceContains(eventKeys, eventKey) {
-				level.Debug(logger).Log("msg", "Skipping event as already encountered", "event", metric.Event)
+				logger.Debug("Skipping event as already encountered", "event", metric.Event)
 				continue
 			} else {
 				eventKeys = append(eventKeys, eventKey)

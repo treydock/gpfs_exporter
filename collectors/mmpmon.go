@@ -17,14 +17,13 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"log/slog"
 	"reflect"
 	"strconv"
 	"strings"
 	"time"
 
 	"github.com/alecthomas/kingpin/v2"
-	"github.com/go-kit/log"
-	"github.com/go-kit/log/level"
 	"github.com/prometheus/client_golang/prometheus"
 )
 
@@ -63,14 +62,14 @@ type MmpmonCollector struct {
 	write_bytes *prometheus.Desc
 	operations  *prometheus.Desc
 	info        *prometheus.Desc
-	logger      log.Logger
+	logger      *slog.Logger
 }
 
 func init() {
 	registerCollector("mmpmon", true, NewMmpmonCollector)
 }
 
-func NewMmpmonCollector(logger log.Logger) Collector {
+func NewMmpmonCollector(logger *slog.Logger) Collector {
 	return &MmpmonCollector{
 		read_bytes: prometheus.NewDesc(prometheus.BuildFQName(namespace, "perf", "read_bytes_total"),
 			"GPFS read bytes", []string{"fs"}, nil),
@@ -92,16 +91,16 @@ func (c *MmpmonCollector) Describe(ch chan<- *prometheus.Desc) {
 }
 
 func (c *MmpmonCollector) Collect(ch chan<- prometheus.Metric) {
-	level.Debug(c.logger).Log("msg", "Collecting mmpmon metrics")
+	c.logger.Debug("Collecting mmpmon metrics")
 	collectTime := time.Now()
 	timeout := 0
 	errorMetric := 0
 	perfs, err := c.collect()
 	if err == context.DeadlineExceeded {
 		timeout = 1
-		level.Error(c.logger).Log("msg", "Timeout executing mmpmon")
+		c.logger.Error("Timeout executing mmpmon")
 	} else if err != nil {
-		level.Error(c.logger).Log("msg", err)
+		c.logger.Error("Cannot collect", err)
 		errorMetric = 1
 	}
 	for _, perf := range perfs {
@@ -145,7 +144,7 @@ func mmpmon(ctx context.Context) (string, error) {
 	return out.String(), nil
 }
 
-func mmpmon_parse(out string, logger log.Logger) []PerfMetrics {
+func mmpmon_parse(out string, logger *slog.Logger) []PerfMetrics {
 	var metrics []PerfMetrics
 	lines := strings.Split(out, "\n")
 	for _, l := range lines {
@@ -174,7 +173,7 @@ func mmpmon_parse(out string, logger log.Logger) []PerfMetrics {
 					if val, err := strconv.ParseInt(values[i], 10, 64); err == nil {
 						f.SetInt(val)
 					} else {
-						level.Error(logger).Log("msg", fmt.Sprintf("Error parsing %s value %s: %s", h, values[i], err.Error()))
+						logger.Error(fmt.Sprintf("Error parsing %s value %s: %s", h, values[i], err.Error()))
 					}
 				}
 			}

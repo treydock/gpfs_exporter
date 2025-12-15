@@ -17,6 +17,7 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"log/slog"
 	"net/url"
 	"reflect"
 	"strconv"
@@ -25,8 +26,6 @@ import (
 	"time"
 
 	"github.com/alecthomas/kingpin/v2"
-	"github.com/go-kit/log"
-	"github.com/go-kit/log/level"
 	"github.com/prometheus/client_golang/prometheus"
 )
 
@@ -64,14 +63,14 @@ type MmlssnapshotCollector struct {
 	Created  *prometheus.Desc
 	Data     *prometheus.Desc
 	Metadata *prometheus.Desc
-	logger   log.Logger
+	logger   *slog.Logger
 }
 
 func init() {
 	registerCollector("mmlssnapshot", false, NewMmlssnapshotCollector)
 }
 
-func NewMmlssnapshotCollector(logger log.Logger) Collector {
+func NewMmlssnapshotCollector(logger *slog.Logger) Collector {
 	labels := []string{"fs", "fileset", "snapshot", "id"}
 	return &MmlssnapshotCollector{
 		Status: prometheus.NewDesc(prometheus.BuildFQName(namespace, "snapshot", "status_info"),
@@ -106,10 +105,10 @@ func (c *MmlssnapshotCollector) Collect(ch chan<- prometheus.Metric) {
 		mmlfsfs_filesystems, err := mmlfsfsFilesystems(ctx, c.logger)
 		if err == context.DeadlineExceeded {
 			mmlsfsTimeout = 1
-			level.Error(c.logger).Log("msg", "Timeout executing mmlsfs")
+			c.logger.Error("Timeout executing mmlsfs")
 		} else if err != nil {
 			mmlsfsError = 1
-			level.Error(c.logger).Log("msg", err)
+			c.logger.Error("Cannot collect", err)
 		}
 		ch <- prometheus.MustNewConstMetric(collecTimeout, prometheus.GaugeValue, mmlsfsTimeout, "mmlssnapshot-mmlsfs")
 		ch <- prometheus.MustNewConstMetric(collectError, prometheus.GaugeValue, mmlsfsError, "mmlssnapshot-mmlsfs")
@@ -118,7 +117,7 @@ func (c *MmlssnapshotCollector) Collect(ch chan<- prometheus.Metric) {
 		filesystems = strings.Split(*snapshotFilesystems, ",")
 	}
 	for _, fs := range filesystems {
-		level.Debug(c.logger).Log("msg", "Collecting mmlssnapshot metrics", "fs", fs)
+		c.logger.Debug("Collecting mmlssnapshot metrics", "fs", fs)
 		wg.Add(1)
 		collectTime := time.Now()
 		go func(fs string) {
@@ -128,10 +127,10 @@ func (c *MmlssnapshotCollector) Collect(ch chan<- prometheus.Metric) {
 			errorMetric := 0
 			metrics, err := c.mmlssnapshotCollect(fs)
 			if err == context.DeadlineExceeded {
-				level.Error(c.logger).Log("msg", fmt.Sprintf("Timeout executing %s", label))
+				c.logger.Error(fmt.Sprintf("Timeout executing %s", label))
 				timeout = 1
 			} else if err != nil {
-				level.Error(c.logger).Log("msg", err, "fs", fs)
+				c.logger.Error("Cannot collect", err, "fs", fs)
 				errorMetric = 1
 			}
 			ch <- prometheus.MustNewConstMetric(collectError, prometheus.GaugeValue, float64(errorMetric), label)
@@ -182,7 +181,7 @@ func mmlssnapshot(fs string, ctx context.Context) (string, error) {
 	return out.String(), nil
 }
 
-func parse_mmlssnapshot(out string, logger log.Logger) ([]SnapshotMetric, error) {
+func parse_mmlssnapshot(out string, logger *slog.Logger) ([]SnapshotMetric, error) {
 	var metrics []SnapshotMetric
 	headers := []string{}
 	lines := strings.Split(out, "\n")
@@ -213,12 +212,12 @@ func parse_mmlssnapshot(out string, logger log.Logger) ([]SnapshotMetric, error)
 					if h == "created" {
 						createdStr, err := url.QueryUnescape(values[i])
 						if err != nil {
-							level.Error(logger).Log("msg", "Unable to unescape created time", "value", values[i])
+							logger.Error("Unable to unescape created time", "value", values[i])
 							return nil, err
 						}
 						createdTime, err := time.ParseInLocation(time.ANSIC, createdStr, NowLocation())
 						if err != nil {
-							level.Error(logger).Log("msg", "Unable to parse time", "value", createdStr)
+							logger.Error("Unable to parse time", "value", createdStr)
 							return nil, err
 						}
 						f.SetFloat(float64(createdTime.Unix()))
@@ -230,7 +229,7 @@ func parse_mmlssnapshot(out string, logger log.Logger) ([]SnapshotMetric, error)
 						}
 						f.SetFloat(val)
 					} else {
-						level.Error(logger).Log("msg", fmt.Sprintf("Error parsing %s value %s: %s", h, values[i], err.Error()))
+						logger.Error(fmt.Sprintf("Error parsing %s value %s: %s", h, values[i], err.Error()))
 						return nil, err
 					}
 				}

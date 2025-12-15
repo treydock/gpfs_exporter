@@ -17,13 +17,12 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"log/slog"
 	"strings"
 	"sync"
 	"time"
 
 	"github.com/alecthomas/kingpin/v2"
-	"github.com/go-kit/log"
-	"github.com/go-kit/log/level"
 	"github.com/prometheus/client_golang/prometheus"
 )
 
@@ -69,14 +68,14 @@ type MmdfCollector struct {
 	PoolFree          *prometheus.Desc
 	PoolFreeFragments *prometheus.Desc
 	PoolMaxDiskSize   *prometheus.Desc
-	logger            log.Logger
+	logger            *slog.Logger
 }
 
 func init() {
 	registerCollector("mmdf", false, NewMmdfCollector)
 }
 
-func NewMmdfCollector(logger log.Logger) Collector {
+func NewMmdfCollector(logger *slog.Logger) Collector {
 	return &MmdfCollector{
 		InodesUsed: prometheus.NewDesc(prometheus.BuildFQName(namespace, "fs", "used_inodes"),
 			"GPFS filesystem inodes used", []string{"fs"}, nil),
@@ -130,10 +129,10 @@ func (c *MmdfCollector) Collect(ch chan<- prometheus.Metric) {
 		mmlfsfs_filesystems, err := mmlfsfsFilesystems(ctx, c.logger)
 		if err == context.DeadlineExceeded {
 			mmlsfsTimeout = 1
-			level.Error(c.logger).Log("msg", "Timeout executing mmlsfs")
+			c.logger.Error("Timeout executing mmlsfs")
 		} else if err != nil {
 			mmlsfsError = 1
-			level.Error(c.logger).Log("msg", err)
+			c.logger.Error("Cannot collect", err)
 		}
 		ch <- prometheus.MustNewConstMetric(collecTimeout, prometheus.GaugeValue, mmlsfsTimeout, "mmdf-mmlsfs")
 		ch <- prometheus.MustNewConstMetric(collectError, prometheus.GaugeValue, mmlsfsError, "mmdf-mmlsfs")
@@ -142,7 +141,7 @@ func (c *MmdfCollector) Collect(ch chan<- prometheus.Metric) {
 		filesystems = strings.Split(*configFilesystems, ",")
 	}
 	for _, fs := range filesystems {
-		level.Debug(c.logger).Log("msg", "Collecting mmdf metrics", "fs", fs)
+		c.logger.Debug("Collecting mmdf metrics", "fs", fs)
 		wg.Add(1)
 		collectTime := time.Now()
 		go func(fs string) {
@@ -152,10 +151,10 @@ func (c *MmdfCollector) Collect(ch chan<- prometheus.Metric) {
 			errorMetric := 0
 			metric, err := c.mmdfCollect(fs)
 			if err == context.DeadlineExceeded {
-				level.Error(c.logger).Log("msg", fmt.Sprintf("Timeout executing %s", label))
+				c.logger.Error(fmt.Sprintf("Timeout executing %s", label))
 				timeout = 1
 			} else if err != nil {
-				level.Error(c.logger).Log("msg", err, "fs", fs)
+				c.logger.Error("Cannot collect", err, "fs", fs)
 				errorMetric = 1
 			}
 			ch <- prometheus.MustNewConstMetric(collectError, prometheus.GaugeValue, float64(errorMetric), label)
@@ -209,7 +208,7 @@ func mmdf(fs string, ctx context.Context) (string, error) {
 	return out.String(), nil
 }
 
-func parse_mmdf(out string, logger log.Logger) DFMetric {
+func parse_mmdf(out string, logger *slog.Logger) DFMetric {
 	dfMetrics := DFMetric{Metadata: false}
 	pools := []DfPoolMetric{}
 	headers := make(map[string][]string)

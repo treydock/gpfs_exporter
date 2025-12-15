@@ -17,6 +17,7 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"log/slog"
 	"net/url"
 	"os"
 	"os/exec"
@@ -27,8 +28,6 @@ import (
 	"time"
 
 	"github.com/alecthomas/kingpin/v2"
-	"github.com/go-kit/log"
-	"github.com/go-kit/log/level"
 	"github.com/prometheus/client_golang/prometheus"
 )
 
@@ -38,7 +37,7 @@ const (
 
 var (
 	collectorState = make(map[string]*bool)
-	factories      = make(map[string]func(logger log.Logger) Collector)
+	factories      = make(map[string]func(logger *slog.Logger) Collector)
 	execCommand    = exec.CommandContext
 	MmlsfsExec     = mmlsfs
 	MmdiagExec     = mmdiag
@@ -107,7 +106,7 @@ type Collector interface {
 	Collect(ch chan<- prometheus.Metric)
 }
 
-func registerCollector(collector string, isDefaultEnabled bool, factory func(logger log.Logger) Collector) {
+func registerCollector(collector string, isDefaultEnabled bool, factory func(logger *slog.Logger) Collector) {
 	var helpDefaultState string
 	if isDefaultEnabled {
 		helpDefaultState = "enabled"
@@ -122,12 +121,12 @@ func registerCollector(collector string, isDefaultEnabled bool, factory func(log
 	factories[collector] = factory
 }
 
-func NewGPFSCollector(logger log.Logger) *GPFSCollector {
+func NewGPFSCollector(logger *slog.Logger) *GPFSCollector {
 	collectors := make(map[string]Collector)
 	for key, enabled := range collectorState {
 		var collector Collector
 		if *enabled {
-			collector = factories[key](log.With(logger, "collector", key))
+			collector = factories[key](logger.With("collector", key))
 			collectors[key] = collector
 		}
 	}
@@ -152,14 +151,14 @@ func SliceIndex(slice []string, str string) int {
 	return -1
 }
 
-func ParseFloat(str string, toBytes bool, logger log.Logger) (float64, error) {
+func ParseFloat(str string, toBytes bool, logger *slog.Logger) (float64, error) {
 	if val, err := strconv.ParseFloat(str, 64); err == nil {
 		if toBytes {
 			val = val * 1024
 		}
 		return val, nil
 	} else {
-		level.Error(logger).Log("msg", fmt.Sprintf("Error parsing %s: %s", str, err.Error()))
+		logger.Error(fmt.Sprintf("Error parsing %s: %s", str, err.Error()))
 		return 0, err
 	}
 }
@@ -185,7 +184,7 @@ func mmdiag(arg string, ctx context.Context) (string, error) {
 	return out.String(), nil
 }
 
-func mmlfsfsFilesystems(ctx context.Context, logger log.Logger) ([]string, error) {
+func mmlfsfsFilesystems(ctx context.Context, logger *slog.Logger) ([]string, error) {
 	var filesystems []string
 	out, err := MmlsfsExec(ctx)
 	if err != nil {

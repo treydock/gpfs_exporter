@@ -16,14 +16,13 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"log/slog"
 	"reflect"
 	"strings"
 	"sync"
 	"time"
 
 	"github.com/alecthomas/kingpin/v2"
-	"github.com/go-kit/log"
-	"github.com/go-kit/log/level"
 	"github.com/prometheus/client_golang/prometheus"
 )
 
@@ -58,14 +57,14 @@ type DiskMetric struct {
 type MmlsdiskCollector struct {
 	Status       *prometheus.Desc
 	Availability *prometheus.Desc
-	logger       log.Logger
+	logger       *slog.Logger
 }
 
 func init() {
 	registerCollector("mmlsdisk", false, NewMmlsdiskCollector)
 }
 
-func NewMmlsdiskCollector(logger log.Logger) Collector {
+func NewMmlsdiskCollector(logger *slog.Logger) Collector {
 	return &MmlsdiskCollector{
 		Status: prometheus.NewDesc(prometheus.BuildFQName(namespace, "disk", "status"),
 			"GPFS disk status", []string{"name", "fs", "metadata", "data", "diskid", "storagepool", "status"}, nil),
@@ -91,10 +90,10 @@ func (c *MmlsdiskCollector) Collect(ch chan<- prometheus.Metric) {
 		mmlfsfs_filesystems, err := mmlfsfsFilesystems(ctx, c.logger)
 		if err == context.DeadlineExceeded {
 			mmlsfsTimeout = 1
-			level.Error(c.logger).Log("msg", "Timeout executing mmlsfs")
+			c.logger.Error("Timeout executing mmlsfs")
 		} else if err != nil {
 			mmlsfsError = 1
-			level.Error(c.logger).Log("msg", err)
+			c.logger.Error("Cannot collect", err)
 		}
 		ch <- prometheus.MustNewConstMetric(collecTimeout, prometheus.GaugeValue, mmlsfsTimeout, "mmlsdisk-mmlsfs")
 		ch <- prometheus.MustNewConstMetric(collectError, prometheus.GaugeValue, mmlsfsError, "mmlsdisk-mmlsfs")
@@ -103,7 +102,7 @@ func (c *MmlsdiskCollector) Collect(ch chan<- prometheus.Metric) {
 		filesystems = strings.Split(*diskFilesystems, ",")
 	}
 	for _, fs := range filesystems {
-		level.Debug(c.logger).Log("msg", "Collecting mmlsdisk metrics", "fs", fs)
+		c.logger.Debug("Collecting mmlsdisk metrics", "fs", fs)
 		wg.Add(1)
 		collectTime := time.Now()
 		go func(fs string) {
@@ -113,10 +112,10 @@ func (c *MmlsdiskCollector) Collect(ch chan<- prometheus.Metric) {
 			errorMetric := 0
 			metrics, err := c.mmlsdiskCollect(fs)
 			if err == context.DeadlineExceeded {
-				level.Error(c.logger).Log("msg", fmt.Sprintf("Timeout executing %s", label))
+				c.logger.Error(fmt.Sprintf("Timeout executing %s", label))
 				timeout = 1
 			} else if err != nil {
-				level.Error(c.logger).Log("msg", err, "fs", fs)
+				c.logger.Error("Cannot collect", err, "fs", fs)
 				errorMetric = 1
 			}
 			ch <- prometheus.MustNewConstMetric(collectError, prometheus.GaugeValue, float64(errorMetric), label)
@@ -181,7 +180,7 @@ func mmlsdisk(fs string, ctx context.Context) (string, error) {
 	return out.String(), nil
 }
 
-func parse_mmlsdisk(out string, logger log.Logger) ([]DiskMetric, error) {
+func parse_mmlsdisk(out string, logger *slog.Logger) ([]DiskMetric, error) {
 	var metrics []DiskMetric
 	headers := []string{}
 	lines := strings.Split(out, "\n")

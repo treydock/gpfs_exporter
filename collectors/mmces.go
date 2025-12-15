@@ -17,14 +17,13 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"log/slog"
 	"os"
 	"regexp"
 	"strings"
 	"time"
 
 	"github.com/alecthomas/kingpin/v2"
-	"github.com/go-kit/log"
-	"github.com/go-kit/log/level"
 	"github.com/prometheus/client_golang/prometheus"
 )
 
@@ -38,10 +37,10 @@ var (
 	mmcesExec            = mmces
 )
 
-func getFQDN(logger log.Logger) string {
+func getFQDN(logger *slog.Logger) string {
 	hostname, err := osHostname()
 	if err != nil {
-		level.Info(logger).Log("msg", fmt.Sprintf("Unable to determine FQDN: %s", err.Error()))
+		logger.Info(fmt.Sprintf("Unable to determine FQDN: %s", err.Error()))
 		return ""
 	}
 	return hostname
@@ -54,14 +53,14 @@ type CESMetric struct {
 
 type MmcesCollector struct {
 	State  *prometheus.Desc
-	logger log.Logger
+	logger *slog.Logger
 }
 
 func init() {
 	registerCollector("mmces", false, NewMmcesCollector)
 }
 
-func NewMmcesCollector(logger log.Logger) Collector {
+func NewMmcesCollector(logger *slog.Logger) Collector {
 	return &MmcesCollector{
 		State: prometheus.NewDesc(prometheus.BuildFQName(namespace, "ces", "state"),
 			"GPFS CES health status", []string{"service", "state"}, nil),
@@ -74,7 +73,7 @@ func (c *MmcesCollector) Describe(ch chan<- *prometheus.Desc) {
 }
 
 func (c *MmcesCollector) Collect(ch chan<- prometheus.Metric) {
-	level.Debug(c.logger).Log("msg", "Collecting mmces metrics")
+	c.logger.Debug("Collecting mmces metrics")
 	collectTime := time.Now()
 	timeout := 0
 	errorMetric := 0
@@ -82,7 +81,7 @@ func (c *MmcesCollector) Collect(ch chan<- prometheus.Metric) {
 	if *configNodeName == "" {
 		nodename = getFQDN(c.logger)
 		if nodename == "" {
-			level.Error(c.logger).Log("msg", "collector.mmces.nodename must be defined and could not be determined")
+			c.logger.Error("collector.mmces.nodename must be defined and could not be determined")
 			os.Exit(1)
 		}
 	} else {
@@ -90,10 +89,10 @@ func (c *MmcesCollector) Collect(ch chan<- prometheus.Metric) {
 	}
 	metrics, err := c.collect(nodename)
 	if err == context.DeadlineExceeded {
-		level.Error(c.logger).Log("msg", "Timeout executing mmces")
+		c.logger.Error("Timeout executing mmces")
 		timeout = 1
 	} else if err != nil {
-		level.Error(c.logger).Log("msg", err)
+		c.logger.Error("Cannot collect", err)
 		errorMetric = 1
 	}
 	for _, m := range metrics {
@@ -107,7 +106,7 @@ func (c *MmcesCollector) Collect(ch chan<- prometheus.Metric) {
 		var unknown float64
 		if !SliceContains(cesStates, m.State) {
 			unknown = 1
-			level.Warn(c.logger).Log("msg", "Unknown state encountered", "state", m.State, "service", m.Service)
+			c.logger.Warn("Unknown state encountered", "state", m.State, "service", m.Service)
 		}
 		ch <- prometheus.MustNewConstMetric(c.State, prometheus.GaugeValue, unknown, m.Service, "UNKNOWN")
 	}
@@ -140,7 +139,7 @@ func mmces(nodename string, ctx context.Context) (string, error) {
 	return out.String(), nil
 }
 
-func mmces_state_show_parse(out string, logger log.Logger) []CESMetric {
+func mmces_state_show_parse(out string, logger *slog.Logger) []CESMetric {
 	mmcesIgnoredServicesPattern := regexp.MustCompile(*mmcesIgnoredServices)
 	var metrics []CESMetric
 	lines := strings.Split(out, "\n")
@@ -165,7 +164,7 @@ func mmces_state_show_parse(out string, logger log.Logger) []CESMetric {
 			continue
 		}
 		if mmcesIgnoredServicesPattern.MatchString(h) {
-			level.Debug(logger).Log("msg", "Skipping service due to ignored pattern", "service", h)
+			logger.Debug("Skipping service due to ignored pattern", "service", h)
 			continue
 		}
 		var metric CESMetric

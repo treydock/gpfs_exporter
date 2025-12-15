@@ -17,13 +17,12 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"log/slog"
 	"strings"
 	"sync"
 	"time"
 
 	"github.com/alecthomas/kingpin/v2"
-	"github.com/go-kit/log"
-	"github.com/go-kit/log/level"
 	"github.com/prometheus/client_golang/prometheus"
 )
 
@@ -52,14 +51,14 @@ type MmlspoolCollector struct {
 	MetaTotal       *prometheus.Desc
 	MetaFree        *prometheus.Desc
 	MetaFreePercent *prometheus.Desc
-	logger          log.Logger
+	logger          *slog.Logger
 }
 
 func init() {
 	registerCollector("mmlspool", false, NewMmlspoolCollector)
 }
 
-func NewMmlspoolCollector(logger log.Logger) Collector {
+func NewMmlspoolCollector(logger *slog.Logger) Collector {
 	return &MmlspoolCollector{
 		PoolTotal: prometheus.NewDesc(prometheus.BuildFQName(namespace, "pool", "total_bytes"),
 			"GPFS pool total size in bytes", []string{"fs", "pool"}, nil),
@@ -97,10 +96,10 @@ func (c *MmlspoolCollector) Collect(ch chan<- prometheus.Metric) {
 		mmlfsfs_filesystems, err := mmlfsfsFilesystems(ctx, c.logger)
 		if err == context.DeadlineExceeded {
 			mmlsfsTimeout = 1
-			level.Error(c.logger).Log("msg", "Timeout executing mmlsfs")
+			c.logger.Error("Timeout executing mmlsfs")
 		} else if err != nil {
 			mmlsfsError = 1
-			level.Error(c.logger).Log("msg", err)
+			c.logger.Error("Cannot collect", err)
 		}
 		ch <- prometheus.MustNewConstMetric(collecTimeout, prometheus.GaugeValue, mmlsfsTimeout, "mmlspool-mmlsfs")
 		ch <- prometheus.MustNewConstMetric(collectError, prometheus.GaugeValue, mmlsfsError, "mmlspool-mmlsfs")
@@ -109,7 +108,7 @@ func (c *MmlspoolCollector) Collect(ch chan<- prometheus.Metric) {
 		filesystems = strings.Split(*poolFilesystems, ",")
 	}
 	for _, fs := range filesystems {
-		level.Debug(c.logger).Log("msg", "Collecting mmlspool metrics", "fs", fs)
+		c.logger.Debug("Collecting mmlspool metrics", "fs", fs)
 		wg.Add(1)
 		collectTime := time.Now()
 		go func(fs string) {
@@ -119,10 +118,10 @@ func (c *MmlspoolCollector) Collect(ch chan<- prometheus.Metric) {
 			errorMetric := 0
 			metrics, err := c.mmlspoolCollect(fs)
 			if err == context.DeadlineExceeded {
-				level.Error(c.logger).Log("msg", fmt.Sprintf("Timeout executing %s", label))
+				c.logger.Error(fmt.Sprintf("Timeout executing %s", label))
 				timeout = 1
 			} else if err != nil {
-				level.Error(c.logger).Log("msg", err, "fs", fs)
+				c.logger.Error("Cannot collect", err, "fs", fs)
 				errorMetric = 1
 			}
 			ch <- prometheus.MustNewConstMetric(collectError, prometheus.GaugeValue, float64(errorMetric), label)
@@ -173,7 +172,7 @@ func mmlspool(fs string, ctx context.Context) (string, error) {
 	return out.String(), nil
 }
 
-func parse_mmlspool(fs string, out string, logger log.Logger) ([]PoolMetric, error) {
+func parse_mmlspool(fs string, out string, logger *slog.Logger) ([]PoolMetric, error) {
 	pools := []PoolMetric{}
 	headers := []string{}
 	lines := strings.Split(out, "\n")
@@ -190,10 +189,10 @@ func parse_mmlspool(fs string, out string, logger log.Logger) ([]PoolMetric, err
 		}
 		if items[0] == "Name" {
 			headers = parse_mmlspool_headers(items)
-			level.Debug(logger).Log("msg", "headers", "headers", fmt.Sprintf("%v", headers), "line", line)
+			logger.Debug("headers", fmt.Sprintf("%v", headers), "line", line)
 			continue
 		}
-		level.Debug(logger).Log("msg", "items", "items", fmt.Sprintf("%v", items), "line", line)
+		logger.Debug("items", fmt.Sprintf("%v", items), "line", line)
 		pool := PoolMetric{
 			FS: fs,
 		}
