@@ -16,6 +16,8 @@ package collectors
 import (
 	"context"
 	"fmt"
+	"io"
+	"log/slog"
 	"os/exec"
 	"strings"
 	"testing"
@@ -124,7 +126,8 @@ func TestMmlsqosTimeout(t *testing.T) {
 }
 
 func TestParseMmlsqos(t *testing.T) {
-	metrics, err := parse_mmlsqos(mmlsqosStdout, log.NewNopLogger())
+	logger := slog.New(slog.NewTextHandler(io.Discard, nil))
+	metrics, err := parse_mmlsqos(mmlsqosStdout, logger)
 	if err != nil {
 		t.Errorf("Unexpected error: %s", err.Error())
 		return
@@ -157,7 +160,7 @@ func TestParseMmlsqos(t *testing.T) {
 	if metrics[0].Bs != 4902092.8 {
 		t.Errorf("Unexpected value for Bs, got %v", metrics[0].Bs)
 	}
-	metrics, err = parse_mmlsqos(mmlsqosStdoutNanValue, log.NewNopLogger())
+	metrics, err = parse_mmlsqos(mmlsqosStdoutNanValue, logger)
 	if err != nil {
 		t.Errorf("Unexpected error: %s", err.Error())
 		return
@@ -168,12 +171,13 @@ func TestParseMmlsqos(t *testing.T) {
 }
 
 func TestParseMmlsqosErrors(t *testing.T) {
-	_, err := parse_mmlsqos(mmlsqosStdoutBadTime, log.NewNopLogger())
+	logger := slog.New(slog.NewTextHandler(io.Discard, nil))
+	_, err := parse_mmlsqos(mmlsqosStdoutBadTime, logger)
 	if err == nil {
 		t.Errorf("Expected error")
 		return
 	}
-	_, err = parse_mmlsqos(mmlsqosStdoutBadValue, log.NewNopLogger())
+	_, err = parse_mmlsqos(mmlsqosStdoutBadValue, logger)
 	if err == nil {
 		t.Errorf("Expected error")
 		return
@@ -226,7 +230,8 @@ func TestMmlsqosCollector(t *testing.T) {
         gpfs_qos_measurement_interval_seconds{class="other",fs="mmfs1",measurement_period_seconds="1678438680",pool="nvme1"} 30
         gpfs_qos_measurement_interval_seconds{class="other",fs="mmfs1",measurement_period_seconds="1678438680",pool="system"} 30
 	`
-	collector := NewMmlsqosCollector(log.NewNopLogger())
+	logger := slog.New(slog.NewTextHandler(io.Discard, nil))
+	collector := NewMmlsqosCollector(logger)
 	gatherers := setupGatherer(collector)
 	if val, err := testutil.GatherAndCount(gatherers); err != nil {
 		t.Errorf("Unexpected error: %v", err)
@@ -292,7 +297,8 @@ func TestMmlsqosCollectorMmlsfs(t *testing.T) {
         gpfs_qos_measurement_interval_seconds{class="other",fs="mmfs1",measurement_period_seconds="1678438680",pool="nvme1"} 30
         gpfs_qos_measurement_interval_seconds{class="other",fs="mmfs1",measurement_period_seconds="1678438680",pool="system"} 30
 	`
-	collector := NewMmlsqosCollector(log.NewNopLogger())
+	logger := slog.New(slog.NewTextHandler(io.Discard, nil))
+	collector := NewMmlsqosCollector(logger)
 	gatherers := setupGatherer(collector)
 	if val, err := testutil.GatherAndCount(gatherers); err != nil {
 		t.Errorf("Unexpected error: %v", err)
@@ -321,7 +327,8 @@ func TestMmlsqosCollectorError(t *testing.T) {
 		# TYPE gpfs_exporter_collect_error gauge
 		gpfs_exporter_collect_error{collector="mmlsqos-mmfs1"} 1
 	`
-	collector := NewMmlsqosCollector(log.NewNopLogger())
+	logger := slog.New(slog.NewTextHandler(io.Discard, nil))
+	collector := NewMmlsqosCollector(logger)
 	gatherers := setupGatherer(collector)
 	if val, err := testutil.GatherAndCount(gatherers); err != nil {
 		t.Errorf("Unexpected error: %v", err)
@@ -347,7 +354,8 @@ func TestMmlsqosCollectorTimeout(t *testing.T) {
 		# TYPE gpfs_exporter_collect_timeout gauge
 		gpfs_exporter_collect_timeout{collector="mmlsqos-mmfs1"} 1
 	`
-	collector := NewMmlsqosCollector(log.NewNopLogger())
+	logger := slog.New(slog.NewTextHandler(io.Discard, nil))
+	collector := NewMmlsqosCollector(logger)
 	gatherers := setupGatherer(collector)
 	if val, err := testutil.GatherAndCount(gatherers); err != nil {
 		t.Errorf("Unexpected error: %v", err)
@@ -373,7 +381,8 @@ func TestMmlsqosCollectorMmlsfsError(t *testing.T) {
 		# TYPE gpfs_exporter_collect_error gauge
 		gpfs_exporter_collect_error{collector="mmlsqos-mmlsfs"} 1
 	`
-	collector := NewMmlsqosCollector(log.NewNopLogger())
+	logger := slog.New(slog.NewTextHandler(io.Discard, nil))
+	collector := NewMmlsqosCollector(logger)
 	gatherers := setupGatherer(collector)
 	if val, err := testutil.GatherAndCount(gatherers); err != nil {
 		t.Errorf("Unexpected error: %v", err)
@@ -399,7 +408,8 @@ func TestMmlsqosCollectorMmlsfsTimeout(t *testing.T) {
 		# TYPE gpfs_exporter_collect_timeout gauge
 		gpfs_exporter_collect_timeout{collector="mmlsqos-mmlsfs"} 1
 	`
-	collector := NewMmlsqosCollector(log.NewNopLogger())
+	logger := slog.New(slog.NewTextHandler(io.Discard, nil))
+	collector := NewMmlsqosCollector(logger)
 	gatherers := setupGatherer(collector)
 	if val, err := testutil.GatherAndCount(gatherers); err != nil {
 		t.Errorf("Unexpected error: %v", err)

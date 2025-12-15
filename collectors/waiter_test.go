@@ -16,7 +16,8 @@ package collectors
 import (
 	"context"
 	"fmt"
-	"os"
+	"io"
+	"log/slog"
 	"strings"
 	"testing"
 
@@ -65,8 +66,7 @@ func TestParseMmdiagWaiters(t *testing.T) {
 	if _, err := kingpin.CommandLine.Parse([]string{}); err != nil {
 		t.Fatal(err)
 	}
-	w := log.NewSyncWriter(os.Stderr)
-	logger := log.NewLogfmtLogger(w)
+	logger := slog.New(slog.NewTextHandler(io.Discard, nil))
 	waiters := parse_mmdiag_waiters(waitersStdout, logger)
 	if val := len(waiters); val != 26 {
 		t.Errorf("Unexpected Waiters len got %v", val)
@@ -107,8 +107,7 @@ func TestWaiterCollector(t *testing.T) {
 		gpfs_waiter_info_count{waiter="NSDThread"} 3
 		gpfs_waiter_info_count{waiter="RebuildWorkThread"} 22
 	`
-	w := log.NewSyncWriter(os.Stderr)
-	logger := log.NewLogfmtLogger(w)
+	logger := slog.New(slog.NewTextHandler(io.Discard, nil))
 	collector1 := NewWaiterCollector(logger)
 	collector2 := NewWaiterCollector(logger)
 	gatherers1 := setupGatherer(collector1)
@@ -136,7 +135,8 @@ func TestWaiterCollectorError(t *testing.T) {
 		# TYPE gpfs_exporter_collect_error gauge
 		gpfs_exporter_collect_error{collector="waiter"} 1
 	`
-	collector := NewWaiterCollector(log.NewNopLogger())
+	logger := slog.New(slog.NewTextHandler(io.Discard, nil))
+	collector := NewWaiterCollector(logger)
 	gatherers := setupGatherer(collector)
 	if val, err := testutil.GatherAndCount(gatherers); err != nil {
 		t.Errorf("Unexpected error: %v", err)
@@ -160,7 +160,8 @@ func TestWaiterCollectorTimeout(t *testing.T) {
 		# TYPE gpfs_exporter_collect_timeout gauge
 		gpfs_exporter_collect_timeout{collector="waiter"} 1
 	`
-	collector := NewWaiterCollector(log.NewNopLogger())
+	logger := slog.New(slog.NewTextHandler(io.Discard, nil))
+	collector := NewWaiterCollector(logger)
 	gatherers := setupGatherer(collector)
 	if val, err := testutil.GatherAndCount(gatherers); err != nil {
 		t.Errorf("Unexpected error: %v", err)

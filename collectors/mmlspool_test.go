@@ -16,7 +16,8 @@ package collectors
 import (
 	"context"
 	"fmt"
-	"os"
+	"io"
+	"log/slog"
 	"os/exec"
 	"strings"
 	"testing"
@@ -90,8 +91,7 @@ func TestMmlspoolTimeout(t *testing.T) {
 }
 
 func TestParseMmlspool(t *testing.T) {
-	w := log.NewSyncWriter(os.Stderr)
-	logger := log.NewLogfmtLogger(w)
+	logger := slog.New(slog.NewTextHandler(io.Discard, nil))
 	//pools, err := parse_mmlspool("scratch", mmlspoolStdout, log.NewNopLogger())
 	pools, err := parse_mmlspool("scratch", mmlspoolStdout, logger)
 	if err != nil {
@@ -156,7 +156,7 @@ func TestParseMmlspool(t *testing.T) {
 		}
 	}
 
-	pools, err = parse_mmlspool("scratch", mmlspoolError, log.NewNopLogger())
+	pools, err = parse_mmlspool("scratch", mmlspoolError, logger)
 	if err == nil {
 		t.Errorf("Expected an error")
 	}
@@ -197,7 +197,8 @@ func TestMmlspoolCollector(t *testing.T) {
 		gpfs_pool_total_bytes{fs="scratch",pool="data"} 3138000816963584
 		gpfs_pool_total_bytes{fs="scratch",pool="system"} 802107691106304
 	`
-	collector := NewMmlspoolCollector(log.NewNopLogger())
+	logger := slog.New(slog.NewTextHandler(io.Discard, nil))
+	collector := NewMmlspoolCollector(logger)
 	gatherers := setupGatherer(collector)
 	if val, err := testutil.GatherAndCount(gatherers); err != nil {
 		t.Errorf("Unexpected error: %v", err)
@@ -251,7 +252,8 @@ mmlsfs::0:1:::scratch:defaultMountPoint:%2Ffs%2Fscratch::
 		gpfs_pool_total_bytes{fs="scratch",pool="data"} 3138000816963584
 		gpfs_pool_total_bytes{fs="scratch",pool="system"} 802107691106304
 	`
-	collector := NewMmlspoolCollector(log.NewNopLogger())
+	logger := slog.New(slog.NewTextHandler(io.Discard, nil))
+	collector := NewMmlspoolCollector(logger)
 	gatherers := setupGatherer(collector)
 	if val, err := testutil.GatherAndCount(gatherers); err != nil {
 		t.Errorf("Unexpected error: %v", err)
@@ -280,7 +282,8 @@ func TestMmlspoolCollectorError(t *testing.T) {
 		# TYPE gpfs_exporter_collect_error gauge
 		gpfs_exporter_collect_error{collector="mmlspool-scratch"} 1
 	`
-	collector := NewMmlspoolCollector(log.NewNopLogger())
+	logger := slog.New(slog.NewTextHandler(io.Discard, nil))
+	collector := NewMmlspoolCollector(logger)
 	gatherers := setupGatherer(collector)
 	if val, err := testutil.GatherAndCount(gatherers); err != nil {
 		t.Errorf("Unexpected error: %v", err)
@@ -306,7 +309,8 @@ func TestMmlspoolCollectorTimeout(t *testing.T) {
 		# TYPE gpfs_exporter_collect_timeout gauge
 		gpfs_exporter_collect_timeout{collector="mmlspool-scratch"} 1
 	`
-	collector := NewMmlspoolCollector(log.NewNopLogger())
+	logger := slog.New(slog.NewTextHandler(io.Discard, nil))
+	collector := NewMmlspoolCollector(logger)
 	gatherers := setupGatherer(collector)
 	if val, err := testutil.GatherAndCount(gatherers); err != nil {
 		t.Errorf("Unexpected error: %v", err)
@@ -332,7 +336,8 @@ func TestMmlspoolCollectorMmlsfsError(t *testing.T) {
 		# TYPE gpfs_exporter_collect_error gauge
 		gpfs_exporter_collect_error{collector="mmlspool-mmlsfs"} 1
 	`
-	collector := NewMmlspoolCollector(log.NewNopLogger())
+	logger := slog.New(slog.NewTextHandler(io.Discard, nil))
+	collector := NewMmlspoolCollector(logger)
 	gatherers := setupGatherer(collector)
 	if val, err := testutil.GatherAndCount(gatherers); err != nil {
 		t.Errorf("Unexpected error: %v", err)
@@ -358,7 +363,8 @@ func TestMmlspoolCollectorMmlsfsTimeout(t *testing.T) {
 		# TYPE gpfs_exporter_collect_timeout gauge
 		gpfs_exporter_collect_timeout{collector="mmlspool-mmlsfs"} 1
 	`
-	collector := NewMmlspoolCollector(log.NewNopLogger())
+	logger := slog.New(slog.NewTextHandler(io.Discard, nil))
+	collector := NewMmlspoolCollector(logger)
 	gatherers := setupGatherer(collector)
 	if val, err := testutil.GatherAndCount(gatherers); err != nil {
 		t.Errorf("Unexpected error: %v", err)

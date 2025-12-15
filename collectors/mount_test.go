@@ -14,6 +14,8 @@
 package collectors
 
 import (
+	"io"
+	"log/slog"
 	"os"
 	"strings"
 	"testing"
@@ -123,7 +125,8 @@ ess                  /fs/ess              gpfs       rw,mtime,relatime,dev=ess.d
 		gpfs_mount_status{mount="/fs/project"} 1
 		gpfs_mount_status{mount="/fs/scratch"} 1
 	`
-	collector := NewMountCollector(log.NewNopLogger())
+	logger := slog.New(slog.NewTextHandler(io.Discard, nil))
+	collector := NewMountCollector(logger)
 	gatherers := setupGatherer(collector)
 	if val, err := testutil.GatherAndCount(gatherers); err != nil {
 		t.Errorf("Unexpected error: %v", err)

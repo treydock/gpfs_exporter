@@ -16,6 +16,8 @@ package collectors
 import (
 	"context"
 	"fmt"
+	"io"
+	"log/slog"
 	"os/exec"
 	"strings"
 	"testing"
@@ -108,7 +110,8 @@ func TestVerbsCollector(t *testing.T) {
 		# TYPE gpfs_verbs_status gauge
 		gpfs_verbs_status 1
 	`
-	collector := NewVerbsCollector(log.NewNopLogger())
+	logger := slog.New(slog.NewTextHandler(io.Discard, nil))
+	collector := NewVerbsCollector(logger)
 	gatherers := setupGatherer(collector)
 	if val, err := testutil.GatherAndCount(gatherers); err != nil {
 		t.Errorf("Unexpected error: %v", err)
@@ -132,7 +135,8 @@ func TestVerbsCollectorError(t *testing.T) {
 		# TYPE gpfs_exporter_collect_error gauge
 		gpfs_exporter_collect_error{collector="verbs"} 1
 	`
-	collector := NewVerbsCollector(log.NewNopLogger())
+	logger := slog.New(slog.NewTextHandler(io.Discard, nil))
+	collector := NewVerbsCollector(logger)
 	gatherers := setupGatherer(collector)
 	if val, err := testutil.GatherAndCount(gatherers); err != nil {
 		t.Errorf("Unexpected error: %v", err)
@@ -156,7 +160,8 @@ func TestVerbsCollectorTimeout(t *testing.T) {
 		# TYPE gpfs_exporter_collect_timeout gauge
 		gpfs_exporter_collect_timeout{collector="verbs"} 1
 	`
-	collector := NewVerbsCollector(log.NewNopLogger())
+	logger := slog.New(slog.NewTextHandler(io.Discard, nil))
+	collector := NewVerbsCollector(logger)
 	gatherers := setupGatherer(collector)
 	if val, err := testutil.GatherAndCount(gatherers); err != nil {
 		t.Errorf("Unexpected error: %v", err)

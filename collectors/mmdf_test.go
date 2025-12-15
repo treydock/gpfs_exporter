@@ -16,6 +16,8 @@ package collectors
 import (
 	"context"
 	"fmt"
+	"io"
+	"log/slog"
 	"os/exec"
 	"strings"
 	"testing"
@@ -124,7 +126,8 @@ func TestMmdfTimeout(t *testing.T) {
 }
 
 func TestParseMmdf(t *testing.T) {
-	dfmetrics := parse_mmdf(mmdfStdout, log.NewNopLogger())
+	logger := slog.New(slog.NewTextHandler(io.Discard, nil))
+	dfmetrics := parse_mmdf(mmdfStdout, logger)
 	if dfmetrics.InodesFree != 484301506 {
 		t.Errorf("Unexpected value for InodesFree, got %v", dfmetrics.InodesFree)
 	}
@@ -140,7 +143,7 @@ func TestParseMmdf(t *testing.T) {
 	if len(dfmetrics.Pools) != 2 {
 		t.Errorf("Unexpected number of pools, got %v", len(dfmetrics.Pools))
 	}
-	dfmetrics = parse_mmdf(mmdfStdoutErrors, log.NewNopLogger())
+	dfmetrics = parse_mmdf(mmdfStdoutErrors, logger)
 	if dfmetrics.InodesFree != 484301506 {
 		t.Errorf("Unexpected value for InodesFree, got %v", dfmetrics.InodesFree)
 	}
@@ -156,7 +159,7 @@ func TestParseMmdf(t *testing.T) {
 	if len(dfmetrics.Pools) != 2 {
 		t.Errorf("Unexpected number of pools, got %v", len(dfmetrics.Pools))
 	}
-	dfmetrics = parse_mmdf(mmdfStdoutMissingMetadata, log.NewNopLogger())
+	dfmetrics = parse_mmdf(mmdfStdoutMissingMetadata, logger)
 	if dfmetrics.InodesFree != 484301506 {
 		t.Errorf("Unexpected value for InodesFree, got %v", dfmetrics.InodesFree)
 	}
@@ -219,7 +222,8 @@ func TestMmdfCollector(t *testing.T) {
 		# TYPE gpfs_fs_used_inodes gauge
 		gpfs_fs_used_inodes{fs="project"} 430741822
 	`
-	collector := NewMmdfCollector(log.NewNopLogger())
+	logger := slog.New(slog.NewTextHandler(io.Discard, nil))
+	collector := NewMmdfCollector(logger)
 	gatherers := setupGatherer(collector)
 	if val, err := testutil.GatherAndCount(gatherers); err != nil {
 		t.Errorf("Unexpected error: %v", err)
@@ -281,7 +285,8 @@ func TestMmdfCollectorNoMetadata(t *testing.T) {
 		# TYPE gpfs_fs_used_inodes gauge
 		gpfs_fs_used_inodes{fs="project"} 430741822
 	`
-	collector := NewMmdfCollector(log.NewNopLogger())
+	logger := slog.New(slog.NewTextHandler(io.Discard, nil))
+	collector := NewMmdfCollector(logger)
 	gatherers := setupGatherer(collector)
 	if val, err := testutil.GatherAndCount(gatherers); err != nil {
 		t.Errorf("Unexpected error: %v", err)
@@ -356,7 +361,8 @@ mmlsfs::0:1:::project:defaultMountPoint:%2Ffs%2Fproject::
 		# TYPE gpfs_fs_size_bytes gauge
 		gpfs_fs_size_bytes{fs="project"} 3749557989015552
 	`
-	collector := NewMmdfCollector(log.NewNopLogger())
+	logger := slog.New(slog.NewTextHandler(io.Discard, nil))
+	collector := NewMmdfCollector(logger)
 	gatherers := setupGatherer(collector)
 	if val, err := testutil.GatherAndCount(gatherers); err != nil {
 		t.Errorf("Unexpected error: %v", err)
@@ -387,7 +393,8 @@ func TestMmdfCollectorError(t *testing.T) {
 		# TYPE gpfs_exporter_collect_error gauge
 		gpfs_exporter_collect_error{collector="mmdf-project"} 1
 	`
-	collector := NewMmdfCollector(log.NewNopLogger())
+	logger := slog.New(slog.NewTextHandler(io.Discard, nil))
+	collector := NewMmdfCollector(logger)
 	gatherers := setupGatherer(collector)
 	if val, err := testutil.GatherAndCount(gatherers); err != nil {
 		t.Errorf("Unexpected error: %v", err)
@@ -413,7 +420,8 @@ func TestMmdfCollectorTimeout(t *testing.T) {
 		# TYPE gpfs_exporter_collect_timeout gauge
 		gpfs_exporter_collect_timeout{collector="mmdf-project"} 1
 	`
-	collector := NewMmdfCollector(log.NewNopLogger())
+	logger := slog.New(slog.NewTextHandler(io.Discard, nil))
+	collector := NewMmdfCollector(logger)
 	gatherers := setupGatherer(collector)
 	if val, err := testutil.GatherAndCount(gatherers); err != nil {
 		t.Errorf("Unexpected error: %v", err)
@@ -439,7 +447,8 @@ func TestMmdfCollectorMmlsfsError(t *testing.T) {
 		# TYPE gpfs_exporter_collect_error gauge
 		gpfs_exporter_collect_error{collector="mmdf-mmlsfs"} 1
 	`
-	collector := NewMmdfCollector(log.NewNopLogger())
+	logger := slog.New(slog.NewTextHandler(io.Discard, nil))
+	collector := NewMmdfCollector(logger)
 	gatherers := setupGatherer(collector)
 	if val, err := testutil.GatherAndCount(gatherers); err != nil {
 		t.Errorf("Unexpected error: %v", err)
@@ -465,7 +474,8 @@ func TestMmdfCollectorMmlsfsTimeout(t *testing.T) {
 		# TYPE gpfs_exporter_collect_timeout gauge
 		gpfs_exporter_collect_timeout{collector="mmdf-mmlsfs"} 1
 	`
-	collector := NewMmdfCollector(log.NewNopLogger())
+	logger := slog.New(slog.NewTextHandler(io.Discard, nil))
+	collector := NewMmdfCollector(logger)
 	gatherers := setupGatherer(collector)
 	if val, err := testutil.GatherAndCount(gatherers); err != nil {
 		t.Errorf("Unexpected error: %v", err)

@@ -17,6 +17,7 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"log/slog"
 	"net/http"
 	"os"
 	"strings"
@@ -24,7 +25,6 @@ import (
 	"time"
 
 	"github.com/alecthomas/kingpin/v2"
-	"github.com/go-kit/log"
 	"github.com/treydock/gpfs_exporter/collectors"
 )
 
@@ -58,7 +58,8 @@ func TestMain(m *testing.M) {
 	varTrue := true
 	disableExporterMetrics = &varTrue
 	go func() {
-		http.Handle("/metrics", metricsHandler(log.NewNopLogger()))
+		logger := slog.New(slog.NewTextHandler(io.Discard, nil))
+		http.Handle("/metrics", metricsHandler(logger))
 		err := http.ListenAndServe(address, nil)
 		if err != nil {
 			os.Exit(1)

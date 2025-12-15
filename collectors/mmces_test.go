@@ -16,6 +16,8 @@ package collectors
 import (
 	"context"
 	"fmt"
+	"io"
+	"log/slog"
 	"os/exec"
 	"strings"
 	"testing"
@@ -37,7 +39,8 @@ func TestGetFQDN(t *testing.T) {
 	osHostname = func() (string, error) {
 		return "foo", nil
 	}
-	if val := getFQDN(log.NewNopLogger()); val != "foo" {
+	logger := slog.New(slog.NewTextHandler(io.Discard, nil))
+	if val := getFQDN(logger); val != "foo" {
 		t.Errorf("Unexpected value, got %s", val)
 	}
 }
@@ -46,7 +49,8 @@ func TestGetFQDNError(t *testing.T) {
 	osHostname = func() (string, error) {
 		return "", fmt.Errorf("err")
 	}
-	if val := getFQDN(log.NewNopLogger()); val != "" {
+	logger := slog.New(slog.NewTextHandler(io.Discard, nil))
+	if val := getFQDN(logger); val != "" {
 		t.Errorf("Unexpected value, got %s", val)
 	}
 }
@@ -105,7 +109,8 @@ func TestParseMmcesStateShow(t *testing.T) {
 	}
 	ignored := "^$"
 	mmcesIgnoredServices = &ignored
-	metrics := mmces_state_show_parse(mmcesStdout, log.NewNopLogger())
+	logger := slog.New(slog.NewTextHandler(io.Discard, nil))
+	metrics := mmces_state_show_parse(mmcesStdout, logger)
 	if len(metrics) != 8 {
 		t.Errorf("Expected 8 metrics returned, got %d", len(metrics))
 		return
@@ -124,7 +129,8 @@ func TestParseMmcesStateShowIgnore(t *testing.T) {
 	}
 	ignored := "^(BLOCK|OBJ)$"
 	mmcesIgnoredServices = &ignored
-	metrics := mmces_state_show_parse(mmcesStdout, log.NewNopLogger())
+	logger := slog.New(slog.NewTextHandler(io.Discard, nil))
+	metrics := mmces_state_show_parse(mmcesStdout, logger)
 	if len(metrics) != 6 {
 		t.Errorf("Expected 6 metrics returned, got %d", len(metrics))
 		return
@@ -216,7 +222,8 @@ func TestMMcesCollector(t *testing.T) {
 		gpfs_ces_state{service="SMB",state="SUSPENDED"} 0
 		gpfs_ces_state{service="SMB",state="UNKNOWN"} 1
 	`
-	collector := NewMmcesCollector(log.NewNopLogger())
+	logger := slog.New(slog.NewTextHandler(io.Discard, nil))
+	collector := NewMmcesCollector(logger)
 	gatherers := setupGatherer(collector)
 	if val, err := testutil.GatherAndCount(gatherers); err != nil {
 		t.Errorf("Unexpected error: %v", err)
@@ -311,7 +318,8 @@ func TestMMcesCollectorHostname(t *testing.T) {
 		gpfs_ces_state{service="SMB",state="SUSPENDED"} 0
 		gpfs_ces_state{service="SMB",state="UNKNOWN"} 1
 	`
-	collector := NewMmcesCollector(log.NewNopLogger())
+	logger := slog.New(slog.NewTextHandler(io.Discard, nil))
+	collector := NewMmcesCollector(logger)
 	gatherers := setupGatherer(collector)
 	if val, err := testutil.GatherAndCount(gatherers); err != nil {
 		t.Errorf("Unexpected error: %v", err)
@@ -335,7 +343,8 @@ func TestMMcesCollectorError(t *testing.T) {
 		# TYPE gpfs_exporter_collect_error gauge
 		gpfs_exporter_collect_error{collector="mmces"} 1
 	`
-	collector := NewMmcesCollector(log.NewNopLogger())
+	logger := slog.New(slog.NewTextHandler(io.Discard, nil))
+	collector := NewMmcesCollector(logger)
 	gatherers := setupGatherer(collector)
 	if val, err := testutil.GatherAndCount(gatherers); err != nil {
 		t.Errorf("Unexpected error: %v", err)
@@ -359,7 +368,8 @@ func TestMMcesCollectorTimeout(t *testing.T) {
 		# TYPE gpfs_exporter_collect_timeout gauge
 		gpfs_exporter_collect_timeout{collector="mmces"} 1
 	`
-	collector := NewMmcesCollector(log.NewNopLogger())
+	logger := slog.New(slog.NewTextHandler(io.Discard, nil))
+	collector := NewMmcesCollector(logger)
 	gatherers := setupGatherer(collector)
 	if val, err := testutil.GatherAndCount(gatherers); err != nil {
 		t.Errorf("Unexpected error: %v", err)

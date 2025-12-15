@@ -16,6 +16,8 @@ package collectors
 import (
 	"context"
 	"fmt"
+	"io"
+	"log/slog"
 	"os/exec"
 	"strings"
 	"testing"
@@ -33,7 +35,8 @@ mmgetstate::0:1:::ib-proj-nsd05.domain:11:active:4:7:1122::(undefined):
 )
 
 func TestNewGPFSCollector(t *testing.T) {
-	ret := NewGPFSCollector(log.NewNopLogger())
+	logger := slog.New(slog.NewTextHandler(io.Discard, nil))
+	ret := NewGPFSCollector(logger)
 	if len(ret.Collectors) != 4 {
 		t.Errorf("Unexpected number of collectors, expected 4, got %d", len(ret.Collectors))
 	}
@@ -109,7 +112,8 @@ func TestMmgetstateCollector(t *testing.T) {
 		gpfs_state{state="down"} 0
 		gpfs_state{state="unknown"} 0
 	`
-	collector := NewMmgetstateCollector(log.NewNopLogger())
+	logger := slog.New(slog.NewTextHandler(io.Discard, nil))
+	collector := NewMmgetstateCollector(logger)
 	gatherers := setupGatherer(collector)
 	if val, err := testutil.GatherAndCount(gatherers); err != nil {
 		t.Errorf("Unexpected error: %v", err)
@@ -133,7 +137,8 @@ func TestMMgetstateCollectorError(t *testing.T) {
 		# TYPE gpfs_exporter_collect_error gauge
 		gpfs_exporter_collect_error{collector="mmgetstate"} 1
 	`
-	collector := NewMmgetstateCollector(log.NewNopLogger())
+	logger := slog.New(slog.NewTextHandler(io.Discard, nil))
+	collector := NewMmgetstateCollector(logger)
 	gatherers := setupGatherer(collector)
 	if val, err := testutil.GatherAndCount(gatherers); err != nil {
 		t.Errorf("Unexpected error: %v", err)
@@ -157,7 +162,8 @@ func TestMMgetstateCollectorTimeout(t *testing.T) {
 		# TYPE gpfs_exporter_collect_timeout gauge
 		gpfs_exporter_collect_timeout{collector="mmgetstate"} 1
 	`
-	collector := NewMmgetstateCollector(log.NewNopLogger())
+	logger := slog.New(slog.NewTextHandler(io.Discard, nil))
+	collector := NewMmgetstateCollector(logger)
 	gatherers := setupGatherer(collector)
 	if val, err := testutil.GatherAndCount(gatherers); err != nil {
 		t.Errorf("Unexpected error: %v", err)

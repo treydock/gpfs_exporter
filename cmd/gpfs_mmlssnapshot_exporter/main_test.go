@@ -16,13 +16,14 @@ package main
 import (
 	"context"
 	"fmt"
+	"io"
+	"log/slog"
 	"os"
 	"strings"
 	"testing"
 	"time"
 
 	"github.com/alecthomas/kingpin/v2"
-	"github.com/go-kit/log"
 	"github.com/treydock/gpfs_exporter/collectors"
 )
 
@@ -91,7 +92,8 @@ func TestCollect(t *testing.T) {
 	collectors.MmlssnapshotExec = func(fs string, ctx context.Context) (string, error) {
 		return mmlssnapshotStdout, nil
 	}
-	err := collect(log.NewNopLogger())
+	logger := slog.New(slog.NewTextHandler(io.Discard, nil))
+	err := collect(logger)
 	if err != nil {
 		t.Errorf("Unexpected error: %s", err.Error())
 		return
@@ -113,8 +115,7 @@ func TestCollectError(t *testing.T) {
 	collectors.MmlssnapshotExec = func(fs string, ctx context.Context) (string, error) {
 		return "", fmt.Errorf("Error")
 	}
-	w := log.NewSyncWriter(os.Stderr)
-	logger := log.NewLogfmtLogger(w)
+	logger := slog.New(slog.NewTextHandler(io.Discard, nil))
 	err := collect(logger)
 	if err == nil {
 		t.Errorf("Expected error")
@@ -137,8 +138,7 @@ func TestCollectTimeout(t *testing.T) {
 	collectors.MmlssnapshotExec = func(fs string, ctx context.Context) (string, error) {
 		return "", context.DeadlineExceeded
 	}
-	w := log.NewSyncWriter(os.Stderr)
-	logger := log.NewLogfmtLogger(w)
+	logger := slog.New(slog.NewTextHandler(io.Discard, nil))
 	err := collect(logger)
 	if err == nil {
 		t.Errorf("Expected error")

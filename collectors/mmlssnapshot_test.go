@@ -16,6 +16,8 @@ package collectors
 import (
 	"context"
 	"fmt"
+	"io"
+	"log/slog"
 	"os/exec"
 	"strings"
 	"testing"
@@ -95,7 +97,8 @@ func TestMmlssnapshotTimeout(t *testing.T) {
 }
 
 func TestParseMmlssnapshot(t *testing.T) {
-	metrics, err := parse_mmlssnapshot(mmlssnapshotStdout, log.NewNopLogger())
+	logger := slog.New(slog.NewTextHandler(io.Discard, nil))
+	metrics, err := parse_mmlssnapshot(mmlssnapshotStdout, logger)
 	if err != nil {
 		t.Errorf("Unexpected error: %s", err.Error())
 		return
@@ -116,7 +119,7 @@ func TestParseMmlssnapshot(t *testing.T) {
 	if metrics[0].Created != 1605426468 {
 		t.Errorf("Unexpected value for Created, got %v", metrics[0].Created)
 	}
-	metrics, err = parse_mmlssnapshot(mmlssnapshotStdoutData, log.NewNopLogger())
+	metrics, err = parse_mmlssnapshot(mmlssnapshotStdoutData, logger)
 	if err != nil {
 		t.Errorf("Unexpected error: %s", err.Error())
 		return
@@ -130,12 +133,13 @@ func TestParseMmlssnapshot(t *testing.T) {
 }
 
 func TestParseMmlssnapshotErrors(t *testing.T) {
-	_, err := parse_mmlssnapshot(mmlssnapshotStdoutBadTime, log.NewNopLogger())
+	logger := slog.New(slog.NewTextHandler(io.Discard, nil))
+	_, err := parse_mmlssnapshot(mmlssnapshotStdoutBadTime, logger)
 	if err == nil {
 		t.Errorf("Expected error")
 		return
 	}
-	_, err = parse_mmlssnapshot(mmlssnapshotStdoutBadValue, log.NewNopLogger())
+	_, err = parse_mmlssnapshot(mmlssnapshotStdoutBadValue, logger)
 	if err == nil {
 		t.Errorf("Expected error")
 		return
@@ -161,7 +165,8 @@ func TestMmlssnapshotCollector(t *testing.T) {
 		gpfs_snapshot_status_info{fileset="PAS1736",fs="ess",id="16337",snapshot="20201115_PAS1736",status="Valid"} 1
 		gpfs_snapshot_status_info{fileset="",fs="ess",id="27107",snapshot="20210120",status="Valid"} 1
 	`
-	collector := NewMmlssnapshotCollector(log.NewNopLogger())
+	logger := slog.New(slog.NewTextHandler(io.Discard, nil))
+	collector := NewMmlssnapshotCollector(logger)
 	gatherers := setupGatherer(collector)
 	if val, err := testutil.GatherAndCount(gatherers); err != nil {
 		t.Errorf("Unexpected error: %v", err)
@@ -202,7 +207,8 @@ func TestMmlssnapshotCollectorData(t *testing.T) {
 		gpfs_snapshot_status_info{fileset="PAS1736",fs="ess",id="16337",snapshot="20201115_PAS1736",status="Valid"} 1
 		gpfs_snapshot_status_info{fileset="",fs="ess",id="27107",snapshot="20210120",status="Valid"} 1
 	`
-	collector := NewMmlssnapshotCollector(log.NewNopLogger())
+	logger := slog.New(slog.NewTextHandler(io.Discard, nil))
+	collector := NewMmlssnapshotCollector(logger)
 	gatherers := setupGatherer(collector)
 	if val, err := testutil.GatherAndCount(gatherers); err != nil {
 		t.Errorf("Unexpected error: %v", err)
@@ -240,7 +246,8 @@ mmlsfs::0:1:::ess:defaultMountPoint:%2Ffs%ess::
 		gpfs_snapshot_status_info{fileset="PAS1736",fs="ess",id="16337",snapshot="20201115_PAS1736",status="Valid"} 1
 		gpfs_snapshot_status_info{fileset="",fs="ess",id="27107",snapshot="20210120",status="Valid"} 1
 	`
-	collector := NewMmlssnapshotCollector(log.NewNopLogger())
+	logger := slog.New(slog.NewTextHandler(io.Discard, nil))
+	collector := NewMmlssnapshotCollector(logger)
 	gatherers := setupGatherer(collector)
 	if val, err := testutil.GatherAndCount(gatherers); err != nil {
 		t.Errorf("Unexpected error: %v", err)
@@ -268,7 +275,8 @@ func TestMmlssnapshotCollectorError(t *testing.T) {
 		# TYPE gpfs_exporter_collect_error gauge
 		gpfs_exporter_collect_error{collector="mmlssnapshot-ess"} 1
 	`
-	collector := NewMmlssnapshotCollector(log.NewNopLogger())
+	logger := slog.New(slog.NewTextHandler(io.Discard, nil))
+	collector := NewMmlssnapshotCollector(logger)
 	gatherers := setupGatherer(collector)
 	if val, err := testutil.GatherAndCount(gatherers); err != nil {
 		t.Errorf("Unexpected error: %v", err)
@@ -294,7 +302,8 @@ func TestMmlssnapshotCollectorTimeout(t *testing.T) {
 		# TYPE gpfs_exporter_collect_timeout gauge
 		gpfs_exporter_collect_timeout{collector="mmlssnapshot-ess"} 1
 	`
-	collector := NewMmlssnapshotCollector(log.NewNopLogger())
+	logger := slog.New(slog.NewTextHandler(io.Discard, nil))
+	collector := NewMmlssnapshotCollector(logger)
 	gatherers := setupGatherer(collector)
 	if val, err := testutil.GatherAndCount(gatherers); err != nil {
 		t.Errorf("Unexpected error: %v", err)
@@ -320,7 +329,8 @@ func TestMmlssnapshotCollectorMmlsfsError(t *testing.T) {
 		# TYPE gpfs_exporter_collect_error gauge
 		gpfs_exporter_collect_error{collector="mmlssnapshot-mmlsfs"} 1
 	`
-	collector := NewMmlssnapshotCollector(log.NewNopLogger())
+	logger := slog.New(slog.NewTextHandler(io.Discard, nil))
+	collector := NewMmlssnapshotCollector(logger)
 	gatherers := setupGatherer(collector)
 	if val, err := testutil.GatherAndCount(gatherers); err != nil {
 		t.Errorf("Unexpected error: %v", err)
@@ -346,7 +356,8 @@ func TestMmlssnapshotCollectorMmlsfsTimeout(t *testing.T) {
 		# TYPE gpfs_exporter_collect_timeout gauge
 		gpfs_exporter_collect_timeout{collector="mmlssnapshot-mmlsfs"} 1
 	`
-	collector := NewMmlssnapshotCollector(log.NewNopLogger())
+	logger := slog.New(slog.NewTextHandler(io.Discard, nil))
+	collector := NewMmlssnapshotCollector(logger)
 	gatherers := setupGatherer(collector)
 	if val, err := testutil.GatherAndCount(gatherers); err != nil {
 		t.Errorf("Unexpected error: %v", err)

@@ -86,7 +86,7 @@ func main() {
 	})
 	server := &http.Server{}
 	if err := web.ListenAndServe(server, toolkitFlags, logger); err != nil {
-		logger.Error("err", err)
+		logger.Error("Service failed", slog.Any("err", err))
 		os.Exit(1)
 	}
 }

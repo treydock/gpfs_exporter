@@ -16,6 +16,8 @@ package collectors
 import (
 	"context"
 	"fmt"
+	"io"
+	"log/slog"
 	"strings"
 	"testing"
 
@@ -37,7 +39,8 @@ mmdiag:config:0:1:::parallelMetadataWrite:0::
 func TestParseMmdiagConfig(t *testing.T) {
 	var metric ConfigMetric
 	configs = []string{"pagepool", "opensslLibName"}
-	parse_mmdiag_config(configStdout, &metric, log.NewNopLogger())
+	logger := slog.New(slog.NewTextHandler(io.Discard, nil))
+	parse_mmdiag_config(configStdout, &metric, logger)
 	if val := metric.PagePool; val != 4294967296 {
 		t.Errorf("Unexpected page pool value %v", val)
 	}
@@ -55,7 +58,8 @@ func TestConfigCollector(t *testing.T) {
 		# TYPE gpfs_config_page_pool_bytes gauge
 		gpfs_config_page_pool_bytes 4294967296
 	`
-	collector := NewConfigCollector(log.NewNopLogger())
+	logger := slog.New(slog.NewTextHandler(io.Discard, nil))
+	collector := NewConfigCollector(logger)
 	gatherers := setupGatherer(collector)
 	if val, err := testutil.GatherAndCount(gatherers); err != nil {
 		t.Errorf("Unexpected error: %v", err)
@@ -79,7 +83,8 @@ func TestConfigCollectorError(t *testing.T) {
 		# TYPE gpfs_exporter_collect_error gauge
 		gpfs_exporter_collect_error{collector="config"} 1
 	`
-	collector := NewConfigCollector(log.NewNopLogger())
+	logger := slog.New(slog.NewTextHandler(io.Discard, nil))
+	collector := NewConfigCollector(logger)
 	gatherers := setupGatherer(collector)
 	if val, err := testutil.GatherAndCount(gatherers); err != nil {
 		t.Errorf("Unexpected error: %v", err)
@@ -103,7 +108,8 @@ func TestConfigCollectorTimeout(t *testing.T) {
 		# TYPE gpfs_exporter_collect_timeout gauge
 		gpfs_exporter_collect_timeout{collector="config"} 1
 	`
-	collector := NewConfigCollector(log.NewNopLogger())
+	logger := slog.New(slog.NewTextHandler(io.Discard, nil))
+	collector := NewConfigCollector(logger)
 	gatherers := setupGatherer(collector)
 	if val, err := testutil.GatherAndCount(gatherers); err != nil {
 		t.Errorf("Unexpected error: %v", err)

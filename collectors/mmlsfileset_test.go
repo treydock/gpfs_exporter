@@ -16,6 +16,8 @@ package collectors
 import (
 	"context"
 	"fmt"
+	"io"
+	"log/slog"
 	"os/exec"
 	"strings"
 	"testing"
@@ -96,7 +98,8 @@ func TestMmlsfilesetTimeout(t *testing.T) {
 }
 
 func TestParseMmlsfileset(t *testing.T) {
-	metrics, err := parse_mmlsfileset(mmlsfilesetStdout, log.NewNopLogger())
+	logger := slog.New(slog.NewTextHandler(io.Discard, nil))
+	metrics, err := parse_mmlsfileset(mmlsfilesetStdout, logger)
 	if err != nil {
 		t.Errorf("Unexpected error: %s", err.Error())
 		return
@@ -123,12 +126,13 @@ func TestParseMmlsfileset(t *testing.T) {
 }
 
 func TestParseMmlsfilesetErrors(t *testing.T) {
-	_, err := parse_mmlsfileset(mmlsfilesetStdoutBadTime, log.NewNopLogger())
+	logger := slog.New(slog.NewTextHandler(io.Discard, nil))
+	_, err := parse_mmlsfileset(mmlsfilesetStdoutBadTime, logger)
 	if err == nil {
 		t.Errorf("Expected error")
 		return
 	}
-	_, err = parse_mmlsfileset(mmlsfilesetStdoutBadValue, log.NewNopLogger())
+	_, err = parse_mmlsfileset(mmlsfilesetStdoutBadValue, logger)
 	if err == nil {
 		t.Errorf("Expected error")
 		return
@@ -176,7 +180,8 @@ func TestMmlsfilesetCollector(t *testing.T) {
 		gpfs_fileset_status_info{fileset="ibtest",fs="project",status="Linked"} 1
 		gpfs_fileset_status_info{fileset="root",fs="project",status="Linked"} 1
 	`
-	collector := NewMmlsfilesetCollector(log.NewNopLogger())
+	logger := slog.New(slog.NewTextHandler(io.Discard, nil))
+	collector := NewMmlsfilesetCollector(logger)
 	gatherers := setupGatherer(collector)
 	if val, err := testutil.GatherAndCount(gatherers); err != nil {
 		t.Errorf("Unexpected error: %v", err)
@@ -236,7 +241,8 @@ mmlsfs::0:1:::project:defaultMountPoint:%2Ffs%project::
 		gpfs_fileset_status_info{fileset="ibtest",fs="project",status="Linked"} 1
 		gpfs_fileset_status_info{fileset="root",fs="project",status="Linked"} 1
 	`
-	collector := NewMmlsfilesetCollector(log.NewNopLogger())
+	logger := slog.New(slog.NewTextHandler(io.Discard, nil))
+	collector := NewMmlsfilesetCollector(logger)
 	gatherers := setupGatherer(collector)
 	if val, err := testutil.GatherAndCount(gatherers); err != nil {
 		t.Errorf("Unexpected error: %v", err)
@@ -264,7 +270,8 @@ func TestMmlsfilesetCollectorError(t *testing.T) {
 		# TYPE gpfs_exporter_collect_error gauge
 		gpfs_exporter_collect_error{collector="mmlsfileset-project"} 1
 	`
-	collector := NewMmlsfilesetCollector(log.NewNopLogger())
+	logger := slog.New(slog.NewTextHandler(io.Discard, nil))
+	collector := NewMmlsfilesetCollector(logger)
 	gatherers := setupGatherer(collector)
 	if val, err := testutil.GatherAndCount(gatherers); err != nil {
 		t.Errorf("Unexpected error: %v", err)
@@ -290,7 +297,8 @@ func TestMmlsfilesetCollectorTimeout(t *testing.T) {
 		# TYPE gpfs_exporter_collect_timeout gauge
 		gpfs_exporter_collect_timeout{collector="mmlsfileset-project"} 1
 	`
-	collector := NewMmlsfilesetCollector(log.NewNopLogger())
+	logger := slog.New(slog.NewTextHandler(io.Discard, nil))
+	collector := NewMmlsfilesetCollector(logger)
 	gatherers := setupGatherer(collector)
 	if val, err := testutil.GatherAndCount(gatherers); err != nil {
 		t.Errorf("Unexpected error: %v", err)
@@ -316,7 +324,8 @@ func TestMmlsfilesetCollectorMmlsfsError(t *testing.T) {
 		# TYPE gpfs_exporter_collect_error gauge
 		gpfs_exporter_collect_error{collector="mmlsfileset-mmlsfs"} 1
 	`
-	collector := NewMmlsfilesetCollector(log.NewNopLogger())
+	logger := slog.New(slog.NewTextHandler(io.Discard, nil))
+	collector := NewMmlsfilesetCollector(logger)
 	gatherers := setupGatherer(collector)
 	if val, err := testutil.GatherAndCount(gatherers); err != nil {
 		t.Errorf("Unexpected error: %v", err)
@@ -342,7 +351,8 @@ func TestMmlsfilesetCollectorMmlsfsTimeout(t *testing.T) {
 		# TYPE gpfs_exporter_collect_timeout gauge
 		gpfs_exporter_collect_timeout{collector="mmlsfileset-mmlsfs"} 1
 	`
-	collector := NewMmlsfilesetCollector(log.NewNopLogger())
+	logger := slog.New(slog.NewTextHandler(io.Discard, nil))
+	collector := NewMmlsfilesetCollector(logger)
 	gatherers := setupGatherer(collector)
 	if val, err := testutil.GatherAndCount(gatherers); err != nil {
 		t.Errorf("Unexpected error: %v", err)
