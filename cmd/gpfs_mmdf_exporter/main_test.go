@@ -23,7 +23,6 @@ import (
 	"testing"
 
 	"github.com/alecthomas/kingpin/v2"
-	"github.com/prometheus/common/model"
 	"github.com/treydock/gpfs_exporter/collectors"
 )
 
@@ -107,7 +106,6 @@ gpfs_exporter_collect_timeout{collector="mmdf-project"} 1`
 )
 
 func TestMain(m *testing.M) {
-	model.SetNameValidationScheme(model.LegacyValidation)
 	tmpDir, err := os.MkdirTemp(os.TempDir(), "output")
 	if err != nil {
 		os.Exit(1)

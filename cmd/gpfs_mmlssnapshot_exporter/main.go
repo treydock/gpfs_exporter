@@ -25,6 +25,7 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 	dto "github.com/prometheus/client_model/go"
 	"github.com/prometheus/common/expfmt"
+	"github.com/prometheus/common/model"
 	"github.com/prometheus/common/promslog"
 	"github.com/prometheus/common/promslog/flag"
 	"github.com/prometheus/common/version"
@@ -101,7 +102,7 @@ func collect(logger *slog.Logger) error {
 			logger.Error("Error opening metrics file", "err", err)
 			goto failure
 		}
-		parser := expfmt.TextParser{}
+		parser := expfmt.NewTextParser(model.LegacyValidation)
 		prevMfs, err := parser.TextToMetricFamilies(file)
 		file.Close()
 		if err != nil {
