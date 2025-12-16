@@ -23,6 +23,8 @@ import (
 
 	"github.com/alecthomas/kingpin/v2"
 	"github.com/prometheus/client_golang/prometheus/testutil"
+	"github.com/prometheus/common/expfmt"
+	"github.com/prometheus/common/model"
 )
 
 var (
@@ -66,7 +68,12 @@ func TestConfigCollector(t *testing.T) {
 	} else if val != 4 {
 		t.Errorf("Unexpected collection count %d, expected 4", val)
 	}
-	if err := testutil.GatherAndCompare(gatherers, strings.NewReader(expected), "gpfs_config_page_pool_bytes"); err != nil {
+	parser := expfmt.NewTextParser(model.LegacyValidation)
+	expectedMFs, err := parser.TextToMetricFamilies(strings.NewReader(expected))
+	if err != nil {
+		t.Fatalf("failed to parse expected metrics: %v", err)
+	}
+	if err := testutil.GatherAndCompare(gatherers, expectedMFs, "gpfs_config_page_pool_bytes"); err != nil {
 		t.Errorf("unexpected collecting result:\n%s", err)
 	}
 }
