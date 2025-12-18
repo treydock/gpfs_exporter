@@ -40,6 +40,34 @@ Name                    Id   BlkSize Data Meta Total Data in (KB)   Free Data in
 system                   0      8 MB  yes  yes   783308292096   foo ( 18%)   783308292096   205366984704 ( 26%)
 data                 65537      8 MB  yes   no  3064453922816   529111449600 ( 17%)              0              0 (  0%)
 `
+	mmlspoolOutputKB = `
+Storage pools in file system at '/fs/example':
+Name                    Id   BlkSize Data Meta Total Data in (KB)   Free Data in (KB)   Total Meta in (KB)    Free Meta in (KB)
+system                   0   1024 KB   no  yes              0              0 (  0%)           1000            500 ( 50%)
+`
+
+	mmlspoolOutputInvalid = `
+Storage pools in file system at '/fs/example':
+Name                    Id   BlkSize Data Meta Total Data in (KB)   Free Data in (KB)
+system                   0   8 MB yes yes
+`
+
+	mmlspoolOutputShortLine = `
+Storage pools in file system at '/fs/example':
+Name                    Id   BlkSize Data Meta Total Data in (KB)   Free Data in (KB)   Total Meta in (KB)    Free Meta in (KB)
+system
+`
+
+	mmlspoolOutputNoPools = `
+Storage pools in file system at '/fs/example':
+Name                    Id   BlkSize Data Meta Total Data in (KB)   Free Data in (KB)   Total Meta in (KB)    Free Meta in (KB)
+`
+
+	mmlspoolOutputExtraColumns = `
+Storage pools in file system at '/fs/example':
+Name                    Id   BlkSize Data Meta Total Data in (KB)   Free Data in (KB)   Total Meta in (KB)    Free Meta in (KB)    Extra
+system                   0      8 MB  yes  yes   783308292096   143079555072 ( 18%)   783308292096   205366984704 ( 26%)    extra
+`
 )
 
 func TestMmlspool(t *testing.T) {
@@ -93,7 +121,6 @@ func TestMmlspoolTimeout(t *testing.T) {
 func TestParseMmlspool(t *testing.T) {
 	w := log.NewSyncWriter(os.Stderr)
 	logger := log.NewLogfmtLogger(w)
-	//pools, err := parse_mmlspool("scratch", mmlspoolStdout, log.NewNopLogger())
 	pools, err := parse_mmlspool("scratch", mmlspoolStdout, logger)
 	if err != nil {
 		t.Errorf("Unexpected error: %s", err)
@@ -163,6 +190,68 @@ func TestParseMmlspool(t *testing.T) {
 	}
 	if pools != nil {
 		t.Errorf("Expected nil pools")
+	}
+
+	pools, err = parse_mmlspool("example", mmlspoolOutputKB, log.NewNopLogger())
+	if err != nil {
+		t.Errorf("Unexpected error: %s", err)
+	}
+	if len(pools) != 1 {
+		t.Errorf("Unexpected number of pools: %v", len(pools))
+	}
+	pool := pools[0]
+	if pool.PoolName != "system" {
+		t.Errorf("Unexpected value for %d PoolName, got %v", 0, pool.PoolName)
+	}
+	if pool.Meta != true {
+		t.Errorf("Unexpected value for %d Meta, got %v", 0, pool.Meta)
+	}
+	if pool.MetaTotal != 1000*1024 {
+		t.Errorf("Unexpected value for %d MetaTotal, got %v", 0, pool.MetaTotal)
+	}
+	if pool.MetaFree != 500*1024 {
+		t.Errorf("Unexpected value for %d MetaFree, got %v", 0, pool.MetaFree)
+	}
+	if pool.MetaFreePercent != 50 {
+		t.Errorf("Unexpected value for %d MetaFreePercent, got %v", 0, pool.MetaFreePercent)
+	}
+
+	pools, err = parse_mmlspool("example", mmlspoolOutputInvalid, log.NewNopLogger())
+	if err == nil {
+		t.Errorf("Expected an error")
+	}
+	if pools != nil {
+		t.Errorf("Expected nil pools")
+	}
+
+	// Test short line (len(rawItems) < 2)
+	pools, err = parse_mmlspool("example", mmlspoolOutputShortLine, log.NewNopLogger())
+	if err == nil {
+		t.Errorf("Expected an error for short line")
+	}
+	if pools != nil {
+		t.Errorf("Expected nil pools for short line")
+	}
+
+	// Test header parsed but no pools found
+	pools, err = parse_mmlspool("example", mmlspoolOutputNoPools, log.NewNopLogger())
+	if err == nil {
+		t.Errorf("Expected error for no pools after header")
+	}
+	if err != nil && err.Error() != "no valid pool data found" {
+		t.Errorf("Expected 'no valid pool data found' error, got: %v", err)
+	}
+	if pools != nil {
+		t.Errorf("Expected nil pools for no pools after header")
+	}
+
+	// Test extra columns (i >= len(headers))
+	pools, err = parse_mmlspool("example", mmlspoolOutputExtraColumns, log.NewNopLogger())
+	if err != nil {
+		t.Errorf("Unexpected error for extra columns: %s", err)
+	}
+	if len(pools) != 1 {
+		t.Errorf("Unexpected number of pools for extra columns: %v", len(pools))
 	}
 }
 
@@ -275,6 +364,32 @@ func TestMmlspoolCollectorError(t *testing.T) {
 	poolFilesystems = &filesystems
 	MmlspoolExec = func(fs string, ctx context.Context) (string, error) {
 		return "", fmt.Errorf("Error")
+	}
+	expected := `
+		# HELP gpfs_exporter_collect_error Indicates if error has occurred during collection
+		# TYPE gpfs_exporter_collect_error gauge
+		gpfs_exporter_collect_error{collector="mmlspool-scratch"} 1
+	`
+	collector := NewMmlspoolCollector(log.NewNopLogger())
+	gatherers := setupGatherer(collector)
+	if val, err := testutil.GatherAndCount(gatherers); err != nil {
+		t.Errorf("Unexpected error: %v", err)
+	} else if val != 4 {
+		t.Errorf("Unexpected collection count %d, expected 4", val)
+	}
+	if err := testutil.GatherAndCompare(gatherers, strings.NewReader(expected), "gpfs_exporter_collect_error"); err != nil {
+		t.Errorf("unexpected collecting result:\n%s", err)
+	}
+}
+
+func TestMmlspoolCollectorParseError(t *testing.T) {
+	if _, err := kingpin.CommandLine.Parse([]string{}); err != nil {
+		t.Fatal(err)
+	}
+	filesystems := "scratch"
+	poolFilesystems = &filesystems
+	MmlspoolExec = func(fs string, ctx context.Context) (string, error) {
+		return mmlspoolError, nil
 	}
 	expected := `
 		# HELP gpfs_exporter_collect_error Indicates if error has occurred during collection
