@@ -1,3 +1,7 @@
+## 3.2.1 / 2026-02-06
+
+* fix: mmlspool parser in 5.x version and 1mb block size will cause error (#77)
+
 ## 3.2.0 / 2025-08-22
 
 * Add mmlsdisk collector (#74)
