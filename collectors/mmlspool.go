@@ -177,27 +177,51 @@ func parse_mmlspool(fs string, out string, logger log.Logger) ([]PoolMetric, err
 	pools := []PoolMetric{}
 	headers := []string{}
 	lines := strings.Split(out, "\n")
+	headerParsed := false
 	for _, l := range lines {
+		// Header parsing must use the original output line
+		rawItems := strings.Fields(l)
+		if len(rawItems) == 0 {
+			continue
+		}
+		if rawItems[0] == "Name" {
+			headers = parse_mmlspool_headers(rawItems)
+			headerParsed = true
+			level.Debug(logger).Log(
+				"msg", "headers", "headers", fmt.Sprintf("%v", headers), "line", l)
+			continue
+		}
+		// Skip lines that don't look like data rows
+		if len(rawItems) < 2 {
+			continue
+		}
+		// If headers haven't been parsed yet, skip
+		if !headerParsed {
+			continue
+		}
+
 		// Replace beginning of percent ( N%)
 		line := strings.Replace(l, "(", "", -1)
 		// Replace percent N %) with just N
 		line = strings.Replace(line, "%)", "", -1)
 		// Replace '8 MB' with just '8'
 		line = strings.Replace(line, " MB", "", -1)
+		// Replace '1024 KB' with just '1024' - for GPFS 5.x compatibility
+		line = strings.Replace(line, " KB", "", -1)
 		items := strings.Fields(line)
-		if len(items) < 8 {
-			continue
-		}
-		if items[0] == "Name" {
-			headers = parse_mmlspool_headers(items)
-			level.Debug(logger).Log("msg", "headers", "headers", fmt.Sprintf("%v", headers), "line", line)
-			continue
-		}
 		level.Debug(logger).Log("msg", "items", "items", fmt.Sprintf("%v", items), "line", line)
+		// Check the item len is same as header
+		if len(items) < len(headers) {
+			return nil, fmt.Errorf("mmlspool output column mismatch")
+		}
+
 		pool := PoolMetric{
 			FS: fs,
 		}
 		for i, item := range items {
+			if i >= len(headers) {
+				continue
+			}
 			field := headers[i]
 			switch field {
 			case "Name":
@@ -245,6 +269,10 @@ func parse_mmlspool(fs string, out string, logger log.Logger) ([]PoolMetric, err
 			}
 		}
 		pools = append(pools, pool)
+	}
+	// If headers were parsed but no pools were found, return error
+	if headerParsed && len(pools) == 0 {
+		return nil, fmt.Errorf("no valid pool data found")
 	}
 	return pools, nil
 }
