@@ -10,42 +10,42 @@ executors:
   # also be updated.
   golang:
     docker:
-    - image: cimg/go:1.25
+      - image: cimg/go:1.25
 
 jobs:
   test:
     executor: golang
     steps:
-    - prometheus/setup_environment
-    - run: make
-    - run: make coverage
-    - codecov/upload:
-        file: coverage.txt
-    - prometheus/store_artifact:
-        file: gpfs_exporter
+      - prometheus/setup_environment
+      - run: make
+      - run: make coverage
+      - codecov/upload:
+          file: coverage.txt
+      - prometheus/store_artifact:
+          file: gpfs_exporter
 workflows:
   version: 2
   gpfs_exporter:
     jobs:
-    - test:
-        filters:
-          tags:
-            only: /.*/
-    - prometheus/build:
-        name: build
-        parallelism: 1
-        filters:
-          tags:
-            only: /.*/
-    - prometheus/publish_release:
-        context: org-context
-        docker_hub_organization: ''
-        quay_io_organization: ''
-        requires:
-        - test
-        - build
-        filters:
-          tags:
-            only: /^v([0-9]).*/
-          branches:
-            ignore: /.*/
+      - test:
+          filters:
+            tags:
+              only: /.*/
+      - prometheus/build:
+          name: build
+          parallelism: 1
+          filters:
+            tags:
+              only: /.*/
+      - prometheus/publish_release:
+          context: org-context
+          docker_hub_organization: ''
+          quay_io_organization: ''
+          requires:
+            - test
+            - build
+          filters:
+            tags:
+              only: /^v([0-9]).*/
+            branches:
+              ignore: /.*/

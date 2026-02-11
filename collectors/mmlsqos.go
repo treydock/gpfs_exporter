@@ -208,7 +208,7 @@ func parse_mmlsqos(out string, logger *slog.Logger) ([]QosMetric, error) {
 				} else if f.Kind() == reflect.Float64 {
 					if strings.Contains(values[i], "nan") {
 						f.SetFloat(0)
-					} else if val, err := strconv.ParseFloat(strings.Replace(values[i], ",", ".", -1), 64); err == nil {
+					} else if val, err := strconv.ParseFloat(strings.ReplaceAll(values[i], ",", "."), 64); err == nil {
 						if field == "Bs" {
 							val = val * 1024 * 1024
 						}

@@ -128,7 +128,7 @@ func collect(logger *slog.Logger) error {
 		return err
 	}
 	if len(failures) != 0 {
-		return fmt.Errorf("Error with collection")
+		return fmt.Errorf("error with collection")
 	}
 	return nil
 

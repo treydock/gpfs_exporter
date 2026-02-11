@@ -101,9 +101,10 @@ func parse_mmdiag_config(out string, configMetric *ConfigMetric, logger *slog.Lo
 		}
 		if items[2] == "HEADER" {
 			for i, header := range items {
-				if header == "name" {
+				switch header {
+				case "name":
 					keyIdx = i
-				} else if header == "value" {
+				case "value":
 					valueIdx = i
 				}
 			}

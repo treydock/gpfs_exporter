@@ -199,13 +199,13 @@ func parse_mmlspool(fs string, out string, logger *slog.Logger) ([]PoolMetric, e
 		}
 
 		// Replace beginning of percent ( N%)
-		line := strings.Replace(l, "(", "", -1)
+		line := strings.ReplaceAll(l, "(", "")
 		// Replace percent N %) with just N
-		line = strings.Replace(line, "%)", "", -1)
+		line = strings.ReplaceAll(line, "%)", "")
 		// Replace '8 MB' with just '8'
-		line = strings.Replace(line, " MB", "", -1)
+		line = strings.ReplaceAll(line, " MB", "")
 		// Replace '1024 KB' with just '1024' - for GPFS 5.x compatibility
-		line = strings.Replace(line, " KB", "", -1)
+		line = strings.ReplaceAll(line, " KB", "")
 		items := strings.Fields(line)
 		logger.Debug("items", "items", fmt.Sprintf("%v", items), "line", line)
 		// Check the item len is same as header
