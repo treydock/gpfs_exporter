@@ -16,12 +16,11 @@ package collectors
 import (
 	"bytes"
 	"context"
+	"log/slog"
 	"strings"
 	"time"
 
 	"github.com/alecthomas/kingpin/v2"
-	"github.com/go-kit/log"
-	"github.com/go-kit/log/level"
 	"github.com/prometheus/client_golang/prometheus"
 )
 
@@ -37,14 +36,14 @@ type MmgetstateMetrics struct {
 
 type MmgetstateCollector struct {
 	state  *prometheus.Desc
-	logger log.Logger
+	logger *slog.Logger
 }
 
 func init() {
 	registerCollector("mmgetstate", true, NewMmgetstateCollector)
 }
 
-func NewMmgetstateCollector(logger log.Logger) Collector {
+func NewMmgetstateCollector(logger *slog.Logger) Collector {
 	return &MmgetstateCollector{
 		state: prometheus.NewDesc(prometheus.BuildFQName(namespace, "", "state"),
 			"GPFS state", []string{"state"}, nil),
@@ -57,16 +56,16 @@ func (c *MmgetstateCollector) Describe(ch chan<- *prometheus.Desc) {
 }
 
 func (c *MmgetstateCollector) Collect(ch chan<- prometheus.Metric) {
-	level.Debug(c.logger).Log("msg", "Collecting mmgetstate metrics")
+	c.logger.Debug("Collecting mmgetstate metrics")
 	collectTime := time.Now()
 	timeout := 0
 	errorMetric := 0
 	metric, err := c.collect()
 	if err == context.DeadlineExceeded {
-		level.Error(c.logger).Log("msg", "Timeout executing mmgetstate")
+		c.logger.Error("Timeout executing mmgetstate")
 		timeout = 1
 	} else if err != nil {
-		level.Error(c.logger).Log("msg", err)
+		c.logger.Error("Error collecting metrics", "err", err)
 		errorMetric = 1
 	}
 	for _, state := range mmgetstateStates {

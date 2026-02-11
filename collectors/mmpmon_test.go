@@ -22,8 +22,8 @@ import (
 	"time"
 
 	"github.com/alecthomas/kingpin/v2"
-	"github.com/go-kit/log"
 	"github.com/prometheus/client_golang/prometheus/testutil"
+	"github.com/prometheus/common/promslog"
 )
 
 var (
@@ -82,7 +82,7 @@ func TestMmpmonTimeout(t *testing.T) {
 }
 
 func TestParsePerf(t *testing.T) {
-	perfs := mmpmon_parse(mmpmonStdout, log.NewNopLogger())
+	perfs := mmpmon_parse(mmpmonStdout, promslog.NewNopLogger())
 	if len(perfs) != 2 {
 		t.Errorf("Expected 2 perfs returned, got %d", len(perfs))
 		return
@@ -139,7 +139,7 @@ func TestMmpmonCollector(t *testing.T) {
 		gpfs_perf_write_bytes_total{fs="project"} 0
 		gpfs_perf_write_bytes_total{fs="scratch"} 74839282351
 	`
-	collector := NewMmpmonCollector(log.NewNopLogger())
+	collector := NewMmpmonCollector(promslog.NewNopLogger())
 	gatherers := setupGatherer(collector)
 	if val, err := testutil.GatherAndCount(gatherers); err != nil {
 		t.Errorf("Unexpected error: %v", err)
@@ -165,7 +165,7 @@ func TestMMpmonCollectorError(t *testing.T) {
 		# TYPE gpfs_exporter_collect_error gauge
 		gpfs_exporter_collect_error{collector="mmpmon"} 1
 	`
-	collector := NewMmpmonCollector(log.NewNopLogger())
+	collector := NewMmpmonCollector(promslog.NewNopLogger())
 	gatherers := setupGatherer(collector)
 	if val, err := testutil.GatherAndCount(gatherers); err != nil {
 		t.Errorf("Unexpected error: %v", err)
@@ -189,7 +189,7 @@ func TestMMpmonCollectorTimeout(t *testing.T) {
 		# TYPE gpfs_exporter_collect_timeout gauge
 		gpfs_exporter_collect_timeout{collector="mmpmon"} 1
 	`
-	collector := NewMmpmonCollector(log.NewNopLogger())
+	collector := NewMmpmonCollector(promslog.NewNopLogger())
 	gatherers := setupGatherer(collector)
 	if val, err := testutil.GatherAndCount(gatherers); err != nil {
 		t.Errorf("Unexpected error: %v", err)

@@ -17,6 +17,7 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"log/slog"
 	"net/url"
 	"reflect"
 	"strconv"
@@ -25,8 +26,6 @@ import (
 	"time"
 
 	"github.com/alecthomas/kingpin/v2"
-	"github.com/go-kit/log"
-	"github.com/go-kit/log/level"
 	"github.com/prometheus/client_golang/prometheus"
 )
 
@@ -64,14 +63,14 @@ type MmlsfilesetCollector struct {
 	MaxInodes   *prometheus.Desc
 	AllocInodes *prometheus.Desc
 	FreeInodes  *prometheus.Desc
-	logger      log.Logger
+	logger      *slog.Logger
 }
 
 func init() {
 	registerCollector("mmlsfileset", false, NewMmlsfilesetCollector)
 }
 
-func NewMmlsfilesetCollector(logger log.Logger) Collector {
+func NewMmlsfilesetCollector(logger *slog.Logger) Collector {
 	labels := []string{"fs", "fileset"}
 	return &MmlsfilesetCollector{
 		Status: prometheus.NewDesc(prometheus.BuildFQName(namespace, "fileset", "status_info"),
@@ -110,10 +109,10 @@ func (c *MmlsfilesetCollector) Collect(ch chan<- prometheus.Metric) {
 		mmlfsfs_filesystems, err := mmlfsfsFilesystems(ctx, c.logger)
 		if err == context.DeadlineExceeded {
 			mmlsfsTimeout = 1
-			level.Error(c.logger).Log("msg", "Timeout executing mmlsfs")
+			c.logger.Error("Timeout executing mmlsfs")
 		} else if err != nil {
 			mmlsfsError = 1
-			level.Error(c.logger).Log("msg", err)
+			c.logger.Error("Error collecting metrics", "err", err)
 		}
 		ch <- prometheus.MustNewConstMetric(collecTimeout, prometheus.GaugeValue, mmlsfsTimeout, "mmlsfileset-mmlsfs")
 		ch <- prometheus.MustNewConstMetric(collectError, prometheus.GaugeValue, mmlsfsError, "mmlsfileset-mmlsfs")
@@ -122,7 +121,7 @@ func (c *MmlsfilesetCollector) Collect(ch chan<- prometheus.Metric) {
 		filesystems = strings.Split(*filesetFilesystems, ",")
 	}
 	for _, fs := range filesystems {
-		level.Debug(c.logger).Log("msg", "Collecting mmlsfileset metrics", "fs", fs)
+		c.logger.Debug("Collecting mmlsfileset metrics", "fs", fs)
 		wg.Add(1)
 		collectTime := time.Now()
 		go func(fs string) {
@@ -132,10 +131,10 @@ func (c *MmlsfilesetCollector) Collect(ch chan<- prometheus.Metric) {
 			errorMetric := 0
 			metrics, err := c.mmlsfilesetCollect(fs)
 			if err == context.DeadlineExceeded {
-				level.Error(c.logger).Log("msg", fmt.Sprintf("Timeout executing %s", label))
+				c.logger.Error(fmt.Sprintf("Timeout executing %s", label))
 				timeout = 1
 			} else if err != nil {
-				level.Error(c.logger).Log("msg", err, "fs", fs)
+				c.logger.Error("Error collecting metrics", "err", err, "fs", fs)
 				errorMetric = 1
 			}
 			ch <- prometheus.MustNewConstMetric(collectError, prometheus.GaugeValue, float64(errorMetric), label)
@@ -181,7 +180,7 @@ func mmlsfileset(fs string, ctx context.Context) (string, error) {
 	return out.String(), nil
 }
 
-func parse_mmlsfileset(out string, logger log.Logger) ([]FilesetMetric, error) {
+func parse_mmlsfileset(out string, logger *slog.Logger) ([]FilesetMetric, error) {
 	var metrics []FilesetMetric
 	headers := []string{}
 	lines := strings.Split(out, "\n")
@@ -211,7 +210,7 @@ func parse_mmlsfileset(out string, logger log.Logger) ([]FilesetMetric, error) {
 					if h == "path" {
 						pathParsed, err := url.QueryUnescape(values[i])
 						if err != nil {
-							level.Error(logger).Log("msg", "Unable to unescape path", "value", values[i])
+							logger.Error("Unable to unescape path", "value", values[i])
 							return nil, err
 						}
 						value = pathParsed
@@ -222,19 +221,19 @@ func parse_mmlsfileset(out string, logger log.Logger) ([]FilesetMetric, error) {
 					if h == "created" {
 						createdStr, err := url.QueryUnescape(values[i])
 						if err != nil {
-							level.Error(logger).Log("msg", "Unable to unescape created time", "value", values[i])
+							logger.Error("Unable to unescape created time", "value", values[i])
 							return nil, err
 						}
 						createdTime, err := time.ParseInLocation(time.ANSIC, createdStr, NowLocation())
 						if err != nil {
-							level.Error(logger).Log("msg", "Unable to parse time", "value", createdStr)
+							logger.Error("Unable to parse time", "value", createdStr)
 							return nil, err
 						}
 						value = float64(createdTime.Unix())
 					} else if val, err := strconv.ParseFloat(values[i], 64); err == nil {
 						value = val
 					} else {
-						level.Error(logger).Log("msg", fmt.Sprintf("Error parsing %s value %s: %s", h, values[i], err.Error()))
+						logger.Error(fmt.Sprintf("Error parsing %s value %s: %s", h, values[i], err.Error()))
 						return nil, err
 					}
 					f.SetFloat(value)

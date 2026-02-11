@@ -16,13 +16,12 @@ package collectors
 import (
 	"context"
 	"fmt"
-	"os"
 	"strings"
 	"testing"
 
 	"github.com/alecthomas/kingpin/v2"
-	"github.com/go-kit/log"
 	"github.com/prometheus/client_golang/prometheus/testutil"
+	"github.com/prometheus/common/promslog"
 )
 
 var (
@@ -66,8 +65,9 @@ func TestParseMmdiagWaiters(t *testing.T) {
 	if _, err := kingpin.CommandLine.Parse([]string{}); err != nil {
 		t.Fatal(err)
 	}
-	w := log.NewSyncWriter(os.Stderr)
-	logger := log.NewLogfmtLogger(w)
+	level := promslog.NewLevel()
+	level.Set("debug")
+	logger := promslog.New(&promslog.Config{Level: level})
 	waiters := parse_mmdiag_waiters(waitersStdout, logger)
 	if val := len(waiters); val != 26 {
 		t.Errorf("Unexpected Waiters len got %v", val)
@@ -108,8 +108,9 @@ func TestWaiterCollector(t *testing.T) {
 		gpfs_waiter_info_count{waiter="NSDThread"} 3
 		gpfs_waiter_info_count{waiter="RebuildWorkThread"} 22
 	`
-	w := log.NewSyncWriter(os.Stderr)
-	logger := log.NewLogfmtLogger(w)
+	level := promslog.NewLevel()
+	level.Set("debug")
+	logger := promslog.New(&promslog.Config{Level: level})
 	collector1 := NewWaiterCollector(logger)
 	collector2 := NewWaiterCollector(logger)
 	gatherers1 := setupGatherer(collector1)
@@ -137,7 +138,7 @@ func TestWaiterCollectorError(t *testing.T) {
 		# TYPE gpfs_exporter_collect_error gauge
 		gpfs_exporter_collect_error{collector="waiter"} 1
 	`
-	collector := NewWaiterCollector(log.NewNopLogger())
+	collector := NewWaiterCollector(promslog.NewNopLogger())
 	gatherers := setupGatherer(collector)
 	if val, err := testutil.GatherAndCount(gatherers); err != nil {
 		t.Errorf("Unexpected error: %v", err)
@@ -161,7 +162,7 @@ func TestWaiterCollectorTimeout(t *testing.T) {
 		# TYPE gpfs_exporter_collect_timeout gauge
 		gpfs_exporter_collect_timeout{collector="waiter"} 1
 	`
-	collector := NewWaiterCollector(log.NewNopLogger())
+	collector := NewWaiterCollector(promslog.NewNopLogger())
 	gatherers := setupGatherer(collector)
 	if val, err := testutil.GatherAndCount(gatherers); err != nil {
 		t.Errorf("Unexpected error: %v", err)

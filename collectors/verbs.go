@@ -16,12 +16,11 @@ package collectors
 import (
 	"bytes"
 	"context"
+	"log/slog"
 	"strings"
 	"time"
 
 	"github.com/alecthomas/kingpin/v2"
-	"github.com/go-kit/log"
-	"github.com/go-kit/log/level"
 	"github.com/prometheus/client_golang/prometheus"
 )
 
@@ -36,14 +35,14 @@ type VerbsMetrics struct {
 
 type VerbsCollector struct {
 	Status *prometheus.Desc
-	logger log.Logger
+	logger *slog.Logger
 }
 
 func init() {
 	registerCollector("verbs", false, NewVerbsCollector)
 }
 
-func NewVerbsCollector(logger log.Logger) Collector {
+func NewVerbsCollector(logger *slog.Logger) Collector {
 	return &VerbsCollector{
 		Status: prometheus.NewDesc(prometheus.BuildFQName(namespace, "verbs", "status"),
 			"GPFS verbs status, 1=started 0=not started", nil, nil),
@@ -56,16 +55,16 @@ func (c *VerbsCollector) Describe(ch chan<- *prometheus.Desc) {
 }
 
 func (c *VerbsCollector) Collect(ch chan<- prometheus.Metric) {
-	level.Debug(c.logger).Log("msg", "Collecting verbs metrics")
+	c.logger.Debug("Collecting verbs metrics")
 	collectTime := time.Now()
 	timeout := 0
 	errorMetric := 0
 	metric, err := c.collect()
 	if err == context.DeadlineExceeded {
 		timeout = 1
-		level.Error(c.logger).Log("msg", "Timeout executing verbs check")
+		c.logger.Error("Timeout executing verbs check")
 	} else if err != nil {
-		level.Error(c.logger).Log("msg", err)
+		c.logger.Error("Error collecting metrics", "err", err)
 		errorMetric = 1
 	}
 	if metric.Status == "started" {

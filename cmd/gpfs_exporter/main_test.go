@@ -24,7 +24,7 @@ import (
 	"time"
 
 	"github.com/alecthomas/kingpin/v2"
-	"github.com/go-kit/log"
+	"github.com/prometheus/common/promslog"
 	"github.com/treydock/gpfs_exporter/collectors"
 )
 
@@ -58,7 +58,7 @@ func TestMain(m *testing.M) {
 	varTrue := true
 	disableExporterMetrics = &varTrue
 	go func() {
-		http.Handle("/metrics", metricsHandler(log.NewNopLogger()))
+		http.Handle("/metrics", metricsHandler(promslog.NewNopLogger()))
 		err := http.ListenAndServe(address, nil)
 		if err != nil {
 			os.Exit(1)

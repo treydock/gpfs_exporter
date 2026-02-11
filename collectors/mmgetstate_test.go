@@ -22,8 +22,8 @@ import (
 	"time"
 
 	"github.com/alecthomas/kingpin/v2"
-	"github.com/go-kit/log"
 	"github.com/prometheus/client_golang/prometheus/testutil"
+	"github.com/prometheus/common/promslog"
 )
 
 var (
@@ -34,7 +34,7 @@ mmgetstate::0:1:::ib-proj-nsd05.domain:11:active:4:7:1122::(undefined):
 )
 
 func TestNewGPFSCollector(t *testing.T) {
-	ret := NewGPFSCollector(log.NewNopLogger())
+	ret := NewGPFSCollector(promslog.NewNopLogger())
 	if len(ret.Collectors) != 4 {
 		t.Errorf("Unexpected number of collectors, expected 4, got %d", len(ret.Collectors))
 	}
@@ -110,7 +110,7 @@ func TestMmgetstateCollector(t *testing.T) {
 		gpfs_state{state="down"} 0
 		gpfs_state{state="unknown"} 0
 	`
-	collector := NewMmgetstateCollector(log.NewNopLogger())
+	collector := NewMmgetstateCollector(promslog.NewNopLogger())
 	gatherers := setupGatherer(collector)
 	if val, err := testutil.GatherAndCount(gatherers); err != nil {
 		t.Errorf("Unexpected error: %v", err)
@@ -134,7 +134,7 @@ func TestMMgetstateCollectorError(t *testing.T) {
 		# TYPE gpfs_exporter_collect_error gauge
 		gpfs_exporter_collect_error{collector="mmgetstate"} 1
 	`
-	collector := NewMmgetstateCollector(log.NewNopLogger())
+	collector := NewMmgetstateCollector(promslog.NewNopLogger())
 	gatherers := setupGatherer(collector)
 	if val, err := testutil.GatherAndCount(gatherers); err != nil {
 		t.Errorf("Unexpected error: %v", err)
@@ -158,7 +158,7 @@ func TestMMgetstateCollectorTimeout(t *testing.T) {
 		# TYPE gpfs_exporter_collect_timeout gauge
 		gpfs_exporter_collect_timeout{collector="mmgetstate"} 1
 	`
-	collector := NewMmgetstateCollector(log.NewNopLogger())
+	collector := NewMmgetstateCollector(promslog.NewNopLogger())
 	gatherers := setupGatherer(collector)
 	if val, err := testutil.GatherAndCount(gatherers); err != nil {
 		t.Errorf("Unexpected error: %v", err)
