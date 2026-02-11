@@ -1,3 +1,7 @@
+## 3.3.0 / 2026-02-11
+
+* Update Go to 1.25 and update module dependencies (#78)
+
 ## 3.2.1 / 2026-02-06
 
 * fix: mmlspool parser in 5.x version and 1mb block size will cause error (#77)
