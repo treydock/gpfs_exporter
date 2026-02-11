@@ -22,8 +22,8 @@ import (
 	"time"
 
 	"github.com/alecthomas/kingpin/v2"
-	"github.com/go-kit/log"
 	"github.com/prometheus/client_golang/prometheus/testutil"
+	"github.com/prometheus/common/promslog"
 )
 
 var (
@@ -38,7 +38,7 @@ func TestGetFQDN(t *testing.T) {
 	osHostname = func() (string, error) {
 		return "foo", nil
 	}
-	if val := getFQDN(log.NewNopLogger()); val != "foo" {
+	if val := getFQDN(promslog.NewNopLogger()); val != "foo" {
 		t.Errorf("Unexpected value, got %s", val)
 	}
 }
@@ -47,7 +47,7 @@ func TestGetFQDNError(t *testing.T) {
 	osHostname = func() (string, error) {
 		return "", fmt.Errorf("err")
 	}
-	if val := getFQDN(log.NewNopLogger()); val != "" {
+	if val := getFQDN(promslog.NewNopLogger()); val != "" {
 		t.Errorf("Unexpected value, got %s", val)
 	}
 }
@@ -106,7 +106,7 @@ func TestParseMmcesStateShow(t *testing.T) {
 	}
 	ignored := "^$"
 	mmcesIgnoredServices = &ignored
-	metrics := mmces_state_show_parse(mmcesStdout, log.NewNopLogger())
+	metrics := mmces_state_show_parse(mmcesStdout, promslog.NewNopLogger())
 	if len(metrics) != 8 {
 		t.Errorf("Expected 8 metrics returned, got %d", len(metrics))
 		return
@@ -125,7 +125,7 @@ func TestParseMmcesStateShowIgnore(t *testing.T) {
 	}
 	ignored := "^(BLOCK|OBJ)$"
 	mmcesIgnoredServices = &ignored
-	metrics := mmces_state_show_parse(mmcesStdout, log.NewNopLogger())
+	metrics := mmces_state_show_parse(mmcesStdout, promslog.NewNopLogger())
 	if len(metrics) != 6 {
 		t.Errorf("Expected 6 metrics returned, got %d", len(metrics))
 		return
@@ -217,7 +217,7 @@ func TestMMcesCollector(t *testing.T) {
 		gpfs_ces_state{service="SMB",state="SUSPENDED"} 0
 		gpfs_ces_state{service="SMB",state="UNKNOWN"} 1
 	`
-	collector := NewMmcesCollector(log.NewNopLogger())
+	collector := NewMmcesCollector(promslog.NewNopLogger())
 	gatherers := setupGatherer(collector)
 	if val, err := testutil.GatherAndCount(gatherers); err != nil {
 		t.Errorf("Unexpected error: %v", err)
@@ -312,7 +312,7 @@ func TestMMcesCollectorHostname(t *testing.T) {
 		gpfs_ces_state{service="SMB",state="SUSPENDED"} 0
 		gpfs_ces_state{service="SMB",state="UNKNOWN"} 1
 	`
-	collector := NewMmcesCollector(log.NewNopLogger())
+	collector := NewMmcesCollector(promslog.NewNopLogger())
 	gatherers := setupGatherer(collector)
 	if val, err := testutil.GatherAndCount(gatherers); err != nil {
 		t.Errorf("Unexpected error: %v", err)
@@ -336,7 +336,7 @@ func TestMMcesCollectorError(t *testing.T) {
 		# TYPE gpfs_exporter_collect_error gauge
 		gpfs_exporter_collect_error{collector="mmces"} 1
 	`
-	collector := NewMmcesCollector(log.NewNopLogger())
+	collector := NewMmcesCollector(promslog.NewNopLogger())
 	gatherers := setupGatherer(collector)
 	if val, err := testutil.GatherAndCount(gatherers); err != nil {
 		t.Errorf("Unexpected error: %v", err)
@@ -360,7 +360,7 @@ func TestMMcesCollectorTimeout(t *testing.T) {
 		# TYPE gpfs_exporter_collect_timeout gauge
 		gpfs_exporter_collect_timeout{collector="mmces"} 1
 	`
-	collector := NewMmcesCollector(log.NewNopLogger())
+	collector := NewMmcesCollector(promslog.NewNopLogger())
 	gatherers := setupGatherer(collector)
 	if val, err := testutil.GatherAndCount(gatherers); err != nil {
 		t.Errorf("Unexpected error: %v", err)

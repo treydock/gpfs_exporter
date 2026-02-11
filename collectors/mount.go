@@ -15,14 +15,13 @@ package collectors
 
 import (
 	"fmt"
+	"log/slog"
 	"strings"
 	"time"
 
 	"github.com/alecthomas/kingpin/v2"
 	linuxproc "github.com/c9s/goprocinfo/linux"
 	fstab "github.com/deniswernert/go-fstab"
-	"github.com/go-kit/log"
-	"github.com/go-kit/log/level"
 	"github.com/prometheus/client_golang/prometheus"
 )
 
@@ -35,14 +34,14 @@ var (
 
 type MountCollector struct {
 	fs_mount_status *prometheus.Desc
-	logger          log.Logger
+	logger          *slog.Logger
 }
 
 func init() {
 	registerCollector("mount", true, NewMountCollector)
 }
 
-func NewMountCollector(logger log.Logger) Collector {
+func NewMountCollector(logger *slog.Logger) Collector {
 	return &MountCollector{
 		fs_mount_status: prometheus.NewDesc(prometheus.BuildFQName(namespace, "mount", "status"),
 			"Status of GPFS filesystems, 1=mounted 0=not mounted", []string{"mount"}, nil),
@@ -55,10 +54,10 @@ func (c *MountCollector) Describe(ch chan<- *prometheus.Desc) {
 }
 
 func (c *MountCollector) Collect(ch chan<- prometheus.Metric) {
-	level.Debug(c.logger).Log("msg", "Collecting mount metrics")
+	c.logger.Debug("Collecting mount metrics")
 	err := c.collect(ch)
 	if err != nil {
-		level.Error(c.logger).Log("msg", err)
+		c.logger.Error("Error collecting metrics", "err", err)
 		ch <- prometheus.MustNewConstMetric(collectError, prometheus.GaugeValue, 1, "mount")
 	} else {
 		ch <- prometheus.MustNewConstMetric(collectError, prometheus.GaugeValue, 0, "mount")
@@ -94,14 +93,14 @@ func (c *MountCollector) collect(ch chan<- prometheus.Metric) error {
 		timeout = true
 		close(c1)
 		ch <- prometheus.MustNewConstMetric(collecTimeout, prometheus.GaugeValue, 1, "mount")
-		level.Error(c.logger).Log("msg", "Timeout collecting mount information")
+		c.logger.Error("Timeout collecting mount information")
 		return nil
 	}
 	close(c1)
 	ch <- prometheus.MustNewConstMetric(collecTimeout, prometheus.GaugeValue, 0, "mount")
 
 	if err != nil {
-		level.Error(c.logger).Log("msg", err)
+		c.logger.Error("Error collecting metrics", "err", err)
 		return err
 	}
 

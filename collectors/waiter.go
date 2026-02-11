@@ -16,6 +16,7 @@ package collectors
 import (
 	"context"
 	"fmt"
+	"log/slog"
 	"math"
 	"reflect"
 	"regexp"
@@ -24,8 +25,6 @@ import (
 	"time"
 
 	"github.com/alecthomas/kingpin/v2"
-	"github.com/go-kit/log"
-	"github.com/go-kit/log/level"
 	"github.com/prometheus/client_golang/prometheus"
 )
 
@@ -57,14 +56,14 @@ type Waiter struct {
 type WaiterCollector struct {
 	Waiter     prometheus.Histogram
 	WaiterInfo *prometheus.Desc
-	logger     log.Logger
+	logger     *slog.Logger
 }
 
 func init() {
 	registerCollector("waiter", false, NewWaiterCollector)
 }
 
-func NewWaiterCollector(logger log.Logger) Collector {
+func NewWaiterCollector(logger *slog.Logger) Collector {
 	return &WaiterCollector{
 		Waiter: prometheus.NewHistogram(prometheus.HistogramOpts{
 			Namespace: namespace,
@@ -85,16 +84,16 @@ func (c *WaiterCollector) Describe(ch chan<- *prometheus.Desc) {
 }
 
 func (c *WaiterCollector) Collect(ch chan<- prometheus.Metric) {
-	level.Debug(c.logger).Log("msg", "Collecting waiter metrics")
+	c.logger.Debug("Collecting waiter metrics")
 	collectTime := time.Now()
 	timeout := 0
 	errorMetric := 0
 	waiterMetric, err := c.collect()
 	if err == context.DeadlineExceeded {
-		level.Error(c.logger).Log("msg", "Timeout executing mmdiag")
+		c.logger.Error("Timeout executing mmdiag")
 		timeout = 1
 	} else if err != nil {
-		level.Error(c.logger).Log("msg", err)
+		c.logger.Error("Error collecting metrics", "err", err)
 		errorMetric = 1
 	}
 	for _, second := range waiterMetric.seconds {
@@ -130,7 +129,7 @@ func (c *WaiterCollector) collect() (WaiterMetric, error) {
 			continue
 		}
 		if *waiterLogReason {
-			level.Info(c.logger).Log("msg", "Waiter reason information", "waiter", waiter.Name, "reason", waiter.Reason, "seconds", waiter.Seconds)
+			c.logger.Info("Waiter reason information", "waiter", waiter.Name, "reason", waiter.Reason, "seconds", waiter.Seconds)
 		}
 		infoCounts[waiter.Name] += 1
 	}
@@ -139,7 +138,7 @@ func (c *WaiterCollector) collect() (WaiterMetric, error) {
 	return waiterMetric, nil
 }
 
-func parse_mmdiag_waiters(out string, logger log.Logger) []Waiter {
+func parse_mmdiag_waiters(out string, logger *slog.Logger) []Waiter {
 	waiters := []Waiter{}
 	lines := strings.Split(out, "\n")
 	var headers []string
@@ -174,14 +173,14 @@ func parse_mmdiag_waiters(out string, logger log.Logger) []Waiter {
 					if val, err := strconv.ParseFloat(values[i], 64); err == nil {
 						f.SetFloat(val)
 					} else {
-						level.Error(logger).Log("msg", fmt.Sprintf("Error parsing %s value %s: %s", h, values[i], err.Error()))
+						logger.Error(fmt.Sprintf("Error parsing %s value %s: %s", h, values[i], err.Error()))
 						f.SetFloat(math.NaN())
 					}
 				}
 			}
 		}
 		if excludePattern.MatchString(metric.Name) {
-			level.Debug(logger).Log("msg", "Skipping waiter due to ignored pattern", "name", metric.Name)
+			logger.Debug("Skipping waiter due to ignored pattern", "name", metric.Name)
 			continue
 		}
 		waiters = append(waiters, metric)

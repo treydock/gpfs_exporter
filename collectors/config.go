@@ -16,13 +16,12 @@ package collectors
 import (
 	"context"
 	"fmt"
+	"log/slog"
 	"strconv"
 	"strings"
 	"time"
 
 	"github.com/alecthomas/kingpin/v2"
-	"github.com/go-kit/log"
-	"github.com/go-kit/log/level"
 	"github.com/prometheus/client_golang/prometheus"
 )
 
@@ -37,14 +36,14 @@ type ConfigMetric struct {
 
 type ConfigCollector struct {
 	PagePool *prometheus.Desc
-	logger   log.Logger
+	logger   *slog.Logger
 }
 
 func init() {
 	registerCollector("config", true, NewConfigCollector)
 }
 
-func NewConfigCollector(logger log.Logger) Collector {
+func NewConfigCollector(logger *slog.Logger) Collector {
 	return &ConfigCollector{
 		PagePool: prometheus.NewDesc(prometheus.BuildFQName(namespace, "config", "page_pool_bytes"),
 			"GPFS configured page pool size", nil, nil),
@@ -57,16 +56,16 @@ func (c *ConfigCollector) Describe(ch chan<- *prometheus.Desc) {
 }
 
 func (c *ConfigCollector) Collect(ch chan<- prometheus.Metric) {
-	level.Debug(c.logger).Log("msg", "Collecting config metrics")
+	c.logger.Debug("Collecting config metrics")
 	collectTime := time.Now()
 	timeout := 0
 	errorMetric := 0
 	metrics, err := c.collect()
 	if err == context.DeadlineExceeded {
-		level.Error(c.logger).Log("msg", "Timeout executing 'mmdiag --config'")
+		c.logger.Error("Timeout executing 'mmdiag --config'")
 		timeout = 1
 	} else if err != nil {
-		level.Error(c.logger).Log("msg", err)
+		c.logger.Error("Error collecting metrics", "err", err)
 		errorMetric = 1
 	}
 
@@ -91,7 +90,7 @@ func (c *ConfigCollector) collect() (ConfigMetric, error) {
 	return configMetric, nil
 }
 
-func parse_mmdiag_config(out string, configMetric *ConfigMetric, logger log.Logger) {
+func parse_mmdiag_config(out string, configMetric *ConfigMetric, logger *slog.Logger) {
 	lines := strings.Split(out, "\n")
 	var keyIdx int
 	var valueIdx int
@@ -102,9 +101,10 @@ func parse_mmdiag_config(out string, configMetric *ConfigMetric, logger log.Logg
 		}
 		if items[2] == "HEADER" {
 			for i, header := range items {
-				if header == "name" {
+				switch header {
+				case "name":
 					keyIdx = i
-				} else if header == "value" {
+				case "value":
 					valueIdx = i
 				}
 			}
@@ -118,7 +118,7 @@ func parse_mmdiag_config(out string, configMetric *ConfigMetric, logger log.Logg
 		}
 		value, err := strconv.ParseFloat(items[valueIdx], 64)
 		if err != nil {
-			level.Error(logger).Log("msg", fmt.Sprintf("Unable to convert %s to float64", items[valueIdx]), "err", err)
+			logger.Error(fmt.Sprintf("Unable to convert %s to float64", items[valueIdx]), "err", err)
 			continue
 		}
 		switch items[keyIdx] {

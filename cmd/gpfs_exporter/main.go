@@ -15,16 +15,15 @@ package main
 
 import (
 	"fmt"
+	"log/slog"
 	"net/http"
 	"os"
 
 	"github.com/alecthomas/kingpin/v2"
-	"github.com/go-kit/log"
-	"github.com/go-kit/log/level"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
-	"github.com/prometheus/common/promlog"
-	"github.com/prometheus/common/promlog/flag"
+	"github.com/prometheus/common/promslog"
+	"github.com/prometheus/common/promslog/flag"
 	"github.com/prometheus/common/version"
 	"github.com/prometheus/exporter-toolkit/web"
 	"github.com/prometheus/exporter-toolkit/web/kingpinflag"
@@ -36,7 +35,7 @@ var (
 	disableExporterMetrics = kingpin.Flag("web.disable-exporter-metrics", "Exclude metrics about the exporter (promhttp_*, process_*, go_*)").Default("false").Bool()
 )
 
-func metricsHandler(logger log.Logger) http.HandlerFunc {
+func metricsHandler(logger *slog.Logger) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		registry := prometheus.NewRegistry()
 
@@ -44,7 +43,7 @@ func metricsHandler(logger log.Logger) http.HandlerFunc {
 		gpfsCollector.Lock()
 		defer gpfsCollector.Unlock()
 		for key, collector := range gpfsCollector.Collectors {
-			level.Debug(logger).Log("msg", fmt.Sprintf("Enabled collector %s", key))
+			logger.Debug(fmt.Sprintf("Enabled collector %s", key))
 			registry.MustRegister(collector)
 		}
 
@@ -62,16 +61,16 @@ func metricsHandler(logger log.Logger) http.HandlerFunc {
 func main() {
 	var toolkitFlags = kingpinflag.AddFlags(kingpin.CommandLine, listenAddr)
 
-	promlogConfig := &promlog.Config{}
-	flag.AddFlags(kingpin.CommandLine, promlogConfig)
+	promslogConfig := &promslog.Config{}
+	flag.AddFlags(kingpin.CommandLine, promslogConfig)
 	kingpin.Version(version.Print("gpfs_exporter"))
 	kingpin.HelpFlag.Short('h')
 	kingpin.Parse()
 
-	logger := promlog.New(promlogConfig)
-	level.Info(logger).Log("msg", "Starting gpfs_exporter", "version", version.Info())
-	level.Info(logger).Log("msg", "Build context", "build_context", version.BuildContext())
-	level.Info(logger).Log("msg", "Starting Server", "address", listenAddr)
+	logger := promslog.New(promslogConfig)
+	logger.Info("Starting gpfs_exporter", "version", version.Info())
+	logger.Info("Build context", "build_context", version.BuildContext())
+	logger.Info("Starting Server", "address", listenAddr)
 
 	http.Handle("/metrics", metricsHandler(logger))
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
@@ -85,7 +84,7 @@ func main() {
 	})
 	server := &http.Server{}
 	if err := web.ListenAndServe(server, toolkitFlags, logger); err != nil {
-		level.Error(logger).Log("err", err)
+		logger.Error("Unable to start HTTP server", "err", err)
 		os.Exit(1)
 	}
 }

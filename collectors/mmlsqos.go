@@ -16,6 +16,7 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"log/slog"
 	"reflect"
 	"strconv"
 	"strings"
@@ -23,8 +24,6 @@ import (
 	"time"
 
 	"github.com/alecthomas/kingpin/v2"
-	"github.com/go-kit/log"
-	"github.com/go-kit/log/level"
 	"github.com/prometheus/client_golang/prometheus"
 )
 
@@ -62,14 +61,14 @@ type MmlsqosCollector struct {
 	AvegareQueuedRequests  *prometheus.Desc
 	MeasurementInterval    *prometheus.Desc
 	Bs                     *prometheus.Desc
-	logger                 log.Logger
+	logger                 *slog.Logger
 }
 
 func init() {
 	registerCollector("mmlsqos", false, NewMmlsqosCollector)
 }
 
-func NewMmlsqosCollector(logger log.Logger) Collector {
+func NewMmlsqosCollector(logger *slog.Logger) Collector {
 	labels := []string{"fs", "pool", "class", "measurement_period_seconds"}
 	return &MmlsqosCollector{
 		Iops: prometheus.NewDesc(prometheus.BuildFQName(namespace, "qos", "iops"),
@@ -105,10 +104,10 @@ func (c *MmlsqosCollector) Collect(ch chan<- prometheus.Metric) {
 		mmlfsfs_filesystems, err := mmlfsfsFilesystems(ctx, c.logger)
 		if err == context.DeadlineExceeded {
 			mmlsfsTimeout = 1
-			level.Error(c.logger).Log("msg", "Timeout executing mmlsfs")
+			c.logger.Error("Timeout executing mmlsfs")
 		} else if err != nil {
 			mmlsfsError = 1
-			level.Error(c.logger).Log("msg", err)
+			c.logger.Error("Error collecting metrics", "err", err)
 		}
 		ch <- prometheus.MustNewConstMetric(collecTimeout, prometheus.GaugeValue, mmlsfsTimeout, "mmlsqos-mmlsfs")
 		ch <- prometheus.MustNewConstMetric(collectError, prometheus.GaugeValue, mmlsfsError, "mmlsqos-mmlsfs")
@@ -117,7 +116,7 @@ func (c *MmlsqosCollector) Collect(ch chan<- prometheus.Metric) {
 		filesystems = strings.Split(*qosFilesystems, ",")
 	}
 	for _, fs := range filesystems {
-		level.Debug(c.logger).Log("msg", "Collecting mmlsqos metrics", "fs", fs)
+		c.logger.Debug("Collecting mmlsqos metrics", "fs", fs)
 		wg.Add(1)
 		collectTime := time.Now()
 		go func(fs string) {
@@ -127,10 +126,10 @@ func (c *MmlsqosCollector) Collect(ch chan<- prometheus.Metric) {
 			errorMetric := 0
 			metrics, err := c.mmlsqosCollect(fs)
 			if err == context.DeadlineExceeded {
-				level.Error(c.logger).Log("msg", fmt.Sprintf("Timeout executing %s", label))
+				c.logger.Error(fmt.Sprintf("Timeout executing %s", label))
 				timeout = 1
 			} else if err != nil {
-				level.Error(c.logger).Log("msg", err, "fs", fs)
+				c.logger.Error("Error collecting metrics", "err", err, "fs", fs)
 				errorMetric = 1
 			}
 			ch <- prometheus.MustNewConstMetric(collectError, prometheus.GaugeValue, float64(errorMetric), label)
@@ -176,7 +175,7 @@ func mmlsqos(fs string, ctx context.Context) (string, error) {
 	return out.String(), nil
 }
 
-func parse_mmlsqos(out string, logger log.Logger) ([]QosMetric, error) {
+func parse_mmlsqos(out string, logger *slog.Logger) ([]QosMetric, error) {
 	var metrics []QosMetric
 	headers := []string{}
 	lines := strings.Split(out, "\n")
@@ -209,13 +208,13 @@ func parse_mmlsqos(out string, logger log.Logger) ([]QosMetric, error) {
 				} else if f.Kind() == reflect.Float64 {
 					if strings.Contains(values[i], "nan") {
 						f.SetFloat(0)
-					} else if val, err := strconv.ParseFloat(strings.Replace(values[i], ",", ".", -1), 64); err == nil {
+					} else if val, err := strconv.ParseFloat(strings.ReplaceAll(values[i], ",", "."), 64); err == nil {
 						if field == "Bs" {
 							val = val * 1024 * 1024
 						}
 						f.SetFloat(val)
 					} else {
-						level.Error(logger).Log("msg", fmt.Sprintf("Error parsing %s value %s: %s", h, values[i], err.Error()))
+						logger.Error(fmt.Sprintf("Error parsing %s value %s: %s", h, values[i], err.Error()))
 						return nil, err
 					}
 				}

@@ -17,14 +17,13 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"log/slog"
 	"reflect"
 	"strconv"
 	"strings"
 	"time"
 
 	"github.com/alecthomas/kingpin/v2"
-	"github.com/go-kit/log"
-	"github.com/go-kit/log/level"
 	"github.com/prometheus/client_golang/prometheus"
 )
 
@@ -97,7 +96,7 @@ type MmrepquotaCollector struct {
 	GroupFilesLimit   *prometheus.Desc
 	GroupFilesInDoubt *prometheus.Desc
 
-	logger log.Logger
+	logger *slog.Logger
 }
 
 type MetricCollectionResult struct {
@@ -109,7 +108,7 @@ func init() {
 	registerCollector("mmrepquota", false, NewMmrepquotaCollector)
 }
 
-func NewMmrepquotaCollector(logger log.Logger) Collector {
+func NewMmrepquotaCollector(logger *slog.Logger) Collector {
 	fileset_labels := []string{"fileset", "fs"}
 	user_labels := []string{"user", "fs", "fileset"}
 	group_labels := []string{"group", "fs", "fileset"}
@@ -199,7 +198,7 @@ func (c *MmrepquotaCollector) Describe(ch chan<- *prometheus.Desc) {
 }
 
 func (c *MmrepquotaCollector) Collect(ch chan<- prometheus.Metric) {
-	level.Debug(c.logger).Log("msg", "Collecting mmrepquota metrics")
+	c.logger.Debug("Collecting mmrepquota metrics")
 	collectTime := time.Now()
 	timeout := 0
 	errorMetric := 0
@@ -228,15 +227,16 @@ func (c *MmrepquotaCollector) Collect(ch chan<- prometheus.Metric) {
 		err := result.Error
 		if err == context.DeadlineExceeded {
 			timeout = 1
-			level.Error(c.logger).Log("msg", "Timeout executing mmrepquota")
+			c.logger.Error("Timeout executing mmrepquota")
 		} else if err != nil {
-			level.Error(c.logger).Log("msg", err)
+			c.logger.Error("Error collecting metrics", "err", err)
 			errorMetric = 1
 		}
 	}
 
 	for _, m := range metrics {
-		if m.QuotaType == "FILESET" {
+		switch m.QuotaType {
+		case "FILESET":
 			ch <- prometheus.MustNewConstMetric(c.FilesetBlockUsage, prometheus.GaugeValue, m.BlockUsage, m.Name, m.FS)
 			ch <- prometheus.MustNewConstMetric(c.FilesetBlockQuota, prometheus.GaugeValue, m.BlockQuota, m.Name, m.FS)
 			ch <- prometheus.MustNewConstMetric(c.FilesetBlockLimit, prometheus.GaugeValue, m.BlockLimit, m.Name, m.FS)
@@ -245,7 +245,7 @@ func (c *MmrepquotaCollector) Collect(ch chan<- prometheus.Metric) {
 			ch <- prometheus.MustNewConstMetric(c.FilesetFilesQuota, prometheus.GaugeValue, m.FilesQuota, m.Name, m.FS)
 			ch <- prometheus.MustNewConstMetric(c.FilesetFilesLimit, prometheus.GaugeValue, m.FilesLimit, m.Name, m.FS)
 			ch <- prometheus.MustNewConstMetric(c.FilesetFilesInDoubt, prometheus.GaugeValue, m.FilesInDoubt, m.Name, m.FS)
-		} else if m.QuotaType == "USR" {
+		case "USR":
 			ch <- prometheus.MustNewConstMetric(c.UserBlockUsage, prometheus.GaugeValue, m.BlockUsage, m.Name, m.FS, m.FilesetName)
 			ch <- prometheus.MustNewConstMetric(c.UserBlockQuota, prometheus.GaugeValue, m.BlockQuota, m.Name, m.FS, m.FilesetName)
 			ch <- prometheus.MustNewConstMetric(c.UserBlockLimit, prometheus.GaugeValue, m.BlockLimit, m.Name, m.FS, m.FilesetName)
@@ -254,7 +254,7 @@ func (c *MmrepquotaCollector) Collect(ch chan<- prometheus.Metric) {
 			ch <- prometheus.MustNewConstMetric(c.UserFilesQuota, prometheus.GaugeValue, m.FilesQuota, m.Name, m.FS, m.FilesetName)
 			ch <- prometheus.MustNewConstMetric(c.UserFilesLimit, prometheus.GaugeValue, m.FilesLimit, m.Name, m.FS, m.FilesetName)
 			ch <- prometheus.MustNewConstMetric(c.UserFilesInDoubt, prometheus.GaugeValue, m.FilesInDoubt, m.Name, m.FS, m.FilesetName)
-		} else if m.QuotaType == "GRP" {
+		case "GRP":
 			ch <- prometheus.MustNewConstMetric(c.GroupBlockUsage, prometheus.GaugeValue, m.BlockUsage, m.Name, m.FS, m.FilesetName)
 			ch <- prometheus.MustNewConstMetric(c.GroupBlockQuota, prometheus.GaugeValue, m.BlockQuota, m.Name, m.FS, m.FilesetName)
 			ch <- prometheus.MustNewConstMetric(c.GroupBlockLimit, prometheus.GaugeValue, m.BlockLimit, m.Name, m.FS, m.FilesetName)
@@ -302,7 +302,7 @@ func mmrepquota(ctx context.Context, typeArg string) (string, error) {
 	return out.String(), nil
 }
 
-func parse_mmrepquota(out string, logger log.Logger) []QuotaMetric {
+func parse_mmrepquota(out string, logger *slog.Logger) []QuotaMetric {
 	var metrics []QuotaMetric
 	var headers []string
 	lines := strings.Split(out, "\n")
@@ -325,7 +325,7 @@ func parse_mmrepquota(out string, logger log.Logger) []QuotaMetric {
 			values = append(values, items...)
 		}
 		if len(headers) != len(values) {
-			level.Error(logger).Log("msg", "Header value mismatch", "headers", len(headers), "values", len(values), "line", l)
+			logger.Error("Header value mismatch", "headers", len(headers), "values", len(values), "line", l)
 			continue
 		}
 		var metric QuotaMetric
@@ -344,7 +344,7 @@ func parse_mmrepquota(out string, logger log.Logger) []QuotaMetric {
 						}
 						f.SetFloat(val)
 					} else {
-						level.Error(logger).Log("msg", "Error parsing value", "key", h, "value", value, "err", err)
+						logger.Error("Error parsing value", "key", h, "value", value, "err", err)
 					}
 				}
 			}

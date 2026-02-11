@@ -3,49 +3,49 @@ version: 2.1
 
 orbs:
   prometheus: prometheus/prometheus@0.17.1
-  codecov: codecov/codecov@3.2.2
+  codecov: codecov/codecov@3.2.4
 
 executors:
   # Whenever the Go version is updated here, .promu.yml should
   # also be updated.
   golang:
     docker:
-    - image: cimg/go:1.20.3
+      - image: cimg/go:1.25
 
 jobs:
   test:
     executor: golang
     steps:
-    - prometheus/setup_environment
-    - run: make
-    - run: make coverage
-    - codecov/upload:
-        file: coverage.txt
-    - prometheus/store_artifact:
-        file: gpfs_exporter
+      - prometheus/setup_environment
+      - run: make
+      - run: make coverage
+      - codecov/upload:
+          file: coverage.txt
+      - prometheus/store_artifact:
+          file: gpfs_exporter
 workflows:
   version: 2
   gpfs_exporter:
     jobs:
-    - test:
-        filters:
-          tags:
-            only: /.*/
-    - prometheus/build:
-        name: build
-        parallelism: 1
-        filters:
-          tags:
-            only: /.*/
-    - prometheus/publish_release:
-        context: org-context
-        docker_hub_organization: ''
-        quay_io_organization: ''
-        requires:
-        - test
-        - build
-        filters:
-          tags:
-            only: /^v([0-9]).*/
-          branches:
-            ignore: /.*/
+      - test:
+          filters:
+            tags:
+              only: /.*/
+      - prometheus/build:
+          name: build
+          parallelism: 1
+          filters:
+            tags:
+              only: /.*/
+      - prometheus/publish_release:
+          context: org-context
+          docker_hub_organization: ''
+          quay_io_organization: ''
+          requires:
+            - test
+            - build
+          filters:
+            tags:
+              only: /^v([0-9]).*/
+            branches:
+              ignore: /.*/

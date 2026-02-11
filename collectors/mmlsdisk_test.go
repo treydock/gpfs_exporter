@@ -16,15 +16,14 @@ package collectors
 import (
 	"context"
 	"fmt"
-	"os"
 	"os/exec"
 	"strings"
 	"testing"
 	"time"
 
 	"github.com/alecthomas/kingpin/v2"
-	"github.com/go-kit/log"
 	"github.com/prometheus/client_golang/prometheus/testutil"
+	"github.com/prometheus/common/promslog"
 )
 
 var (
@@ -91,8 +90,9 @@ func TestMmlsdiskTimeout(t *testing.T) {
 }
 
 func TestParseMmlsdisk(t *testing.T) {
-	w := log.NewSyncWriter(os.Stderr)
-	logger := log.NewLogfmtLogger(w)
+	level := promslog.NewLevel()
+	level.Set("debug")
+	logger := promslog.New(&promslog.Config{Level: level})
 	metrics, err := parse_mmlsdisk(mmlsdiskStdout, logger)
 	if err != nil {
 		t.Errorf("Unexpected error: %s", err.Error())
@@ -258,8 +258,9 @@ func TestMmlsdiskCollector(t *testing.T) {
         gpfs_disk_status{data="yes",diskid="8",fs="ess",metadata="no",name="RG008VS010",status="to be emptied",storagepool="ess5000"} 0
         gpfs_disk_status{data="yes",diskid="8",fs="ess",metadata="no",name="RG008VS010",status="unknown",storagepool="ess5000"} 1
 	`
-	w := log.NewSyncWriter(os.Stderr)
-	logger := log.NewLogfmtLogger(w)
+	level := promslog.NewLevel()
+	level.Set("debug")
+	logger := promslog.New(&promslog.Config{Level: level})
 	collector := NewMmlsdiskCollector(logger)
 	gatherers := setupGatherer(collector)
 	if val, err := testutil.GatherAndCount(gatherers); err != nil {
@@ -411,7 +412,7 @@ func TestMmlsdiskCollectorMmlsfs(t *testing.T) {
         gpfs_disk_status{data="yes",diskid="8",fs="ess",metadata="no",name="RG008VS010",status="to be emptied",storagepool="ess5000"} 0
         gpfs_disk_status{data="yes",diskid="8",fs="ess",metadata="no",name="RG008VS010",status="unknown",storagepool="ess5000"} 1
 	`
-	collector := NewMmlsdiskCollector(log.NewNopLogger())
+	collector := NewMmlsdiskCollector(promslog.NewNopLogger())
 	gatherers := setupGatherer(collector)
 	if val, err := testutil.GatherAndCount(gatherers); err != nil {
 		t.Errorf("Unexpected error: %v", err)
@@ -438,7 +439,7 @@ func TestMmlsdiskCollectorError(t *testing.T) {
 		# TYPE gpfs_exporter_collect_error gauge
 		gpfs_exporter_collect_error{collector="mmlsdisk-mmfs1"} 1
 	`
-	collector := NewMmlsdiskCollector(log.NewNopLogger())
+	collector := NewMmlsdiskCollector(promslog.NewNopLogger())
 	gatherers := setupGatherer(collector)
 	if val, err := testutil.GatherAndCount(gatherers); err != nil {
 		t.Errorf("Unexpected error: %v", err)
@@ -464,7 +465,7 @@ func TestMmlsdiskCollectorTimeout(t *testing.T) {
 		# TYPE gpfs_exporter_collect_timeout gauge
 		gpfs_exporter_collect_timeout{collector="mmlsdisk-mmfs1"} 1
 	`
-	collector := NewMmlsdiskCollector(log.NewNopLogger())
+	collector := NewMmlsdiskCollector(promslog.NewNopLogger())
 	gatherers := setupGatherer(collector)
 	if val, err := testutil.GatherAndCount(gatherers); err != nil {
 		t.Errorf("Unexpected error: %v", err)
@@ -490,7 +491,7 @@ func TestMmlsdiskCollectorMmlsfsError(t *testing.T) {
 		# TYPE gpfs_exporter_collect_error gauge
 		gpfs_exporter_collect_error{collector="mmlsdisk-mmlsfs"} 1
 	`
-	collector := NewMmlsdiskCollector(log.NewNopLogger())
+	collector := NewMmlsdiskCollector(promslog.NewNopLogger())
 	gatherers := setupGatherer(collector)
 	if val, err := testutil.GatherAndCount(gatherers); err != nil {
 		t.Errorf("Unexpected error: %v", err)
@@ -516,7 +517,7 @@ func TestMmlsdiskCollectorMmlsfsTimeout(t *testing.T) {
 		# TYPE gpfs_exporter_collect_timeout gauge
 		gpfs_exporter_collect_timeout{collector="mmlsdisk-mmlsfs"} 1
 	`
-	collector := NewMmlsdiskCollector(log.NewNopLogger())
+	collector := NewMmlsdiskCollector(promslog.NewNopLogger())
 	gatherers := setupGatherer(collector)
 	if val, err := testutil.GatherAndCount(gatherers); err != nil {
 		t.Errorf("Unexpected error: %v", err)

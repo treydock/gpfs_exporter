@@ -22,8 +22,8 @@ import (
 	"time"
 
 	"github.com/alecthomas/kingpin/v2"
-	"github.com/go-kit/log"
 	"github.com/prometheus/client_golang/prometheus/testutil"
+	"github.com/prometheus/common/promslog"
 )
 
 var (
@@ -115,7 +115,7 @@ func TestMmrepquotaTimeout(t *testing.T) {
 }
 
 func TestParseMmrepquota(t *testing.T) {
-	metrics := parse_mmrepquota(mmrepquotaStdout, log.NewNopLogger())
+	metrics := parse_mmrepquota(mmrepquotaStdout, promslog.NewNopLogger())
 	if len(metrics) != 3 {
 		t.Errorf("Unexpected metric count: %d", len(metrics))
 		return
@@ -134,7 +134,7 @@ func TestParseMmrepquota(t *testing.T) {
 	}
 }
 func TestParseMmrepquotaAll(t *testing.T) {
-	metrics := parse_mmrepquota(mmrepquotaStdoutAll, log.NewNopLogger())
+	metrics := parse_mmrepquota(mmrepquotaStdoutAll, promslog.NewNopLogger())
 	if len(metrics) != 13 {
 		t.Errorf("Unexpected metric count: %d", len(metrics))
 		return
@@ -209,7 +209,7 @@ gpfs_fileset_used_files{fileset="root",fs="project"} 1395
 gpfs_fileset_used_files{fileset="root",fs="scratch"} 141909093
 `
 
-	collector := NewMmrepquotaCollector(log.NewNopLogger())
+	collector := NewMmrepquotaCollector(promslog.NewNopLogger())
 	gatherers := setupGatherer(collector)
 	if val, err := testutil.GatherAndCount(gatherers); err != nil {
 		t.Errorf("Unexpected error: %v", err)
@@ -396,7 +396,7 @@ gpfs_user_used_files{fileset="foo",fs="home",user="root"} 1395
 gpfs_user_used_files{fileset="tmpdir",fs="scratch",user="root"} 1.41909093e+08
 `
 
-	collector := NewMmrepquotaCollector(log.NewNopLogger())
+	collector := NewMmrepquotaCollector(promslog.NewNopLogger())
 	gatherers := setupGatherer(collector)
 	if val, err := testutil.GatherAndCount(gatherers); err != nil {
 		t.Errorf("Unexpected error: %v", err)
@@ -436,7 +436,7 @@ func TestMMrepquotaCollectorError(t *testing.T) {
 		# TYPE gpfs_exporter_collect_error gauge
 		gpfs_exporter_collect_error{collector="mmrepquota"} 1
 	`
-	collector := NewMmrepquotaCollector(log.NewNopLogger())
+	collector := NewMmrepquotaCollector(promslog.NewNopLogger())
 	gatherers := setupGatherer(collector)
 	if val, err := testutil.GatherAndCount(gatherers); err != nil {
 		t.Errorf("Unexpected error: %v", err)
@@ -461,7 +461,7 @@ func TestMMrepquotaCollectorTimeout(t *testing.T) {
 		# TYPE gpfs_exporter_collect_timeout gauge
 		gpfs_exporter_collect_timeout{collector="mmrepquota"} 1
 	`
-	collector := NewMmrepquotaCollector(log.NewNopLogger())
+	collector := NewMmrepquotaCollector(promslog.NewNopLogger())
 	gatherers := setupGatherer(collector)
 	if val, err := testutil.GatherAndCount(gatherers); err != nil {
 		t.Errorf("Unexpected error: %v", err)

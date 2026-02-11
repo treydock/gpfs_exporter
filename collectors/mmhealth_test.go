@@ -16,15 +16,14 @@ package collectors
 import (
 	"context"
 	"fmt"
-	"os"
 	"os/exec"
 	"strings"
 	"testing"
 	"time"
 
 	"github.com/alecthomas/kingpin/v2"
-	"github.com/go-kit/log"
 	"github.com/prometheus/client_golang/prometheus/testutil"
+	"github.com/prometheus/common/promslog"
 )
 
 var (
@@ -95,8 +94,9 @@ func TestMmhealthTimeout(t *testing.T) {
 }
 
 func TestParseMmhealth(t *testing.T) {
-	w := log.NewSyncWriter(os.Stderr)
-	logger := log.NewLogfmtLogger(w)
+	level := promslog.NewLevel()
+	level.Set("debug")
+	logger := promslog.New(&promslog.Config{Level: level})
 	metrics := mmhealth_parse(mmhealthStdout, logger)
 	if len(metrics) != 11 {
 		t.Errorf("Expected 11 metrics returned, got %d", len(metrics))
@@ -134,7 +134,7 @@ func TestParseMmhealthIgnores(t *testing.T) {
 	mmhealthIgnoredEntityName = &noignore
 	mmhealthIgnoredEntityType = &noignore
 	mmhealthIgnoredEvent = &eventIgnore
-	metrics := mmhealth_parse(mmhealthStdout, log.NewNopLogger())
+	metrics := mmhealth_parse(mmhealthStdout, promslog.NewNopLogger())
 	if len(metrics) != 6 {
 		t.Errorf("Expected 6 metrics returned, got %d", len(metrics))
 		return
@@ -144,7 +144,7 @@ func TestParseMmhealthIgnores(t *testing.T) {
 	mmhealthIgnoredEntityName = &ignore
 	mmhealthIgnoredEntityType = &noignore
 	mmhealthIgnoredEvent = &empty
-	metrics = mmhealth_parse(mmhealthStdout, log.NewNopLogger())
+	metrics = mmhealth_parse(mmhealthStdout, promslog.NewNopLogger())
 	if len(metrics) != 10 {
 		t.Errorf("Expected 10 metrics returned, got %d", len(metrics))
 		return
@@ -154,7 +154,7 @@ func TestParseMmhealthIgnores(t *testing.T) {
 	mmhealthIgnoredEntityName = &noignore
 	mmhealthIgnoredEntityType = &ignore
 	mmhealthIgnoredEvent = &empty
-	metrics = mmhealth_parse(mmhealthStdout, log.NewNopLogger())
+	metrics = mmhealth_parse(mmhealthStdout, promslog.NewNopLogger())
 	if len(metrics) != 8 {
 		t.Errorf("Expected 8 metrics returned, got %d", len(metrics))
 		return
@@ -279,8 +279,9 @@ func TestMmhealthCollector(t *testing.T) {
 		gpfs_health_status{component="NODE",entityname="ib-haswell1.example.com",entitytype="NODE",status="TIPS"} 1
 		gpfs_health_status{component="NODE",entityname="ib-haswell1.example.com",entitytype="NODE",status="UNKNOWN"} 0
 	`
-	w := log.NewSyncWriter(os.Stderr)
-	logger := log.NewLogfmtLogger(w)
+	level := promslog.NewLevel()
+	level.Set("debug")
+	logger := promslog.New(&promslog.Config{Level: level})
 	collector := NewMmhealthCollector(logger)
 	gatherers := setupGatherer(collector)
 	if val, err := testutil.GatherAndCount(gatherers); err != nil {
@@ -305,7 +306,7 @@ func TestMMhealthCollectorError(t *testing.T) {
 		# TYPE gpfs_exporter_collect_error gauge
 		gpfs_exporter_collect_error{collector="mmhealth"} 1
 	`
-	collector := NewMmhealthCollector(log.NewNopLogger())
+	collector := NewMmhealthCollector(promslog.NewNopLogger())
 	gatherers := setupGatherer(collector)
 	if val, err := testutil.GatherAndCount(gatherers); err != nil {
 		t.Errorf("Unexpected error: %v", err)
@@ -329,7 +330,7 @@ func TestMMhealthCollectorTimeout(t *testing.T) {
 		# TYPE gpfs_exporter_collect_timeout gauge
 		gpfs_exporter_collect_timeout{collector="mmhealth"} 1
 	`
-	collector := NewMmhealthCollector(log.NewNopLogger())
+	collector := NewMmhealthCollector(promslog.NewNopLogger())
 	gatherers := setupGatherer(collector)
 	if val, err := testutil.GatherAndCount(gatherers); err != nil {
 		t.Errorf("Unexpected error: %v", err)

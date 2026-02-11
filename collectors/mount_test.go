@@ -19,8 +19,8 @@ import (
 	"testing"
 
 	"github.com/alecthomas/kingpin/v2"
-	"github.com/go-kit/log"
 	"github.com/prometheus/client_golang/prometheus/testutil"
+	"github.com/prometheus/common/promslog"
 )
 
 func TestGetGPFSMounts(t *testing.T) {
@@ -124,7 +124,7 @@ ess                  /fs/ess              gpfs       rw,mtime,relatime,dev=ess.d
 		gpfs_mount_status{mount="/fs/project"} 1
 		gpfs_mount_status{mount="/fs/scratch"} 1
 	`
-	collector := NewMountCollector(log.NewNopLogger())
+	collector := NewMountCollector(promslog.NewNopLogger())
 	gatherers := setupGatherer(collector)
 	if val, err := testutil.GatherAndCount(gatherers); err != nil {
 		t.Errorf("Unexpected error: %v", err)
