@@ -297,7 +297,9 @@ func mmrepquota(ctx context.Context, typeArg string) (string, error) {
 	cmd.Stdout = &out
 	err := cmd.Run()
 	if ctx.Err() == context.DeadlineExceeded {
-		syscall.Kill(-cmd.Process.Pid, syscall.SIGKILL)
+		if cmd.Process != nil {
+			syscall.Kill(-cmd.Process.Pid, syscall.SIGKILL)
+		}
 		return "", ctx.Err()
 	} else if err != nil {
 		return "", err
