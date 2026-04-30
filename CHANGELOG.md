@@ -1,3 +1,7 @@
+## 3.4.0 / 2026-04-30
+
+* Update mmrepquta and mmlsfileset to kill processes on timeout (#79)
+
 ## 3.3.0 / 2026-02-11
 
 * Update Go to 1.25 and update module dependencies (#78)
