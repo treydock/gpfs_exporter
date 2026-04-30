@@ -21,6 +21,7 @@ import (
 	"reflect"
 	"strconv"
 	"strings"
+	"syscall"
 	"time"
 
 	"github.com/alecthomas/kingpin/v2"
@@ -291,10 +292,14 @@ func mmrepquota(ctx context.Context, typeArg string) (string, error) {
 	}
 
 	cmd := execCommand(ctx, *sudoCmd, args...)
+	cmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
 	var out bytes.Buffer
 	cmd.Stdout = &out
 	err := cmd.Run()
 	if ctx.Err() == context.DeadlineExceeded {
+		if cmd.Process != nil {
+			syscall.Kill(-cmd.Process.Pid, syscall.SIGKILL)
+		}
 		return "", ctx.Err()
 	} else if err != nil {
 		return "", err

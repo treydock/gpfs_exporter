@@ -6,6 +6,7 @@ linters:
       exclude-functions:
         - (net/http.ResponseWriter).Write
         - (*github.com/prometheus/common/promslog.Level).Set
+        - syscall.Kill
   exclusions:
     generated: lax
     presets:
