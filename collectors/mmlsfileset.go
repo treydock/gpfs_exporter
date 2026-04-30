@@ -23,6 +23,7 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"syscall"
 	"time"
 
 	"github.com/alecthomas/kingpin/v2"
@@ -169,10 +170,12 @@ func (c *MmlsfilesetCollector) mmlsfilesetCollect(fs string) ([]FilesetMetric, e
 
 func mmlsfileset(fs string, ctx context.Context) (string, error) {
 	cmd := execCommand(ctx, *sudoCmd, "/usr/lpp/mmfs/bin/mmlsfileset", fs, "-Y")
+	cmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
 	var out bytes.Buffer
 	cmd.Stdout = &out
 	err := cmd.Run()
 	if ctx.Err() == context.DeadlineExceeded {
+		syscall.Kill(-cmd.Process.Pid, syscall.SIGKILL)
 		return "", ctx.Err()
 	} else if err != nil {
 		return "", err
