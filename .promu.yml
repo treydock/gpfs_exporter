@@ -1,7 +1,7 @@
 ---
 # yamllint disable rule:line-length
 go:
-  version: 1.25
+  version: 1.26
   cgo: false
 repository:
   path: github.com/treydock/gpfs_exporter
