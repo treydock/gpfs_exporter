@@ -1,3 +1,7 @@
+## 3.5.0 / 2026-07-06
+
+* Update to Go 1.26.4 and update module dependencies (#81)
+
 ## 3.4.0 / 2026-04-30
 
 * Update mmrepquta and mmlsfileset to kill processes on timeout (#79)
